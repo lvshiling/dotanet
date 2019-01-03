@@ -1,0 +1,38 @@
+//指定版本
+//注意proto3与proto2的写法有些不同
+syntax = "proto3";
+
+//包名，通过protoc生成时go文件时
+package protomsg;
+
+//手机类型
+//枚举类型第一个字段必须为0
+enum PhoneType {
+    HOME = 0;
+    WORK = 1;
+}
+message MsgBase {
+    string  ModeType = 1;
+    int32   Uid = 2;
+    string  MsgType = 3;
+    int32   ConnectId = 4;
+    bytes Datas = 5;
+}
+message MsgRegisterToGate {
+    string ModeType = 1;
+}
+
+message CS_MsgQuickLogin {
+    string Platform = 1;
+    string Machineid = 2;
+    string Name = 3;
+}
+
+
+message CS_Login {
+    string Phonenumber = 1;
+    string Platform = 2;
+    string Machineid = 3;
+    string Wechat_id = 4;
+    string QQ_id = 5;
+}

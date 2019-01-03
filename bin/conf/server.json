@@ -1,0 +1,39 @@
+{
+    "GateInfo":{
+        //客户端监听端口
+        "ClientListenPort":":1118",
+        //服务器监听地址
+        "ServerListenPort":"127.0.0.1:12345",
+        "MaxConnNum":10000,
+        "PendingWriteNum":100,
+        "TimeOut":10
+    },
+    "LoginInfo":{
+        //gate服务器监听地址
+        "GateIp":"127.0.0.1:12345"
+    },
+    "HallInfo":{
+        //gate服务器监听地址
+        "GateIp":"127.0.0.1:12345"
+    },
+    "Game5GInfo":{
+        //gate服务器监听地址
+        "GateIp":"127.0.0.1:12345",
+        "SeasonMatching_Time":60,
+        "SeasonMatching_EveryTime":30,
+
+        "CreateRoom_Time":60,
+        "CreateRoom_EveryTime":30,
+
+        "WinScore":50,
+        "LoseScore":40
+    },
+    //数据库信息
+    "DataBaseInfo":{
+        //gate服务器监听地址
+        "Ip":"tcp(127.0.0.1:3306)",
+        "NameAndPassword":"root:123456",
+        "DataBaseName":"sheshe?charset=utf8"
+    }
+	
+}

@@ -1,0 +1,2 @@
+2019-01-03T10:57:31+08:00 [dq] [D] [app.go:203] dq closing down (signal: interrupt) 4
+2019-01-03T10:57:31+08:00 [dq] [D] [hallAgent.go:81] read message: read tcp 127.0.0.1:63959->127.0.0.1:12345: use of closed network connection

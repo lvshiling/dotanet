@@ -1,0 +1,78 @@
+2018-12-29T16:26:40+08:00 [dq] [I] [app.go:138] dq starting up
+2018-12-29T16:26:40+08:00 [dq] [I] [app.go:140] runtime.GOOS:windows
+2018-12-29T16:26:40+08:00 [dq] [I] [app.go:142] ---models:4
+2018-12-29T16:26:40+08:00 [dq] [I] [app.go:151] new model :Gate
+2018-12-29T16:26:40+08:00 [dq] [I] [gate.go:110] KCPAddr::1118
+2018-12-29T16:26:40+08:00 [dq] [I] [tcp_server.go:79] ------Listen:127.0.0.1:12345
+2018-12-29T16:26:40+08:00 [dq] [I] [kcp_server.go:76] ------Listen::1118
+2018-12-29T16:26:40+08:00 [dq] [I] [app.go:151] new model :Login
+2018-12-29T16:26:40+08:00 [dq] [I] [app.go:151] new model :Hall
+2018-12-29T16:26:40+08:00 [dq] [I] [app.go:151] new model :GameScene1
+2018-12-29T16:26:40+08:00 [dq] [D] [tcp_client.go:42] invalid ConnNum, reset to 1
+2018-12-29T16:26:40+08:00 [dq] [D] [tcp_client.go:46] invalid ConnectInterval, reset to 3s
+2018-12-29T16:26:40+08:00 [dq] [D] [tcp_client.go:50] invalid PendingWriteNum, reset to 200
+2018-12-29T16:26:40+08:00 [dq] [D] [tcp_client.go:42] invalid ConnNum, reset to 1
+2018-12-29T16:26:40+08:00 [dq] [D] [tcp_client.go:46] invalid ConnectInterval, reset to 3s
+2018-12-29T16:26:40+08:00 [dq] [D] [tcp_client.go:50] invalid PendingWriteNum, reset to 200
+2018-12-29T16:26:40+08:00 [dq] [D] [tcp_client.go:42] invalid ConnNum, reset to 1
+2018-12-29T16:26:40+08:00 [dq] [D] [tcp_client.go:46] invalid ConnectInterval, reset to 3s
+2018-12-29T16:26:40+08:00 [dq] [D] [tcp_client.go:50] invalid PendingWriteNum, reset to 200
+2018-12-29T16:26:40+08:00 [dq] [I] [serverAgent.go:54] --register modetype:Login
+2018-12-29T16:26:40+08:00 [dq] [I] [serverAgent.go:54] --register modetype:Hall
+2018-12-29T16:26:40+08:00 [dq] [I] [serverAgent.go:54] --register modetype:GameScene1
+2018-12-29T16:26:59+08:00 [dq] [I] [agent.go:47] ------readmsg len45:{ "ModeType": "Gate", "MsgType": "LoginMsg" }
+2018-12-29T16:26:59+08:00 [dq] [I] [agent.go:48] :-----:
+2018-12-29T16:27:09+08:00 [dq] [D] [agent.go:38] read message: i/o timeout
+2018-12-29T16:27:09+08:00 [dq] [D] [kcp_server.go:135] conn close :10000
+2018-12-29T16:29:55+08:00 [dq] [I] [agent.go:47] ------readmsg len45:{ "ModeType": "Gate", "MsgType": "LoginMsg" }
+2018-12-29T16:29:55+08:00 [dq] [I] [agent.go:48] :-----:
+2018-12-29T16:30:05+08:00 [dq] [D] [agent.go:38] read message: i/o timeout
+2018-12-29T16:30:05+08:00 [dq] [D] [kcp_server.go:135] conn close :10001
+2018-12-29T17:08:04+08:00 [dq] [I] [agent.go:47] ------readmsg len16:
+GateLoginMsg
+2018-12-29T17:08:04+08:00 [dq] [I] [agent.go:48] :Gate-----:LoginMsg
+2018-12-29T17:08:14+08:00 [dq] [D] [agent.go:38] read message: i/o timeout
+2018-12-29T17:08:14+08:00 [dq] [D] [kcp_server.go:135] conn close :10002
+2018-12-29T17:11:17+08:00 [dq] [D] [app.go:203] dq closing down (signal: interrupt) 4
+2018-12-29T17:11:17+08:00 [dq] [D] [hallAgent.go:79] read message: read tcp 127.0.0.1:57985->127.0.0.1:12345: use of closed network connection
+2018-12-29T17:11:17+08:00 [dq] [D] [loginAgent.go:106] read message: read tcp 127.0.0.1:57984->127.0.0.1:12345: use of closed network connection
+2018-12-29T17:13:41+08:00 [dq] [I] [app.go:138] dq starting up
+2018-12-29T17:13:41+08:00 [dq] [I] [app.go:140] runtime.GOOS:windows
+2018-12-29T17:13:41+08:00 [dq] [I] [app.go:142] ---models:4
+2018-12-29T17:13:41+08:00 [dq] [I] [app.go:151] new model :Gate
+2018-12-29T17:13:41+08:00 [dq] [I] [gate.go:110] KCPAddr::1118
+2018-12-29T17:13:41+08:00 [dq] [I] [tcp_server.go:79] ------Listen:127.0.0.1:12345
+2018-12-29T17:13:41+08:00 [dq] [I] [kcp_server.go:76] ------Listen::1118
+2018-12-29T17:13:41+08:00 [dq] [I] [app.go:151] new model :Login
+2018-12-29T17:13:41+08:00 [dq] [I] [app.go:151] new model :Hall
+2018-12-29T17:13:41+08:00 [dq] [I] [app.go:151] new model :GameScene1
+2018-12-29T17:13:41+08:00 [dq] [D] [tcp_client.go:42] invalid ConnNum, reset to 1
+2018-12-29T17:13:41+08:00 [dq] [D] [tcp_client.go:46] invalid ConnectInterval, reset to 3s
+2018-12-29T17:13:41+08:00 [dq] [D] [tcp_client.go:50] invalid PendingWriteNum, reset to 200
+2018-12-29T17:13:41+08:00 [dq] [D] [tcp_client.go:42] invalid ConnNum, reset to 1
+2018-12-29T17:13:41+08:00 [dq] [D] [tcp_client.go:46] invalid ConnectInterval, reset to 3s
+2018-12-29T17:13:41+08:00 [dq] [D] [tcp_client.go:42] invalid ConnNum, reset to 1
+2018-12-29T17:13:41+08:00 [dq] [D] [tcp_client.go:50] invalid PendingWriteNum, reset to 200
+2018-12-29T17:13:41+08:00 [dq] [D] [tcp_client.go:46] invalid ConnectInterval, reset to 3s
+2018-12-29T17:13:41+08:00 [dq] [D] [tcp_client.go:50] invalid PendingWriteNum, reset to 200
+2018-12-29T17:13:41+08:00 [dq] [I] [serverAgent.go:54] --register modetype:Hall
+2018-12-29T17:13:41+08:00 [dq] [I] [serverAgent.go:54] --register modetype:Login
+2018-12-29T17:13:41+08:00 [dq] [I] [serverAgent.go:54] --register modetype:GameScene1
+2018-12-29T17:16:37+08:00 [dq] [I] [agent.go:47] ------readmsg len16:
+GateLoginMsg
+2018-12-29T17:16:37+08:00 [dq] [I] [agent.go:48] :Gate-----:LoginMsg
+2018-12-29T17:16:47+08:00 [dq] [D] [agent.go:38] read message: i/o timeout
+2018-12-29T17:16:47+08:00 [dq] [D] [kcp_server.go:135] conn close :10000
+2018-12-29T17:19:04+08:00 [dq] [I] [agent.go:47] ------readmsg len16:
+GateLoginMsg
+2018-12-29T17:19:04+08:00 [dq] [I] [agent.go:48] :Gate-----:LoginMsg
+2018-12-29T17:19:15+08:00 [dq] [D] [agent.go:38] read message: i/o timeout
+2018-12-29T17:19:15+08:00 [dq] [D] [kcp_server.go:135] conn close :10001
+2018-12-29T17:45:58+08:00 [dq] [I] [agent.go:47] ------readmsg len16:
+GateLoginMsg
+2018-12-29T17:45:58+08:00 [dq] [I] [agent.go:48] :Gate-----:LoginMsg
+2018-12-29T17:46:03+08:00 [dq] [I] [agent.go:47] ------readmsg len16:
+GateLoginMsg
+2018-12-29T17:46:03+08:00 [dq] [I] [agent.go:48] :Gate-----:LoginMsg
+2018-12-29T17:46:13+08:00 [dq] [D] [agent.go:38] read message: i/o timeout
+2018-12-29T17:46:13+08:00 [dq] [D] [kcp_server.go:135] conn close :10002
