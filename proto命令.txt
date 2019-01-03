@@ -1,0 +1,2 @@
+protoc --go_out=././src/dq/ protobuf/msg.proto
+protoc --csharp_out=././csharp/ protobuf/msg.proto
