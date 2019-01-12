@@ -18,16 +18,104 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	//"fmt"
+	"dq/vec2d"
 	"io/ioutil"
 	"os"
 	"strings"
 )
 
 var (
-	Conf = Config{}
+	Conf         = Config{}
+	SceneRawData = SceneAllData{}
+	SceneData    = make(map[string]*Scene)
 )
 
+//func LoadJsonFile(Path string,obj *interface){
+
+//	ApplicationDir, err := os.Getwd()
+//	if err != nil {
+//		log.Error(err.Error())
+//		return
+//	}
+
+//	confPath := fmt.Sprintf("%s"+Path, ApplicationDir)
+
+//	f, err := os.Open(confPath)
+//	if err != nil {
+//		log.Error(err.Error())
+//		return
+//	}
+
+//	err, data := readFileInto(Path)
+//	if err != nil {
+//		panic(err)
+//	}
+//	err = json.Unmarshal(data, obj)
+//	if err != nil {
+//		panic(err)
+//	}
+//}
+
+//场景配置文件
+func LoadScene(Path string) {
+	// Read config.
+
+	ApplicationDir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	confPath := fmt.Sprintf("%s"+Path, ApplicationDir)
+
+	f, err := os.Open(confPath)
+	if err != nil {
+		panic(err)
+	}
+
+	err, data := readFileInto(f.Name())
+	if err != nil {
+		panic(err)
+	}
+	err = json.Unmarshal(data, &SceneRawData)
+	if err != nil {
+		panic(err)
+	}
+
+	//---------
+	for _, v := range SceneRawData.Scenes {
+		SceneData[v.Name] = &v
+	}
+
+}
+
+func GetSceneData(name string) *Scene {
+	if _, ok := SceneData[name]; !ok {
+
+		return nil
+	}
+	return SceneData[name]
+}
+
+//场景文件
+type SceneAllData struct {
+	Scenes []Scene
+}
+type Scene struct {
+	Name     string
+	Collides []Collide
+}
+type Collide struct {
+	IsRect  bool
+	CenterX float32
+	CenterY float32
+	Width   float32
+	Height  float32
+	Points  []vec2d.Vec2
+}
+
+//基础配置文件
 func LoadConfig(Path string) {
 	// Read config.
 	err, data := readFileInto(Path)

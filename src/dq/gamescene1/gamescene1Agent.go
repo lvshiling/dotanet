@@ -1,12 +1,12 @@
 package gamescene1
 
 import (
-	"dq/network"
-	"time"
-
+	"dq/conf"
 	"dq/datamsg"
 	"dq/log"
+	"dq/network"
 	"net"
+	"time"
 
 	//"dq/db"
 	//"dq/utils"
@@ -39,8 +39,18 @@ func (a *GameScene1Agent) GetModeType() string {
 
 func (a *GameScene1Agent) Init() {
 
-	a.core = &cyward.WardCore{}
-	var test []*cyward.Body
+	scenedata := conf.GetSceneData("Map/set_5v5")
+
+	for _, v := range scenedata.Collides {
+		log.Info("Collide %v", v)
+		//		if v.IsRect == true{
+		//			log.Info("IsRect= true %v",v)
+		//		}else{
+
+		//		}
+	}
+
+	a.core = cyward.CreateWardCore()
 
 	for i := 0; i < 10; i++ {
 		for j := 0; j < 10; j++ {
@@ -48,7 +58,7 @@ func (a *GameScene1Agent) Init() {
 			r := vec2d.Vec2{float64(10 + i/2), float64(10 + j/2)}
 			t := a.core.CreateBody(pos, r, 100.0)
 			t.SetTag(i*10 + j)
-			test = append(test, t)
+
 		}
 
 	}

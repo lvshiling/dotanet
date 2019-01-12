@@ -16,6 +16,73 @@ type DetourPathNode struct {
 	path2       []vec2d.Vec2
 }
 
+type MyPolygon struct {
+	Center vec2d.Vec2
+	Points []vec2d.Vec2 //绝对坐标 左上 右上 右下 左下
+	IsRect bool
+}
+
+func multi(p1 vec2d.Vec2, p2 vec2d.Vec2, p0 vec2d.Vec2) float64 {
+	return (p1.X-p0.X)*(p2.Y-p0.Y) - (p2.X-p0.X)*(p1.Y-p0.Y)
+}
+
+/*
+	令矢量的起点为p1，终点为p2，判断的点为p3，
+		如果fangxiang（p1，p2，p3）为正数，则C在矢量AB的左侧；
+		如果fangxiang（p1，p2，p3）为负数，则C在矢量AB的右侧；
+		如果fangxiang（p1，p2，p3）为0，则C在直线AB上。*/
+func fangxiang(p1 vec2d.Vec2, p2 vec2d.Vec2, p3 vec2d.Vec2) float64 {
+	var a = (p1.X-p3.X)*(p2.Y-p3.Y) - (p1.Y-p3.Y)*(p2.X-p3.X)
+	return a
+}
+
+func (this *MyPolygon) IsInMyPolygon(p vec2d.Vec2) bool {
+
+	if len(this.Points) < 4 {
+		return true
+	}
+	if this.IsRect {
+		if this.Points[0].X <= p.X && this.Points[1].X >= p.X && this.Points[3].Y <= p.Y && this.Points[0].Y >= p.Y {
+			return true
+		}
+		return false
+	} else {
+		var pre, now float64
+		var n = len(this.Points)
+		for i := 0; i < n; i++ {
+			now = multi(p, this.Points[i], this.Points[(i+1)%n])
+			if i > 0 {
+				if pre*now < 0 {
+					return false
+				}
+			}
+			pre = now
+		}
+		return true
+	}
+}
+
+func (this *MyPolygon) GetBigMyPolygonOnePoint(pointindex int, r vec2d.Vec2) vec2d.Vec2 {
+	if this.IsRect {
+		var offset [4]vec2d.Vec2
+		offset[0] = vec2d.Vec2{-r.X, r.Y}
+		offset[1] = vec2d.Vec2{r.X, r.Y}
+		offset[2] = vec2d.Vec2{r.X, -r.Y}
+		offset[3] = vec2d.Vec2{-r.X, -r.Y}
+
+		re := vec2d.Add(this.Points[pointindex], offset[pointindex])
+		return re
+
+	} else {
+		var addlen = r.Length()
+		var dir = vec2d.Sub(this.Points[pointindex], this.Center)
+		add := vec2d.Add(this.Points[pointindex], vec2d.Mul(dir.GetNormalized(), addlen))
+
+		return add
+
+	}
+}
+
 type Body struct {
 	Core           *WardCore
 	Position       vec2d.Vec2   //当前位置
@@ -32,11 +99,46 @@ type Body struct {
 	Direction    vec2d.Vec2 //速度方向
 
 	Tag int //标记
+
+	IsRect       bool         //是否是标准矩形
+	OffsetPoints []vec2d.Vec2 //相对偏移位置 坐标 左上 右上 右下 左下
+	M_MyPolygon  *MyPolygon
 }
 
 //避障核心
 type WardCore struct {
 	Bodys []*Body
+}
+
+func (this *Body) GetMyPolygonBig(p1 *Body, big vec2d.Vec2) *MyPolygon {
+
+	this.M_MyPolygon.Points = this.M_MyPolygon.Points[0:0]
+	this.M_MyPolygon.IsRect = this.IsRect
+	this.M_MyPolygon.Center = this.Position
+	if this.IsRect {
+
+		r := vec2d.Add(vec2d.Add(p1.R, this.R), big)
+
+		//变成正方形
+		this.M_MyPolygon.Points = append(this.M_MyPolygon.Points, vec2d.Add(this.M_MyPolygon.Center, vec2d.Vec2{-r.X, r.Y}))
+		this.M_MyPolygon.Points = append(this.M_MyPolygon.Points, vec2d.Add(this.M_MyPolygon.Center, vec2d.Vec2{r.X, r.Y}))
+		this.M_MyPolygon.Points = append(this.M_MyPolygon.Points, vec2d.Add(this.M_MyPolygon.Center, vec2d.Vec2{r.X, -r.Y}))
+		this.M_MyPolygon.Points = append(this.M_MyPolygon.Points, vec2d.Add(this.M_MyPolygon.Center, vec2d.Vec2{-r.X, -r.Y}))
+
+	} else {
+		tt := vec2d.Add(p1.R, big)
+		addlen := tt.Length()
+		for i := 0; i < len(this.OffsetPoints); i++ {
+			add := vec2d.Add(vec2d.Add(this.M_MyPolygon.Center, this.OffsetPoints[i]), vec2d.Mul(this.OffsetPoints[i].GetNormalized(), addlen))
+			this.M_MyPolygon.Points = append(this.M_MyPolygon.Points, add)
+			//this.M_MyPolygon->m_Points.push_back(this.M_MyPolygon->m_Center + m_OffsetPoints[i] + ((m_OffsetPoints[i]).getNormalized() * addlen));
+		}
+	}
+
+	return this.M_MyPolygon
+}
+func (this *Body) GetMyPolygon(p1 *Body) *MyPolygon {
+	return this.GetMyPolygonBig(p1, vec2d.Vec2{0, 0})
 }
 
 func (this *Body) SetTag(tag int) {
@@ -202,12 +304,12 @@ func (this *Body) CalcNextPosition(dt float64) bool {
 }
 
 //线段是否与矩形相交
-func (this *WardCore) IsSegmentCollionSquare(p1 vec2d.Vec2, p2 vec2d.Vec2, pCenter vec2d.Vec2, r vec2d.Vec2) bool {
+func (this *WardCore) IsSegmentCollionSquare(p1 vec2d.Vec2, p2 vec2d.Vec2, mypolygon *MyPolygon) bool {
 	//变成正方形
-	circlep1 := vec2d.Add(pCenter, vec2d.Vec2{-r.X, r.Y})
-	circlep2 := vec2d.Add(pCenter, vec2d.Vec2{-r.X, -r.Y})
-	circlep3 := vec2d.Add(pCenter, vec2d.Vec2{r.X, -r.Y})
-	circlep4 := vec2d.Add(pCenter, vec2d.Vec2{r.X, r.Y})
+	circlep1 := mypolygon.Points[0]
+	circlep2 := mypolygon.Points[1]
+	circlep3 := mypolygon.Points[2]
+	circlep4 := mypolygon.Points[3]
 
 	//判断线段是否与线段相交
 
@@ -234,12 +336,12 @@ func (this *WardCore) GetIntersectPoint(A vec2d.Vec2, B vec2d.Vec2, C vec2d.Vec2
 
 	return false
 }
-func (this *WardCore) GetSegmentInsterset(p1 vec2d.Vec2, p2 vec2d.Vec2, pCenter vec2d.Vec2, r vec2d.Vec2, Re *vec2d.Vec2) bool {
+func (this *WardCore) GetSegmentInsterset(p1 vec2d.Vec2, p2 vec2d.Vec2, mypolygon *MyPolygon, Re *vec2d.Vec2) bool {
 	//变成正方形
-	circlep1 := vec2d.Add(pCenter, vec2d.Vec2{-r.X, r.Y})
-	circlep2 := vec2d.Add(pCenter, vec2d.Vec2{-r.X, -r.Y})
-	circlep3 := vec2d.Add(pCenter, vec2d.Vec2{r.X, -r.Y})
-	circlep4 := vec2d.Add(pCenter, vec2d.Vec2{r.X, r.Y})
+	circlep1 := mypolygon.Points[0]
+	circlep2 := mypolygon.Points[1]
+	circlep3 := mypolygon.Points[2]
+	circlep4 := mypolygon.Points[3]
 
 	//判断线段是否与线段相交
 
@@ -267,43 +369,86 @@ func (this *WardCore) GetStaticBodys(bodys *[]*Body) {
 func (this *WardCore) GetBodys() *[]*Body {
 	return &this.Bodys
 }
-func (this *WardCore) GetPointIndexFromSquare(centerPoint vec2d.Vec2, r vec2d.Vec2, targetPos vec2d.Vec2, posIndex *[]int) {
+func (this *WardCore) GetPointIndexFromSquare(mypolygon *MyPolygon, targetPos vec2d.Vec2, posIndex *[]int) {
 	//正方形的4个顶点
-	var points [4]vec2d.Vec2
-	points[0] = vec2d.Vec2{centerPoint.X - r.X, centerPoint.Y + r.Y}
-	points[1] = vec2d.Vec2{centerPoint.X + r.X, centerPoint.Y + r.Y}
-	points[2] = vec2d.Vec2{centerPoint.X + r.X, centerPoint.Y - r.Y}
-	points[3] = vec2d.Vec2{centerPoint.X - r.X, centerPoint.Y - r.Y}
-
-	if targetPos.X <= points[0].X && targetPos.Y >= points[0].Y { //目标点在矩形的左上
-		(*posIndex) = append((*posIndex), 3)
-		(*posIndex) = append((*posIndex), 0)
-		(*posIndex) = append((*posIndex), 1)
-	} else if targetPos.X >= points[0].X && targetPos.X <= points[1].X && targetPos.Y >= points[0].Y { //正上
-		(*posIndex) = append((*posIndex), 0)
-		(*posIndex) = append((*posIndex), 1)
-	} else if targetPos.X >= points[1].X && targetPos.Y >= points[0].Y { //右上
-		(*posIndex) = append((*posIndex), 0)
-		(*posIndex) = append((*posIndex), 1)
-		(*posIndex) = append((*posIndex), 2)
-	} else if targetPos.X >= points[1].X && targetPos.Y < points[1].Y && targetPos.Y >= points[2].Y { //正右
-		(*posIndex) = append((*posIndex), 1)
-		(*posIndex) = append((*posIndex), 2)
-	} else if targetPos.X >= points[1].X && targetPos.Y <= points[2].Y { //右下
-		(*posIndex) = append((*posIndex), 1)
-		(*posIndex) = append((*posIndex), 2)
-		(*posIndex) = append((*posIndex), 3)
-	} else if targetPos.X >= points[3].X && targetPos.X <= points[2].X && targetPos.Y <= points[2].Y { //正下
-		(*posIndex) = append((*posIndex), 2)
-		(*posIndex) = append((*posIndex), 3)
-	} else if targetPos.X <= points[3].X && targetPos.Y <= points[2].Y { //左下
-		(*posIndex) = append((*posIndex), 2)
-		(*posIndex) = append((*posIndex), 3)
-		(*posIndex) = append((*posIndex), 0)
-	} else if targetPos.X <= points[3].X && targetPos.Y <= points[0].Y && targetPos.Y >= points[3].Y { //正左
-		(*posIndex) = append((*posIndex), 3)
-		(*posIndex) = append((*posIndex), 0)
+	if mypolygon.IsRect {
+		if targetPos.X <= mypolygon.Points[0].X && targetPos.Y >= mypolygon.Points[0].Y { //目标点在矩形的左上
+			(*posIndex) = append((*posIndex), 3)
+			(*posIndex) = append((*posIndex), 0)
+			(*posIndex) = append((*posIndex), 1)
+		} else if targetPos.X >= mypolygon.Points[0].X && targetPos.X <= mypolygon.Points[1].X && targetPos.Y >= mypolygon.Points[0].Y { //正上
+			(*posIndex) = append((*posIndex), 0)
+			(*posIndex) = append((*posIndex), 1)
+		} else if targetPos.X >= mypolygon.Points[1].X && targetPos.Y >= mypolygon.Points[0].Y { //右上
+			(*posIndex) = append((*posIndex), 0)
+			(*posIndex) = append((*posIndex), 1)
+			(*posIndex) = append((*posIndex), 2)
+		} else if targetPos.X >= mypolygon.Points[1].X && targetPos.Y < mypolygon.Points[1].Y && targetPos.Y >= mypolygon.Points[2].Y { //正右
+			(*posIndex) = append((*posIndex), 1)
+			(*posIndex) = append((*posIndex), 2)
+		} else if targetPos.X >= mypolygon.Points[1].X && targetPos.Y <= mypolygon.Points[2].Y { //右下
+			(*posIndex) = append((*posIndex), 1)
+			(*posIndex) = append((*posIndex), 2)
+			(*posIndex) = append((*posIndex), 3)
+		} else if targetPos.X >= mypolygon.Points[3].X && targetPos.X <= mypolygon.Points[2].X && targetPos.Y <= mypolygon.Points[2].Y { //正下
+			(*posIndex) = append((*posIndex), 2)
+			(*posIndex) = append((*posIndex), 3)
+		} else if targetPos.X <= mypolygon.Points[3].X && targetPos.Y <= mypolygon.Points[2].Y { //左下
+			(*posIndex) = append((*posIndex), 2)
+			(*posIndex) = append((*posIndex), 3)
+			(*posIndex) = append((*posIndex), 0)
+		} else if targetPos.X <= mypolygon.Points[3].X && targetPos.Y <= mypolygon.Points[0].Y && targetPos.Y >= mypolygon.Points[3].Y { //正左
+			(*posIndex) = append((*posIndex), 3)
+			(*posIndex) = append((*posIndex), 0)
+		}
+	} else {
+		var isLeft1 = false
+		if fangxiang(mypolygon.Points[0], mypolygon.Points[1], targetPos) >= 0 {
+			isLeft1 = true
+		}
+		var isLeft2 = false
+		if fangxiang(mypolygon.Points[1], mypolygon.Points[2], targetPos) >= 0 {
+			isLeft2 = true
+		}
+		var isLeft3 = false
+		if fangxiang(mypolygon.Points[2], mypolygon.Points[3], targetPos) >= 0 {
+			isLeft3 = true
+		}
+		var isLeft4 = false
+		if fangxiang(mypolygon.Points[3], mypolygon.Points[0], targetPos) >= 0 {
+			isLeft4 = true
+		}
+		if isLeft1 && isLeft4 { //目标点在矩形的左上
+			(*posIndex) = append((*posIndex), 3)
+			(*posIndex) = append((*posIndex), 0)
+			(*posIndex) = append((*posIndex), 1)
+		} else if isLeft1 && !isLeft4 && !isLeft2 { //正上
+			(*posIndex) = append((*posIndex), 0)
+			(*posIndex) = append((*posIndex), 1)
+		} else if isLeft1 && isLeft2 { //右上
+			(*posIndex) = append((*posIndex), 0)
+			(*posIndex) = append((*posIndex), 1)
+			(*posIndex) = append((*posIndex), 2)
+		} else if isLeft2 && !isLeft1 && !isLeft3 { //正右
+			(*posIndex) = append((*posIndex), 1)
+			(*posIndex) = append((*posIndex), 2)
+		} else if isLeft2 && isLeft3 { //右下
+			(*posIndex) = append((*posIndex), 1)
+			(*posIndex) = append((*posIndex), 2)
+			(*posIndex) = append((*posIndex), 3)
+		} else if isLeft3 && !isLeft2 && !isLeft4 { //正下
+			(*posIndex) = append((*posIndex), 2)
+			(*posIndex) = append((*posIndex), 3)
+		} else if isLeft3 && isLeft4 { //左下
+			(*posIndex) = append((*posIndex), 2)
+			(*posIndex) = append((*posIndex), 3)
+			(*posIndex) = append((*posIndex), 0)
+		} else if isLeft4 && !isLeft3 && !isLeft1 { //正左
+			(*posIndex) = append((*posIndex), 3)
+			(*posIndex) = append((*posIndex), 0)
+		}
 	}
+
 }
 
 func (this *WardCore) GetLen(path []vec2d.Vec2) float64 {
@@ -319,30 +464,23 @@ func (this *WardCore) GetLen(path []vec2d.Vec2) float64 {
 }
 
 //计算绕行路径
-func (this *WardCore) CalcDetourPathFromSquare(p1 vec2d.Vec2, centerPoint vec2d.Vec2, r vec2d.Vec2, targetPos vec2d.Vec2, path1 *[]vec2d.Vec2, path2 *[]vec2d.Vec2) bool {
+func (this *WardCore) CalcDetourPathFromSquare(p1 vec2d.Vec2, mypolygon *MyPolygon, targetPos vec2d.Vec2, path1 *[]vec2d.Vec2, path2 *[]vec2d.Vec2) bool {
 	//目标点在正方形内部
-	if centerPoint.X-r.X <= targetPos.X && centerPoint.X+r.X >= targetPos.X &&
-		centerPoint.Y-r.Y <= targetPos.Y && centerPoint.Y+r.Y >= targetPos.Y {
+	if mypolygon.IsInMyPolygon(targetPos) {
 		return false
 	}
 
-	if centerPoint.X-r.X <= p1.X && centerPoint.X+r.X >= p1.X &&
-		centerPoint.Y-r.Y <= p1.Y && centerPoint.Y+r.Y >= p1.Y {
+	if mypolygon.IsInMyPolygon(p1) {
 		return false
 	}
 	//r = r + 1;
 	//正方形的4个顶点
-	var points [4]vec2d.Vec2
-	points[0] = vec2d.Vec2{centerPoint.X - r.X, centerPoint.Y + r.Y}
-	points[1] = vec2d.Vec2{centerPoint.X + r.X, centerPoint.Y + r.Y}
-	points[2] = vec2d.Vec2{centerPoint.X + r.X, centerPoint.Y - r.Y}
-	points[3] = vec2d.Vec2{centerPoint.X - r.X, centerPoint.Y - r.Y}
 	//计算目标点能直接通过的顶点
 	var points2TargetIndex []int
 	var points2P1Index []int
 
-	this.GetPointIndexFromSquare(centerPoint, r, targetPos, &points2TargetIndex)
-	this.GetPointIndexFromSquare(centerPoint, r, p1, &points2P1Index)
+	this.GetPointIndexFromSquare(mypolygon, targetPos, &points2TargetIndex)
+	this.GetPointIndexFromSquare(mypolygon, p1, &points2P1Index)
 	//删掉中间点(只保留两端顶点)
 	if len(points2P1Index) >= 3 {
 		points2P1Index = append(points2P1Index[:1], points2P1Index[2:]...)
@@ -351,17 +489,12 @@ func (this *WardCore) CalcDetourPathFromSquare(p1 vec2d.Vec2, centerPoint vec2d.
 	leftp := points2P1Index[1]
 
 	//向外偏移一个像素
-	var offset [4]vec2d.Vec2
-	offset[0] = vec2d.Vec2{-1, 1}
-	offset[1] = vec2d.Vec2{1, 1}
-	offset[2] = vec2d.Vec2{1, -1}
-	offset[3] = vec2d.Vec2{-1, -1}
 	has := false
 	for {
 		if has == true {
 			break
 		}
-		(*path1) = append((*path1), vec2d.Add(points[rightp], offset[rightp]))
+		(*path1) = append((*path1), mypolygon.GetBigMyPolygonOnePoint(rightp, vec2d.Vec2{0.01, 0.01}))
 
 		for i := 0; i < len(points2TargetIndex); i++ {
 			if points2TargetIndex[i] == rightp {
@@ -379,7 +512,7 @@ func (this *WardCore) CalcDetourPathFromSquare(p1 vec2d.Vec2, centerPoint vec2d.
 		if has == true {
 			break
 		}
-		(*path2) = append((*path2), vec2d.Add(points[leftp], offset[leftp]))
+		(*path2) = append((*path2), mypolygon.GetBigMyPolygonOnePoint(leftp, vec2d.Vec2{0.01, 0.01}))
 		for i := 0; i < len(points2TargetIndex); i++ {
 			if points2TargetIndex[i] == leftp {
 				has = true
@@ -400,15 +533,16 @@ func (this *WardCore) ChangeErrorPath(my *Body, detourBody *Body, staticbodys *[
 			if (*staticbodys)[i] == my || (*staticbodys)[i] == detourBody {
 				continue
 			}
-			R := vec2d.Add(my.R, (*staticbodys)[i].R)
-			if (*staticbodys)[i].Position.X-R.X <= (*path1)[j].X && (*path1)[j].X <= (*staticbodys)[i].Position.X+R.X &&
-				(*staticbodys)[i].Position.Y-R.Y <= (*path1)[j].Y && (*path1)[j].Y <= (*staticbodys)[i].Position.Y+R.Y {
+			//R := vec2d.Add(my.R, (*staticbodys)[i].R)
+			mypolygon1 := (*staticbodys)[i].GetMyPolygon(my)
+			if mypolygon1.IsInMyPolygon((*path1)[j]) {
 				//更改点
 				dir := vec2d.Sub((*path1)[j], detourBody.Position)
 				seg := vec2d.Add(vec2d.Mul(dir.GetNormalized(), 10000), (*path1)[j])
 
 				var intersectPoint vec2d.Vec2
-				if (this.GetSegmentInsterset((*path1)[j], seg, (*staticbodys)[i].Position, vec2d.Add(R, vec2d.Vec2{1, 1}), &intersectPoint)) {
+				mypolygon2 := (*staticbodys)[i].GetMyPolygonBig(my, vec2d.Vec2{0.01, 0.01})
+				if this.GetSegmentInsterset((*path1)[j], seg, mypolygon2, &intersectPoint) {
 					(*path1)[j] = intersectPoint
 					j--
 					break
@@ -422,15 +556,16 @@ func (this *WardCore) ChangeErrorPath(my *Body, detourBody *Body, staticbodys *[
 			if (*staticbodys)[i] == my || (*staticbodys)[i] == detourBody {
 				continue
 			}
-			R := vec2d.Add(my.R, (*staticbodys)[i].R)
-			if (*staticbodys)[i].Position.X-R.X <= (*path2)[j].X && (*path2)[j].X <= (*staticbodys)[i].Position.X+R.X &&
-				(*staticbodys)[i].Position.Y-R.Y <= (*path2)[j].Y && (*path2)[j].Y <= (*staticbodys)[i].Position.Y+R.Y {
+			//R := vec2d.Add(my.R, (*staticbodys)[i].R)
+			mypolygon1 := (*staticbodys)[i].GetMyPolygon(my)
+			if mypolygon1.IsInMyPolygon((*path2)[j]) {
 				//更改点
 				dir := vec2d.Sub((*path2)[j], detourBody.Position)
 				seg := vec2d.Add(vec2d.Mul(dir.GetNormalized(), 10000), (*path2)[j])
 
 				var intersectPoint vec2d.Vec2
-				if (this.GetSegmentInsterset((*path2)[j], seg, (*staticbodys)[i].Position, vec2d.Add(R, vec2d.Vec2{1, 1}), &intersectPoint)) {
+				mypolygon2 := (*staticbodys)[i].GetMyPolygonBig(my, vec2d.Vec2{0.01, 0.01})
+				if this.GetSegmentInsterset((*path2)[j], seg, mypolygon2, &intersectPoint) {
 					(*path2)[j] = intersectPoint
 					j--
 					break
@@ -493,9 +628,10 @@ func (this *WardCore) OptimizePath(me *Body, staticbodys *[]*Body, path *[]vec2d
 				if (*staticbodys)[i] == me {
 					continue
 				}
-				R := vec2d.Add((*staticbodys)[i].R, me.R)
+				//R := vec2d.Add((*staticbodys)[i].R, me.R)
 				//
-				if this.IsSegmentCollionSquare(p1, p2, (*staticbodys)[i].Position, R) {
+				mypolygon := (*staticbodys)[i].GetMyPolygon(me)
+				if this.IsSegmentCollionSquare(p1, p2, mypolygon) {
 					isCollion = true
 					break
 				}
@@ -538,9 +674,10 @@ func (this *WardCore) CheckDetourPathNode2(dpnode *DetourPathNode, staticbodys *
 				if (*staticbodys)[i] == dpnode.my {
 					continue
 				}
-				R := vec2d.Add((*staticbodys)[i].R, dpnode.my.R)
+				//R := vec2d.Add((*staticbodys)[i].R, dpnode.my.R)
 				//
-				if this.IsSegmentCollionSquare(p1, p2, (*staticbodys)[i].Position, R) {
+				mypolygon := (*staticbodys)[i].GetMyPolygon(dpnode.my)
+				if this.IsSegmentCollionSquare(p1, p2, mypolygon) {
 					//继续绕路
 					if (*staticbodys)[i] == dpnode.collions {
 						log.Info("staticbodys[i] == dpnode->collions---%d", (*staticbodys)[i].Tag)
@@ -580,12 +717,13 @@ func (this *WardCore) CheckDetourPathNode2(dpnode *DetourPathNode, staticbodys *
 					isbreakpath = true
 					break
 				}
-				R := vec2d.Add(minDisCollion.R, dpnode.my.R)
+				//R := vec2d.Add(minDisCollion.R, dpnode.my.R)
 
 				path1 := make([]vec2d.Vec2, 0)
 				path2 := make([]vec2d.Vec2, 0)
 
 				detourPointIndex := pathindex + 1
+				mypolygon1 := minDisCollion.GetMyPolygon(dpnode.my)
 				for {
 					if detourPointIndex >= len(dpnodepath1) {
 						canPassAblePath1 = false
@@ -595,7 +733,7 @@ func (this *WardCore) CheckDetourPathNode2(dpnode *DetourPathNode, staticbodys *
 					//log.Info("----DoCheckGameData--tag:%d", minDisCollion.Tag)
 					//cocos2d::log("--------tag:%d", minDisCollion->Tag);
 
-					if this.CalcDetourPathFromSquare(p1, minDisCollion.Position, R, dpnodepath1[detourPointIndex], &path1, &path2) {
+					if this.CalcDetourPathFromSquare(p1, mypolygon1, dpnodepath1[detourPointIndex], &path1, &path2) {
 
 						this.ChangeErrorPath(dpnode.my, minDisCollion, staticbodys, &path1, &path2)
 
@@ -682,9 +820,10 @@ func (this *WardCore) CheckDetourPathNode1(dpnode *DetourPathNode, staticbodys *
 				if (*staticbodys)[i] == dpnode.my {
 					continue
 				}
-				R := vec2d.Add((*staticbodys)[i].R, dpnode.my.R)
-				//
-				if this.IsSegmentCollionSquare(p1, p2, (*staticbodys)[i].Position, R) {
+				//R := vec2d.Add((*staticbodys)[i].R, dpnode.my.R)
+				//-----------区别
+				mypolygon := (*staticbodys)[i].GetMyPolygon(dpnode.my)
+				if this.IsSegmentCollionSquare(p1, p2, mypolygon) {
 					//继续绕路
 					if (*staticbodys)[i] == dpnode.collions {
 						log.Info("staticbodys[i] == dpnode->collions---%d", (*staticbodys)[i].Tag)
@@ -724,12 +863,13 @@ func (this *WardCore) CheckDetourPathNode1(dpnode *DetourPathNode, staticbodys *
 					isbreakpath = true
 					break
 				}
-				R := vec2d.Add(minDisCollion.R, dpnode.my.R)
+				//R := vec2d.Add(minDisCollion.R, dpnode.my.R)
 
 				path1 := make([]vec2d.Vec2, 0)
 				path2 := make([]vec2d.Vec2, 0)
 
 				detourPointIndex := pathindex + 1
+				mypolygon1 := minDisCollion.GetMyPolygon(dpnode.my)
 				for {
 					if detourPointIndex >= len(dpnodepath1) {
 						canPassAblePath1 = false
@@ -738,8 +878,8 @@ func (this *WardCore) CheckDetourPathNode1(dpnode *DetourPathNode, staticbodys *
 					}
 					//log.Info("----DoCheckGameData--tag:%d", minDisCollion.Tag)
 					//cocos2d::log("--------tag:%d", minDisCollion->Tag);
-
-					if this.CalcDetourPathFromSquare(p1, minDisCollion.Position, R, dpnodepath1[detourPointIndex], &path1, &path2) {
+					//-----------区别
+					if this.CalcDetourPathFromSquare(p1, mypolygon1, dpnodepath1[detourPointIndex], &path1, &path2) {
 
 						this.ChangeErrorPath(dpnode.my, minDisCollion, staticbodys, &path1, &path2)
 
@@ -799,14 +939,14 @@ func (this *WardCore) CheckDetourPathNode1(dpnode *DetourPathNode, staticbodys *
 func (this *WardCore) CalcDetourPath(my *Body, collion *Body, targetPos vec2d.Vec2, path *[]vec2d.Vec2) {
 	(*path) = make([]vec2d.Vec2, 0)
 	//目标点被当前障碍物阻碍
-	R := vec2d.Add(collion.R, my.R)
-	if collion.NextPosition.X-R.X < targetPos.X && collion.NextPosition.X+R.X > targetPos.X &&
-		collion.NextPosition.Y-R.Y < targetPos.Y && collion.NextPosition.Y+R.Y > targetPos.Y {
+	//R := vec2d.Add(collion.R, my.R)
+	mypolygon1 := collion.GetMyPolygon(my)
+	if mypolygon1.IsInMyPolygon(targetPos) {
 		return
 	}
 
 	var path1, path2 []vec2d.Vec2
-	this.CalcDetourPathFromSquare(my.Position, collion.Position, R, targetPos, &path1, &path2)
+	this.CalcDetourPathFromSquare(my.Position, mypolygon1, targetPos, &path1, &path2)
 
 	var dpNode DetourPathNode
 	dpNode.parent = nil
@@ -832,9 +972,9 @@ func (this *WardCore) CalcDetourPath(my *Body, collion *Body, targetPos vec2d.Ve
 func (this *WardCore) GetNextPositionCollision(one *Body) *Body {
 	for i := 0; i < len(this.Bodys); i++ {
 		if this.Bodys[i] != one {
-			R := vec2d.Add(this.Bodys[i].R, one.R)
-			if this.Bodys[i].Position.X-R.X < one.NextPosition.X && this.Bodys[i].Position.X+R.X > one.NextPosition.X &&
-				this.Bodys[i].Position.Y-R.Y < one.NextPosition.Y && this.Bodys[i].Position.Y+R.Y > one.NextPosition.Y {
+			//R := vec2d.Add(this.Bodys[i].R, one.R)
+			mypolygon1 := this.Bodys[i].GetMyPolygon(one)
+			if mypolygon1.IsInMyPolygon(one.NextPosition) {
 				return this.Bodys[i]
 			}
 		}
@@ -853,9 +993,28 @@ func (this *WardCore) CreateBody(position vec2d.Vec2, r vec2d.Vec2, speedsize fl
 	body.R = r
 	body.SpeedSize = speedsize
 	body.Core = this
+	body.IsRect = true
+	body.M_MyPolygon = &MyPolygon{}
 
 	this.Bodys = append(this.Bodys, body)
 	return body
+}
+func (this *WardCore) CreateBodyPolygon(position vec2d.Vec2, points []vec2d.Vec2, speedsize float64) *Body {
+	body := &Body{}
+	body.Position = position
+	body.SpeedSize = speedsize
+	body.Core = this
+	body.IsRect = false
+	body.M_MyPolygon = &MyPolygon{}
+	body.OffsetPoints = points
+	this.Bodys = append(this.Bodys, body)
+	return body
+}
+
+func CreateWardCore() *WardCore {
+	re := &WardCore{}
+
+	return re
 }
 
 //	Body* Core::CreateBody(cocos2d::Vec2 position, cocos2d::Vec2 r, float speedsize)

@@ -132,6 +132,7 @@ func (app *DefaultApp) Run() error {
 	}
 
 	conf.LoadConfig(f.Name()) //加载配置文件
+	conf.LoadScene("/bin/conf/SceneCollides.sc")
 
 	log.InitBeego(true, "dq", Logdir, make(map[string]interface{}))
 

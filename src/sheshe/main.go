@@ -24,17 +24,8 @@ func main() {
 	app := new(app.DefaultApp)
 	app.Run()
 	log.Info("dq over!")
-
-	//	t1 := time.Now().UnixNano()
-
-	//	addnum := 0
-	//	for i := 0; i < 1000000000; i++ {
-	//		addnum++
-	//	}
-	//	t2 := time.Now().UnixNano()
-	//	log.Info("main time:%d", (t2-t1)/1e6)
-
-	//	core := &cyward.WardCore{}
+	//	log.Info("111!")
+	//	core := cyward.CreateWardCore()
 	//	var test []*cyward.Body
 
 	//	for i := 0; i < 10; i++ {
@@ -47,7 +38,27 @@ func main() {
 	//		}
 
 	//	}
+	//	var points []vec2d.Vec2
+	//	points = append(points, vec2d.Vec2{-10, 0})
+	//	points = append(points, vec2d.Vec2{0, 10})
+	//	points = append(points, vec2d.Vec2{10, 0})
+	//	points = append(points, vec2d.Vec2{0, -10})
+	//	//	points[0] = vec2d.Vec2{-10, 0}
+	//	//	points[1] = vec2d.Vec2{0, 10}
+	//	//	points[2] = vec2d.Vec2{10, 0}
+	//	//	points[3] = vec2d.Vec2{0, -10}
+	//	core.CreateBodyPolygon(vec2d.Vec2{400, 200}, points, 30.0)
 
-	//	test[22].SetTarget(vec2d.Vec2{float64(50), float64(300)})
+	//	t1 := time.Now().UnixNano()
+
+	//	test[0].SetTarget(vec2d.Vec2{float64(500), float64(300)})
+	//	test[1].SetTarget(vec2d.Vec2{float64(500), float64(300)})
+	//	test[2].SetTarget(vec2d.Vec2{float64(500), float64(300)})
+	//	test[3].SetTarget(vec2d.Vec2{float64(500), float64(300)})
+	//	test[4].SetTarget(vec2d.Vec2{float64(500), float64(300)})
+	//	test[5].SetTarget(vec2d.Vec2{float64(500), float64(300)})
+
+	//	t2 := time.Now().UnixNano()
+	//	log.Info("main time:%d", (t2-t1)/1e6)
 
 }
