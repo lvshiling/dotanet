@@ -1,19 +1,21 @@
 package gamescene1
 
 import (
-	"dq/conf"
+	//"dq/conf"
 	"dq/datamsg"
 	"dq/log"
 	"dq/network"
 	"net"
-	"time"
+	//"time"
 
 	//"dq/db"
-	//"dq/utils"
-	"dq/cyward"
+	"dq/utils"
+	//"dq/cyward"
+	"dq/gamecore"
 	"dq/protobuf"
-	"dq/timer"
-	"dq/vec2d"
+	//"dq/timer"
+	//"dq/vec2d"
+	"sync"
 
 	"github.com/golang/protobuf/proto"
 )
@@ -22,11 +24,11 @@ import (
 type GameScene1Agent struct {
 	conn network.Conn
 
-	userdata string
-
 	handles map[string]func(data *protomsg.MsgBase)
 
-	core *cyward.WardCore
+	Scenes *utils.BeeMap
+
+	wgScene sync.WaitGroup
 }
 
 func (a *GameScene1Agent) GetConnectId() int32 {
@@ -39,39 +41,82 @@ func (a *GameScene1Agent) GetModeType() string {
 
 func (a *GameScene1Agent) Init() {
 
-	scenedata := conf.GetSceneData("Map/set_5v5")
+	a.Scenes = utils.NewBeeMap()
 
-	for _, v := range scenedata.Collides {
-		log.Info("Collide %v", v)
-		//		if v.IsRect == true{
-		//			log.Info("IsRect= true %v",v)
-		//		}else{
-
-		//		}
-	}
-
-	a.core = cyward.CreateWardCore()
-
-	for i := 0; i < 10; i++ {
-		for j := 0; j < 10; j++ {
-			pos := vec2d.Vec2{float64(0 + i*40), float64(0 + j*40)}
-			r := vec2d.Vec2{float64(10 + i/2), float64(10 + j/2)}
-			t := a.core.CreateBody(pos, r, 100.0)
-			t.SetTag(i*10 + j)
-
-		}
-
-	}
-
-	timer.AddRepeatCallback(time.Millisecond*time.Duration((20)), a.Update)
+	//timer.AddRepeatCallback(time.Millisecond*time.Duration((100)), a.Update)
 
 	a.handles = make(map[string]func(data *protomsg.MsgBase))
+	a.handles["MsgUserEnterScene"] = a.DoMsgUserEnterScene
+	a.handles["CS_SetTarget"] = a.DoCSSetTarget
+
+	//创建场景
+	for k := 0; k < 1; k++ {
+		scene := gamecore.CreateScene("Map/set_5v5")
+		a.Scenes.Set("Map/set_5v5", scene)
+		a.wgScene.Add(1)
+		go func() {
+			scene.Update()
+			a.wgScene.Done()
+		}()
+	}
 
 	//玩家进来
 
 }
+
+func (a *GameScene1Agent) DoMsgUserEnterScene(data *protomsg.MsgBase) {
+
+	log.Info("---------DoMsgUserEnterScene")
+	h2 := &protomsg.MsgUserEnterScene{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	//	a.testplayer = &Player{}
+	//	a.testplayer.Uid = h2.Uid
+	//	a.testplayer.ConnectId = h2.ConnectId
+	//	a.testplayer.MainBody = a.core.CreateBody(vec2d.Vec2{-30, -30}, vec2d.Vec2{1, 1}, 10)
+
+	//	log.Info("MainBody %v", a.testplayer.MainBody)
+}
+func (a *GameScene1Agent) DoCSSetTarget(data *protomsg.MsgBase) {
+
+	log.Info("---------DoCSSetTarget")
+	h2 := &protomsg.CS_SetTarget{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	//	if a.testplayer != nil {
+	//		a.testplayer.MainBody.SetTarget(vec2d.Vec2{float64(h2.TargetPos.X), float64(h2.TargetPos.Y)})
+	//	}
+
+}
+
 func (a *GameScene1Agent) Update() {
-	a.core.Update(0.02)
+	//	a.core.Update(0.1)
+
+	//	a.SendMyData()
+}
+
+func (a *GameScene1Agent) SendMyData() {
+	//	if a.testplayer != nil {
+	//		//回复客户端
+	//		data := &protomsg.MsgBase{}
+	//		data.ModeType = "Client"
+	//		data.Uid = a.testplayer.Uid
+	//		data.ConnectId = a.testplayer.ConnectId
+	//		data.MsgType = "SC_LogicFrame"
+	//		jd := &protomsg.SC_LogicFrame{}
+	//		//jd.Position = a.testplayer.MainBody.Position
+	//		jd.Position = &protomsg.Point{}
+	//		jd.Position.X = float32(a.testplayer.MainBody.Position.X)
+	//		jd.Position.Y = float32(a.testplayer.MainBody.Position.Y)
+	//		a.WriteMsgBytes(datamsg.NewMsg1Bytes(data, jd))
+	//	}
+
 }
 
 func (a *GameScene1Agent) Run() {
@@ -108,7 +153,16 @@ func (a *GameScene1Agent) doMessage(data []byte) {
 }
 
 func (a *GameScene1Agent) OnClose() {
+	scenes := a.Scenes.Items()
+	for _, v := range scenes {
+		v.(*gamecore.Scene).Close()
+	}
 
+	a.wgScene.Wait()
+
+	//存储玩家数据
+
+	log.Info("GameScene1Agent OnClose")
 }
 
 func (a *GameScene1Agent) WriteMsg(msg interface{}) {

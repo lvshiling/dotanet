@@ -71,13 +71,24 @@ func (a *LoginAgent) DoQuickLoginData(data *protomsg.MsgBase) {
 	//--------------------
 	a.NotifyGateLogined(data.ConnectId, uid)
 
-	//	//回复客户端
-	//	data.ModeType = "Client"
-	//	data.Uid = (uid)
-	//	data.MsgType = "SC_LoginResponse"
-	//	jd := make(map[string]interface{})
-	//	jd["result"] = 1 //成功
-	//	a.WriteMsgBytes(datamsg.NewMsg1Bytes(data, jd))
+	//回复客户端
+	data.ModeType = "Client"
+	data.Uid = (uid)
+	data.MsgType = "SC_Logined"
+	jd := &protomsg.SC_Logined{}
+	jd.Code = 1 //成功
+	a.WriteMsgBytes(datamsg.NewMsg1Bytes(data, jd))
+
+	//通知进入场景
+	t2 := protomsg.MsgUserEnterScene{
+		Uid:       uid,
+		ConnectId: data.ConnectId,
+	}
+	t1 := protomsg.MsgBase{
+		ModeType: datamsg.GameScene1,
+		MsgType:  "MsgUserEnterScene",
+	}
+	a.WriteMsgBytes(datamsg.NewMsg1Bytes(&t1, &t2))
 
 }
 

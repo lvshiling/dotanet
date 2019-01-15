@@ -108,10 +108,10 @@ type Scene struct {
 }
 type Collide struct {
 	IsRect  bool
-	CenterX float32
-	CenterY float32
-	Width   float32
-	Height  float32
+	CenterX float64
+	CenterY float64
+	Width   float64
+	Height  float64
 	Points  []vec2d.Vec2
 }
 
