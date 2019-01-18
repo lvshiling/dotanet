@@ -5,12 +5,7 @@ syntax = "proto3";
 //包名，通过protoc生成时go文件时
 package protomsg;
 
-//手机类型
-//枚举类型第一个字段必须为0
-enum PhoneType {
-    HOME = 0;
-    WORK = 1;
-}
+
 message MsgBase {
     string  ModeType = 1;
     int32   Uid = 2;
@@ -42,22 +37,46 @@ message Point {
     float Y = 2;
 }
 
-//测试
-message CS_SetTarget {
-    Point TargetPos = 1;
+//单位数据
+message UnitDatas{
+    string  Name = 1;
+    int32   Level = 2;
+    int32   HP = 3;
+    int32   MP = 4;
+    float   X = 5;
+    float   Y = 6;
+    int32   ID = 7;
+    string  ModeType = 8;//模型类型(客户端使用的模型名字)
+    int32   MaxHP = 9;
+    int32   MaxMP = 10;
+    int32   Experience = 11;
+    int32   MaxExperience = 12;
+
+    //单位状态(idle walk attack skill die)
+    //各种buff状态(单位身上的buff 包括剩余时间)
+    //单位的装备
+    //单位的技能
+
 }
+
+
 
 message MsgUserEnterScene {
     int32 Uid = 1;
     int32 ConnectId = 2;
+    string SrcServerName = 3;
+    string DestServerName = 4;
+    string SceneName = 5;
+    bytes Datas = 6;
 }
 
 
-//------服务器发给客户端的消息
-//测试
-message SC_LogicFrame {
-    Point Position = 1;
+message SC_Update  {
+    repeated UnitDatas NewUnits = 1;//新的单位数据
+    repeated UnitDatas OldUnits = 2;//旧单位(只更新变化的值)
+    repeated int32 RemoveUnits = 3;//删除单位(单位ID)
 }
+
 
 
 message SC_Logined {
