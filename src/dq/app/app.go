@@ -79,7 +79,15 @@ func (app *DefaultApp) Init() {
 			return a
 		} else if modelType == datamsg.GameScene1 {
 			a := &gamescene1.GameScene1{
-				TCPAddr: conf.Conf.Game5GInfo["GateIp"].(string),
+				TCPAddr:    conf.Conf.Game5GInfo["GateIp"].(string),
+				ServerName: datamsg.GameScene1,
+			}
+			//app.databaseOne.Do(db.CreateDB)
+			return a
+		} else if modelType == "GameScene2" {
+			a := &gamescene1.GameScene1{
+				TCPAddr:    conf.Conf.Game5GInfo["GateIp"].(string),
+				ServerName: "GameScene2",
 			}
 			//app.databaseOne.Do(db.CreateDB)
 			return a

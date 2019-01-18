@@ -19,7 +19,35 @@ import (
 	//"dq/vec2d"
 )
 
+//type test struct {
+//	x int32
+//	y int32
+//}
+
 func main() {
+
+	//	t1 := make(map[int32][]test)
+	//	for i := 0; i < 10; i++ {
+
+	//		p := test{}
+	//		p.x = int32(i)
+	//		p.y = int32(i)
+	//		t1[int32(i%2)] = append(t1[int32(i%2)], p)
+	//	}
+
+	//	t1 = make(map[int32][]test)
+	//	_, ok1 := t1[0]
+	//	t1[100] = make([]test, 0)
+	//	_, ok2 := t1[100]
+
+	//	log.Info("-:%b---%b", ok1, ok2)
+
+	//	for k, v := range t1 {
+	//		for _, v1 := range v {
+	//			log.Info("k:%d---%v", k, v1)
+	//		}
+
+	//	}
 
 	app := new(app.DefaultApp)
 	app.Run()

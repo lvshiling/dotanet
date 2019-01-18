@@ -39,6 +39,8 @@ func (a *agent) Run() {
 			break
 		}
 
+		log.Info("--data:%s---len:%d", data, len(data))
+
 		h1 := &protomsg.MsgBase{}
 		err = proto.Unmarshal(data, h1)
 

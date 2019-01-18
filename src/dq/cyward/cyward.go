@@ -107,7 +107,8 @@ type Body struct {
 
 //避障核心
 type WardCore struct {
-	Bodys []*Body
+	Bodys map[*Body]*Body
+	//Bodys []*Body
 }
 
 func (this *Body) GetMyPolygonBig(p1 *Body, big vec2d.Vec2) *MyPolygon {
@@ -358,17 +359,6 @@ func (this *WardCore) GetSegmentInsterset(p1 vec2d.Vec2, p2 vec2d.Vec2, mypolygo
 	}
 }
 
-func (this *WardCore) GetStaticBodys(bodys *[]*Body) {
-	for i := 0; i < len(this.Bodys); i++ {
-		if this.Bodys[i].CurSpeedSize <= 0 {
-			(*bodys) = append((*bodys), this.Bodys[i])
-		}
-	}
-}
-
-func (this *WardCore) GetBodys() *[]*Body {
-	return &this.Bodys
-}
 func (this *WardCore) GetPointIndexFromSquare(mypolygon *MyPolygon, targetPos vec2d.Vec2, posIndex *[]int) {
 	//正方形的4个顶点
 	if mypolygon.IsRect {
@@ -969,23 +959,57 @@ func (this *WardCore) CalcDetourPath(my *Body, collion *Body, targetPos vec2d.Ve
 		log.Info("2222222222222")
 	}
 }
+
+func (this *WardCore) GetStaticBodys(bodys *[]*Body) {
+
+	for _, v := range this.Bodys {
+		if v.CurSpeedSize <= 0 {
+			(*bodys) = append((*bodys), v)
+		}
+	}
+
+	//	for i := 0; i < len(this.Bodys); i++ {
+	//		if this.Bodys[i].CurSpeedSize <= 0 {
+	//			(*bodys) = append((*bodys), this.Bodys[i])
+	//		}
+	//	}
+}
+
+//func (this *WardCore) GetBodys() *[]*Body {
+//	return &this.Bodys
+//}
+
 func (this *WardCore) GetNextPositionCollision(one *Body) *Body {
-	for i := 0; i < len(this.Bodys); i++ {
-		if this.Bodys[i] != one {
-			//R := vec2d.Add(this.Bodys[i].R, one.R)
-			mypolygon1 := this.Bodys[i].GetMyPolygon(one)
+
+	for _, v := range this.Bodys {
+		if v != one {
+
+			mypolygon1 := v.GetMyPolygon(one)
 			if mypolygon1.IsInMyPolygon(one.NextPosition) {
-				return this.Bodys[i]
+				return v
 			}
 		}
 	}
+
+	//	for i := 0; i < len(this.Bodys); i++ {
+	//		if this.Bodys[i] != one {
+	//			//R := vec2d.Add(this.Bodys[i].R, one.R)
+	//			mypolygon1 := this.Bodys[i].GetMyPolygon(one)
+	//			if mypolygon1.IsInMyPolygon(one.NextPosition) {
+	//				return this.Bodys[i]
+	//			}
+	//		}
+	//	}
 	return nil
 }
 
 func (this *WardCore) Update(dt float64) {
-	for i := 0; i < len(this.Bodys); i++ {
-		this.Bodys[i].Update(dt)
+	for _, v := range this.Bodys {
+		v.Update(dt)
 	}
+	//	for i := 0; i < len(this.Bodys); i++ {
+	//		this.Bodys[i].Update(dt)
+	//	}
 }
 func (this *WardCore) CreateBody(position vec2d.Vec2, r vec2d.Vec2, speedsize float64) *Body {
 	body := &Body{}
@@ -996,7 +1020,7 @@ func (this *WardCore) CreateBody(position vec2d.Vec2, r vec2d.Vec2, speedsize fl
 	body.IsRect = true
 	body.M_MyPolygon = &MyPolygon{}
 
-	this.Bodys = append(this.Bodys, body)
+	this.Bodys[body] = body
 	return body
 }
 func (this *WardCore) CreateBodyPolygon(position vec2d.Vec2, points []vec2d.Vec2, speedsize float64) *Body {
@@ -1007,12 +1031,20 @@ func (this *WardCore) CreateBodyPolygon(position vec2d.Vec2, points []vec2d.Vec2
 	body.IsRect = false
 	body.M_MyPolygon = &MyPolygon{}
 	body.OffsetPoints = points
-	this.Bodys = append(this.Bodys, body)
+	this.Bodys[body] = body
 	return body
+}
+
+func (this *WardCore) RemoveBody(body *Body) {
+
+	delete(this.Bodys, body)
+	//this.Bodys = append(this.Bodys, body)
+	//return body
 }
 
 func CreateWardCore() *WardCore {
 	re := &WardCore{}
+	re.Bodys = make(map[*Body]*Body)
 
 	return re
 }

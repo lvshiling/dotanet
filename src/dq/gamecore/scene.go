@@ -16,10 +16,15 @@ type Scene struct {
 	MoveCore       *cyward.WardCore //移动核心
 	SceneName      string           //场景名字
 
-	Units *utils.BeeMap //游戏中的单位
+	Players   map[int32]*Player     //游戏中所有的玩家
+	Units     map[int32]*Unit       //游戏中所有的单位
+	ZoneUnits map[SceneZone][]*Unit //
 
 	NextAddUnit    *utils.BeeMap //下一帧需要增加的单位
 	NextRemoveUnit *utils.BeeMap //下一帧需要删除的单位
+
+	NextAddPlayer    *utils.BeeMap //下一帧需要增加的玩家
+	NextRemovePlayer *utils.BeeMap //下一帧需要删除的玩家
 
 	Quit bool //是否退出
 }
@@ -37,12 +42,19 @@ func (this *Scene) Init() {
 
 	this.LastUpdateTime = time.Now().UnixNano()
 
-	this.Units = utils.NewBeeMap()
 	this.NextAddUnit = utils.NewBeeMap()
 	this.NextRemoveUnit = utils.NewBeeMap()
 
+	this.NextAddPlayer = utils.NewBeeMap()
+	this.NextRemovePlayer = utils.NewBeeMap()
+
+	this.Players = make(map[int32]*Player)
+	this.Units = make(map[int32]*Unit)
+	this.ZoneUnits = make(map[SceneZone][]*Unit)
+
 	scenedata := conf.GetSceneData(this.SceneName)
 
+	//场景碰撞区域
 	this.MoveCore = cyward.CreateWardCore()
 	for _, v := range scenedata.Collides {
 		log.Info("Collide %v", v)
@@ -55,6 +67,8 @@ func (this *Scene) Init() {
 			this.MoveCore.CreateBodyPolygon(pos, v.Points, 1)
 		}
 	}
+	//场景分区数据
+
 }
 
 func (this *Scene) Update() {
@@ -62,23 +76,16 @@ func (this *Scene) Update() {
 	for {
 		this.DoAddAndRemoveUnit()
 
-		this.MoveCore.Update(1 / float64(SceneFrame))
+		this.DoMove()
 
-		//处理单位逻辑
-		units := this.Units.Items()
-		for _, v := range units {
-			v.(*Unit).PreUpdate(1 / float64(SceneFrame))
-		}
-		for _, v := range units {
-			v.(*Unit).Update(1 / float64(SceneFrame))
-		}
-		sencond := time.Second
-		onetime := int64(1 / float64(SceneFrame) * float64(sencond))
-		t1 := time.Now().UnixNano()
-		if (t1 - this.LastUpdateTime) < onetime {
-			time.Sleep(time.Duration(onetime - (t1 - this.LastUpdateTime)))
-		}
-		this.LastUpdateTime = t1
+		this.DoZone()
+
+		this.DoLogic()
+
+		this.DoSleep()
+
+		this.DoSendData()
+		//处理分区
 
 		if this.Quit {
 			break
@@ -88,29 +95,125 @@ func (this *Scene) Update() {
 
 }
 
+//同步数据
+func (this *Scene) DoSendData() {
+
+	//生成单位的 客户端 显示数据
+	for _, v := range this.Units {
+		v.FreshClientData()
+	}
+
+	//遍历所有玩家
+	for _, player := range this.Players {
+		v := player.MainUnit
+		if v == nil {
+			continue
+		}
+		zones := GetVisibleZones((v.Body.Position.X), (v.Body.Position.Y))
+		//遍历可视区域
+		for _, vzone := range zones {
+			if _, ok := this.ZoneUnits[vzone]; ok {
+				//遍历区域中的单位
+				for _, unit := range this.ZoneUnits[vzone] {
+					player.AddUnitData(unit.ClientData)
+
+				}
+			}
+		}
+	}
+}
+
+//处理移动
+func (this *Scene) DoMove() {
+	this.MoveCore.Update(1 / float64(SceneFrame))
+}
+
+//处理分区
+func (this *Scene) DoZone() {
+	this.ZoneUnits = make(map[SceneZone][]*Unit)
+	for _, v := range this.Units {
+
+		zone := GetSceneZone((v.Body.Position.X), (v.Body.Position.Y))
+		this.ZoneUnits[zone] = append(this.ZoneUnits[zone], v)
+
+	}
+}
+
+//处理单位逻辑
+func (this *Scene) DoLogic() {
+	//处理单位逻辑
+	for _, v := range this.Units {
+		v.PreUpdate(1 / float64(SceneFrame))
+	}
+	for _, v := range this.Units {
+		v.Update(1 / float64(SceneFrame))
+	}
+}
+
+//处理sleep
+func (this *Scene) DoSleep() {
+	sencond := time.Second
+	onetime := int64(1 / float64(SceneFrame) * float64(sencond))
+	t1 := time.Now().UnixNano()
+	if (t1 - this.LastUpdateTime) < onetime {
+		time.Sleep(time.Duration(onetime - (t1 - this.LastUpdateTime)))
+	}
+	this.LastUpdateTime = t1
+}
+
 //增加单位
 func (this *Scene) DoAddAndRemoveUnit() {
 	//增加
 	itemsadd := this.NextAddUnit.Items()
 	for k, v := range itemsadd {
-		if v.(*Unit).Body == nil {
-
-			//设置移动核心body
-			pos := vec2d.Vec2{0.0, 0.0}
-			r := vec2d.Vec2{1, 1}
-
-			v.(*Unit).Body = this.MoveCore.CreateBody(pos, r, 0)
+		if v.(*Unit).Body != nil {
+			this.MoveCore.RemoveBody(v.(*Unit).Body)
+			v.(*Unit).Body = nil
 		}
-		this.Units.Set(k, v)
+
+		//设置移动核心body
+		pos := vec2d.Vec2{0, 0}
+		r := vec2d.Vec2{1, 1}
+
+		v.(*Unit).Body = this.MoveCore.CreateBody(pos, r, 0)
+
+		this.Units[k.(int32)] = v.(*Unit)
+
+		this.NextAddUnit.Delete(k)
+
+		//this.Players[]
 	}
-	this.NextAddUnit.DeleteAll()
+	//this.NextAddUnit.DeleteAll()
 
 	//删除
 	itemsremove := this.NextRemoveUnit.Items()
-	for k, _ := range itemsremove {
-		this.Units.Delete(k)
+	for k, v := range itemsremove {
+		this.MoveCore.RemoveBody(v.(*Unit).Body)
+		//v.(*Unit).Body
+		//this.Units.Delete(k)
+		delete(this.Units, k.(int32))
+
+		this.NextRemoveUnit.Delete(k)
 	}
-	this.NextRemoveUnit.DeleteAll()
+	//this.NextRemoveUnit.DeleteAll()
+
+	//增加玩家
+	playeradd := this.NextAddPlayer.Items()
+	for k, v := range playeradd {
+		this.Players[k.(int32)] = v.(*Player)
+
+		this.NextAddPlayer.Delete(k)
+	}
+	//this.NextAddPlayer.DeleteAll()
+
+	//删除玩家
+	playerremove := this.NextRemovePlayer.Items()
+	for k, _ := range playerremove {
+		delete(this.Players, k.(int32))
+
+		this.NextRemovePlayer.Delete(k)
+	}
+	//this.NextRemovePlayer.DeleteAll()
 
 }
 
@@ -119,15 +222,21 @@ func (this *Scene) Close() {
 }
 
 //玩家进入
-func (this *Scene) PlayerGoin(player *Player) {
+func (this *Scene) PlayerGoin(player *Player, datas []byte) {
 	if player.MainUnit == nil {
-		player.MainUnit = CreateUnit(this)
+		player.MainUnit = CreateUnitByPlayer(this, player.Uid, player, datas)
 
-		this.NextAddUnit.Set(player.MainUnit.ID, player.MainUnit)
 	}
+
+	this.NextAddUnit.Set(player.MainUnit.ID, player.MainUnit)
+
+	this.NextAddPlayer.Set(player.Uid, player)
 }
 
 //玩家退出
 func (this *Scene) PlayerGoout(player *Player) {
+	//删除主单位
+	this.NextRemoveUnit.Set(player.MainUnit.ID, player.MainUnit)
 
+	this.NextRemovePlayer.Set(player.Uid, player)
 }

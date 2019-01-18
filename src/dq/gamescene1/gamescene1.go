@@ -13,6 +13,8 @@ type GameScene1 struct {
 	TCPAddr string
 
 	TcpClient *network.TCPClient
+
+	ServerName string
 }
 
 func (game5g *GameScene1) Run(closeSig chan bool) {
@@ -24,6 +26,7 @@ func (game5g *GameScene1) Run(closeSig chan bool) {
 
 		tcpClient.NewAgent = func(conn *network.TCPConn) network.Agent {
 			a := &GameScene1Agent{conn: conn}
+			a.ServerName = game5g.ServerName
 			a.RegisterToGate()
 			return a
 		}

@@ -20,8 +20,8 @@ type TCPClient struct {
 	closeFlag       bool
 
 	// msg parser
-	
-	msgParser    *MsgParser
+
+	msgParser *MsgParser
 }
 
 func (client *TCPClient) Start() {
@@ -61,7 +61,7 @@ func (client *TCPClient) init() {
 
 	// msg parser
 	msgParser := NewMsgParser()
-	
+
 	client.msgParser = msgParser
 }
 
@@ -106,7 +106,6 @@ reconnect:
 	delete(client.conns, conn)
 	client.Unlock()
 	agent.OnClose()
-
 	if client.AutoReconnect {
 		time.Sleep(client.ConnectInterval)
 		goto reconnect
@@ -114,13 +113,14 @@ reconnect:
 }
 
 func (client *TCPClient) Close() {
+
 	client.Lock()
 	client.closeFlag = true
+	client.AutoReconnect = false
 	for conn := range client.conns {
 		conn.Close()
 	}
 	client.conns = nil
 	client.Unlock()
-
 	client.wg.Wait()
 }
