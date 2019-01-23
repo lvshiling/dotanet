@@ -52,6 +52,8 @@ func (a *GameScene1Agent) Init() {
 	a.handles = make(map[string]func(data *protomsg.MsgBase))
 	a.handles["MsgUserEnterScene"] = a.DoMsgUserEnterScene
 
+	a.handles["CS_PlayerOperate"] = a.DoPlayerOperate
+
 	//创建场景
 	for k := 0; k < 1; k++ {
 		scene := gamecore.CreateScene("Map/set_5v5")
@@ -76,6 +78,8 @@ func (a *GameScene1Agent) DoMsgUserEnterScene(data *protomsg.MsgBase) {
 		log.Info(err.Error())
 		return
 	}
+
+	log.Info("---------datas:%d---%s", len(h2.Datas), string(h2.Datas))
 
 	//如果目的地服务器是本服务器
 	if h2.DestServerName == a.ServerName {
@@ -102,6 +106,26 @@ func (a *GameScene1Agent) DoMsgUserEnterScene(data *protomsg.MsgBase) {
 
 }
 
+func (a *GameScene1Agent) DoPlayerOperate(data *protomsg.MsgBase) {
+
+	log.Info("---------DoPlayerOperate")
+	h2 := &protomsg.CS_PlayerOperate{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+
+	//	player := a.Players.Get(h2.Uid)
+	//	if player == nil {
+	//		return
+	//	}
+
+	//	player.(*gamecore.Player).
+
+}
+
+//
 func (a *GameScene1Agent) Run() {
 
 	a.Init()

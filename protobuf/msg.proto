@@ -6,6 +6,9 @@ syntax = "proto3";
 package protomsg;
 
 
+
+
+
 message MsgBase {
     string  ModeType = 1;
     int32   Uid = 2;
@@ -32,10 +35,16 @@ message CS_Login {
     string QQ_id = 5;
 }
 
-message Point {
-    float X = 1;
-    float Y = 2;
+
+//玩家操作
+message CS_PlayerOperate {
+    repeated int32 IDs = 1;//操作的单位对象
+    int32 Type = 2;//操作类型 0:移动  1:攻击  2:技能
+    float X = 3;//移动的x方向 技能的目标点x或目标方向
+    float Y = 4;//移动的Y方向 技能的目标点Y或目标方向
+    int32 TargetUnitID = 5;//攻击对象id 或者技能对象ID
 }
+
 
 //单位数据
 message UnitDatas{
@@ -67,19 +76,28 @@ message MsgUserEnterScene {
     string SrcServerName = 3;
     string DestServerName = 4;
     string SceneName = 5;
-    bytes Datas = 6;
+    bytes Datas = 6;    //玩家信息数据
 }
 
 
+//每帧更新单位数据
 message SC_Update  {
-    repeated UnitDatas NewUnits = 1;//新的单位数据
-    repeated UnitDatas OldUnits = 2;//旧单位(只更新变化的值)
-    repeated int32 RemoveUnits = 3;//删除单位(单位ID)
+    int32   CurFrame = 1;//当前帧
+    repeated UnitDatas NewUnits = 2;//新的单位数据
+    repeated UnitDatas OldUnits = 3;//旧单位(只更新变化的值)
+    repeated int32 RemoveUnits = 4;//删除单位(单位ID)
 }
 
+//玩家进入新场景时的场景信息
+message SC_NewScene{
+    string Name = 1;//场景名称
+    int32  LogicFps = 2;//逻辑帧率 (20即每秒20帧)
+    int32  CurFrame = 3;//当前帧 (客户端通过当前帧和本地时间匹配计算延时逻辑)
+}
 
 
 message SC_Logined {
     int32 Code = 1;//登录结果 1表示成功 0表示失败
-    string Error = 2;//失败原因
+    int32 Uid = 2;//UID
+    string Error = 3;//失败原因
 }

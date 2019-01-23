@@ -3,6 +3,8 @@ package gamecore
 import (
 	"dq/datamsg"
 	"dq/protobuf"
+
+	"github.com/golang/protobuf/proto"
 )
 
 type Server interface {
@@ -19,72 +21,65 @@ type Player struct {
 	//OtherUnit  *Unit //其他单位
 
 	//组合数据包相关
-	LastUnitDatas map[int32]*protomsg.UnitDatas
-	CurUnitDatas  map[int32]*protomsg.UnitDatas
-	Msg           *protomsg.SC_Update
+	LastShowUnit map[int32]*Unit
+	CurShowUnit  map[int32]*Unit
+	Msg          *protomsg.SC_Update
 }
 
 func CreatePlayer(uid int32, connectid int32) *Player {
 	re := &Player{}
 	re.Uid = uid
 	re.ConnectId = connectid
-	re.LastUnitDatas = make(map[int32]*protomsg.UnitDatas)
-	re.CurUnitDatas = make(map[int32]*protomsg.UnitDatas)
-
+	re.LastShowUnit = make(map[int32]*Unit)
+	re.CurShowUnit = make(map[int32]*Unit)
+	re.Msg = &protomsg.SC_Update{}
 	return re
 }
 
-//获取差异包
-//func GetChangedValueOfUnitDatas(last *protomsg.UnitDatas, cur *protomsg.UnitDatas) *protomsg.UnitDatas {
-//	re := &protomsg.UnitDatas{}
-
-//}
-
-//开始组合客户端显示单位数据
-func (this *Player) StartComClientData() {
-
-	this.CurUnitDatas = make(map[int32]*protomsg.UnitDatas)
-	//
-	this.Msg = &protomsg.SC_Update{}
-
-	//	for _,v := range this.LastUnitDatas{
-	//		this.Msg.RemoveUnits = append()
-	//	}
-}
-
 //添加客户端显示单位数据包
-func (this *Player) AddUnitData(data protomsg.UnitDatas) {
+func (this *Player) AddUnitData(unit *Unit) {
 
-	this.CurUnitDatas[data.ID] = &data
+	this.CurShowUnit[unit.ID] = unit
 
-	if _, ok := this.LastUnitDatas[data.ID]; ok {
+	if _, ok := this.LastShowUnit[unit.ID]; ok {
 		//旧单位(只更新变化的值)
+		d1 := *unit.ClientDataSub
+		this.Msg.OldUnits = append(this.Msg.OldUnits, &d1)
 	} else {
 		//新的单位数据
-		this.Msg.NewUnits = append(this.Msg.NewUnits, &data)
+		d1 := *unit.ClientData
+		this.Msg.NewUnits = append(this.Msg.NewUnits, &d1)
 	}
 
 }
 
-func (this *Player) SendMsg() {
+func (this *Player) SendUpdateMsg(curframe int32) {
 
 	//删除的单位 id
-	for k, _ := range this.LastUnitDatas {
-		if _, ok := this.CurUnitDatas[k]; !ok {
+	for k, _ := range this.LastShowUnit {
+		if _, ok := this.CurShowUnit[k]; !ok {
 			this.Msg.RemoveUnits = append(this.Msg.RemoveUnits, k)
 		}
 	}
 
 	//回复客户端
+	this.Msg.CurFrame = curframe
+	this.SendMsgToClient("SC_Update", this.Msg)
+
+	//重置数据
+	this.LastShowUnit = this.CurShowUnit
+	this.CurShowUnit = make(map[int32]*Unit)
+	this.Msg = &protomsg.SC_Update{}
+}
+
+func (this *Player) SendMsgToClient(msgtype string, msg proto.Message) {
 	data := &protomsg.MsgBase{}
 	data.ConnectId = this.ConnectId
 	data.ModeType = "Client"
 	data.Uid = this.Uid
-	data.MsgType = "SC_Update"
+	data.MsgType = msgtype
 
-	this.ServerAgent.WriteMsgBytes(datamsg.NewMsg1Bytes(data, this.Msg))
-
-	this.LastUnitDatas = this.CurUnitDatas
+	this.ServerAgent.WriteMsgBytes(datamsg.NewMsg1Bytes(data, msg))
 }
 
 //退出场景

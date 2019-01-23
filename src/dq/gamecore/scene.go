@@ -4,6 +4,7 @@ import (
 	"dq/conf"
 	"dq/cyward"
 	"dq/log"
+	"dq/protobuf"
 	"dq/utils"
 	"dq/vec2d"
 	"time"
@@ -15,10 +16,11 @@ type Scene struct {
 	LastUpdateTime int64            //上次更新时间
 	MoveCore       *cyward.WardCore //移动核心
 	SceneName      string           //场景名字
+	CurFrame       int32            //当前帧
 
 	Players   map[int32]*Player     //游戏中所有的玩家
 	Units     map[int32]*Unit       //游戏中所有的单位
-	ZoneUnits map[SceneZone][]*Unit //
+	ZoneUnits map[SceneZone][]*Unit //区域中的单位
 
 	NextAddUnit    *utils.BeeMap //下一帧需要增加的单位
 	NextRemoveUnit *utils.BeeMap //下一帧需要删除的单位
@@ -39,6 +41,7 @@ func CreateScene(name string) *Scene {
 
 //初始化
 func (this *Scene) Init() {
+	this.CurFrame = 0
 
 	this.LastUpdateTime = time.Now().UnixNano()
 
@@ -74,6 +77,9 @@ func (this *Scene) Init() {
 func (this *Scene) Update() {
 
 	for {
+
+		this.CurFrame++
+
 		this.DoAddAndRemoveUnit()
 
 		this.DoMove()
@@ -82,9 +88,10 @@ func (this *Scene) Update() {
 
 		this.DoLogic()
 
+		this.DoSendData()
+
 		this.DoSleep()
 
-		this.DoSendData()
 		//处理分区
 
 		if this.Quit {
@@ -100,6 +107,7 @@ func (this *Scene) DoSendData() {
 
 	//生成单位的 客户端 显示数据
 	for _, v := range this.Units {
+		v.FreshClientDataSub()
 		v.FreshClientData()
 	}
 
@@ -115,11 +123,11 @@ func (this *Scene) DoSendData() {
 			if _, ok := this.ZoneUnits[vzone]; ok {
 				//遍历区域中的单位
 				for _, unit := range this.ZoneUnits[vzone] {
-					player.AddUnitData(unit.ClientData)
-
+					player.AddUnitData(unit)
 				}
 			}
 		}
+		player.SendUpdateMsg(this.CurFrame)
 	}
 }
 
@@ -231,6 +239,13 @@ func (this *Scene) PlayerGoin(player *Player, datas []byte) {
 	this.NextAddUnit.Set(player.MainUnit.ID, player.MainUnit)
 
 	this.NextAddPlayer.Set(player.Uid, player)
+
+	//发送场景信息给玩家
+	msg := &protomsg.SC_NewScene{}
+	msg.Name = this.SceneName
+	msg.LogicFps = int32(SceneFrame)
+	msg.CurFrame = this.CurFrame
+	player.SendMsgToClient("SC_NewScene", msg)
 }
 
 //玩家退出

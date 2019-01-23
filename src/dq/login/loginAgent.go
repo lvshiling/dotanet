@@ -3,9 +3,11 @@ package login
 import (
 	"dq/datamsg"
 	"dq/db"
+	"dq/gamecore"
 	"dq/log"
 	"dq/network"
 	"dq/protobuf"
+	"dq/utils"
 	"math/rand"
 	"net"
 	"time"
@@ -80,9 +82,23 @@ func (a *LoginAgent) DoQuickLoginData(data *protomsg.MsgBase) {
 	a.WriteMsgBytes(datamsg.NewMsg1Bytes(data, jd))
 
 	//通知进入场景
+	d1 := &gamecore.UnitProperty{}
+	d1.HP = 1000
+	d1.MAX_HP = 1000
+	d1.MAX_MP = 1000
+	d1.MAX_MP = 1000
+	d1.Name = "t1"
+	d1.Level = 5
+	d1.ModeType = "Hero/hero1"
+	d1.Experience = 1000
+	d1.Experience = 10000
 	t2 := protomsg.MsgUserEnterScene{
-		Uid:       uid,
-		ConnectId: data.ConnectId,
+		Uid:            uid,
+		ConnectId:      data.ConnectId,
+		SrcServerName:  "",
+		DestServerName: "GameScene1",
+		SceneName:      "Map/set_5v5",
+		Datas:          utils.Struct2Bytes(d1),
 	}
 	t1 := protomsg.MsgBase{
 		ModeType: datamsg.GameScene1,
