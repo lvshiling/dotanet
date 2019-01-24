@@ -80,6 +80,7 @@ func (this *Player) SendMsgToClient(msgtype string, msg proto.Message) {
 	data.MsgType = msgtype
 
 	this.ServerAgent.WriteMsgBytes(datamsg.NewMsg1Bytes(data, msg))
+
 }
 
 //退出场景
@@ -97,4 +98,13 @@ func (this *Player) GoInScene(scene *Scene, datas []byte) {
 	this.CurScene = scene
 
 	this.CurScene.PlayerGoin(this, datas)
+}
+
+//玩家移动操作
+func (this *Player) MoveCmd(data *protomsg.CS_PlayerMove) {
+	for _, v := range data.IDs {
+		if this.MainUnit.ID == v {
+			this.MainUnit.MoveCmd(data)
+		}
+	}
 }

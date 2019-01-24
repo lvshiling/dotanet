@@ -36,10 +36,23 @@ message CS_Login {
 }
 
 
-//玩家操作
-message CS_PlayerOperate {
+//玩家移动操作
+message CS_PlayerMove {
     repeated int32 IDs = 1;//操作的单位对象
-    int32 Type = 2;//操作类型 0:移动  1:攻击  2:技能
+    float X = 2;//移动的x方向 技能的目标点x或目标方向
+    float Y = 3;//移动的Y方向 技能的目标点Y或目标方向
+    bool IsStart = 4;//true 表示开始移动  false表示结束移动
+}
+//玩家攻击操作
+message CS_PlayerAttack {
+    repeated int32 IDs = 1;//操作的单位对象
+    int32 TargetUnitID = 2;//攻击对象id 或者技能对象ID
+}
+
+//玩家技能(包括道具)
+message CS_PlayerSkill {
+    int32 IDs = 1;//操作的单位对象
+    int32 SkillID = 2;//技能id
     float X = 3;//移动的x方向 技能的目标点x或目标方向
     float Y = 4;//移动的Y方向 技能的目标点Y或目标方向
     int32 TargetUnitID = 5;//攻击对象id 或者技能对象ID
@@ -60,6 +73,7 @@ message UnitDatas{
     int32   MaxMP = 10;
     int32   Experience = 11;
     int32   MaxExperience = 12;
+    int32   ControlID = 13;//控制者id
 
     //单位状态(idle walk attack skill die)
     //各种buff状态(单位身上的buff 包括剩余时间)
@@ -93,6 +107,7 @@ message SC_NewScene{
     string Name = 1;//场景名称
     int32  LogicFps = 2;//逻辑帧率 (20即每秒20帧)
     int32  CurFrame = 3;//当前帧 (客户端通过当前帧和本地时间匹配计算延时逻辑)
+    string ServerName = 4;//服务器名字
 }
 
 

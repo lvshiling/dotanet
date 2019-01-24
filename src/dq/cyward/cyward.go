@@ -146,7 +146,7 @@ func (this *Body) SetTag(tag int) {
 	this.Tag = tag
 }
 func (this *Body) Update(dt float64) {
-
+	//log.Info(" %v---%v", dt, this.CollisoinStopTime)
 	this.CollisoinStopTime -= dt
 	if this.CalcNextPosition(dt) {
 
@@ -155,7 +155,7 @@ func (this *Body) Update(dt float64) {
 		//检查碰撞
 		collisionOne := this.CheckPositionCollisoin(dt)
 		if collisionOne != nil {
-			//log.Info("collisionOne:%d", collisionOne.Tag)
+			log.Info("collisionOne:%d", collisionOne.Tag)
 			if collisionOne.CurSpeedSize > 0 {
 				this.CollisoinStopTime = 0.5
 				this.CurSpeedSize = 0
@@ -250,6 +250,16 @@ func (this *Body) GetTargetPos(index int, pos *vec2d.Vec2) bool {
 		}
 	}
 
+}
+
+func (this *Body) IsMove() bool {
+
+	//log.Info("IsMove:%d---%d---%f", len(this.TargetPosition), len(this.DetourPath), this.CollisoinStopTime)
+	if (len(this.TargetPosition) <= 0 && len(this.DetourPath) <= 0) || this.CollisoinStopTime > 0.0000001 {
+
+		return false
+	}
+	return true
 }
 
 func (this *Body) CalcNextPosition(dt float64) bool {
@@ -1004,6 +1014,8 @@ func (this *WardCore) GetNextPositionCollision(one *Body) *Body {
 }
 
 func (this *WardCore) Update(dt float64) {
+
+	//log.Info("len:%d-", len(this.Bodys))
 	for _, v := range this.Bodys {
 		v.Update(dt)
 	}

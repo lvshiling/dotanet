@@ -2,7 +2,7 @@ package gamecore
 
 import (
 	"dq/cyward"
-	//"dq/log"
+	"dq/log"
 	"dq/protobuf"
 	"dq/utils"
 	"strings"
@@ -21,17 +21,25 @@ type UnitProperty struct {
 	ModeType      string
 	Experience    int32
 	MaxExperience int32
+	ControlID     int32
 
 	BaseAttack      int32   //基础攻击力
 	BaseAttackRange float32 //基础攻击范围
+	BaseSpeed       float64 //基础移动速度
 
 	//复合数据 会随时变动的数据 比如受buff影响攻击力降低  (每帧动态计算)
+	Speed       float64
 	Attack      int32   //攻击力 (基础攻击力+属性影响+buff影响)
 	AttackRange float32 //攻击范围
 }
 
+type UnitCmd struct {
+	Move *protomsg.CS_PlayerMove
+}
+
 type Unit struct {
 	UnitProperty
+	UnitCmd
 	InScene  *Scene
 	MyPlayer *Player
 	ID       int32        //单位唯一ID
@@ -66,7 +74,7 @@ func CreateUnitByPlayer(scene *Scene, id int32, player *Player, datas []byte) *U
 
 //初始化
 func (this *Unit) Init() {
-
+	this.State = NewIdleState(this)
 }
 
 //
@@ -75,9 +83,11 @@ func (this *Unit) PreUpdate(dt float64) {
 
 }
 
-//行为命令
-func (this *Unit) DoCommand() {
+//移动行为命令
+func (this *Unit) MoveCmd(data *protomsg.CS_PlayerMove) {
+	this.Move = data
 
+	log.Info("---------MoveCmd")
 }
 
 //更新
@@ -86,8 +96,17 @@ func (this *Unit) Update(dt float64) {
 
 	//
 
+	this.CalProperty()
 	//逻辑状态更新
+	this.State.OnTransform()
 	this.State.Update(dt)
+}
+
+func (this *Unit) CalProperty() {
+
+	this.Speed = this.BaseSpeed
+
+	this.Body.SpeedSize = this.Speed
 }
 
 //刷新客户端显示数据
@@ -107,6 +126,7 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.ModeType = this.ModeType
 	this.ClientData.Experience = this.Experience
 	this.ClientData.MaxExperience = this.MaxExperience
+	this.ClientData.ControlID = this.ControlID
 
 	this.ClientData.X = float32(this.Body.Position.X)
 	this.ClientData.Y = float32(this.Body.Position.Y)
@@ -144,6 +164,14 @@ func (this *Unit) FreshClientDataSub() {
 	this.ClientDataSub.Level = this.Level - this.ClientData.Level
 	this.ClientDataSub.Experience = this.Experience - this.ClientData.Experience
 	this.ClientDataSub.MaxExperience = this.MaxExperience - this.ClientData.MaxExperience
+	this.ClientDataSub.ControlID = this.ControlID - this.ClientData.ControlID
 	this.ClientDataSub.X = float32(this.Body.Position.X) - this.ClientData.X
 	this.ClientDataSub.Y = float32(this.Body.Position.Y) - this.ClientData.Y
+}
+
+//即时属性获取
+
+//是否可以移动
+func (this *Unit) GetCanMove() bool {
+	return true
 }

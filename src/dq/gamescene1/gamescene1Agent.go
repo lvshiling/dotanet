@@ -52,7 +52,7 @@ func (a *GameScene1Agent) Init() {
 	a.handles = make(map[string]func(data *protomsg.MsgBase))
 	a.handles["MsgUserEnterScene"] = a.DoMsgUserEnterScene
 
-	a.handles["CS_PlayerOperate"] = a.DoPlayerOperate
+	a.handles["CS_PlayerMove"] = a.DoPlayerMove
 
 	//创建场景
 	for k := 0; k < 1; k++ {
@@ -102,26 +102,37 @@ func (a *GameScene1Agent) DoMsgUserEnterScene(data *protomsg.MsgBase) {
 		//进入新场景
 		player.(*gamecore.Player).GoInScene(scene.(*gamecore.Scene), h2.Datas)
 
+		//发送场景信息给玩家
+		msg := &protomsg.SC_NewScene{}
+		msg.Name = scene.(*gamecore.Scene).SceneName
+		msg.LogicFps = int32(scene.(*gamecore.Scene).SceneFrame)
+		msg.CurFrame = scene.(*gamecore.Scene).CurFrame
+		msg.ServerName = a.ServerName
+		player.(*gamecore.Player).SendMsgToClient("SC_NewScene", msg)
+
+		log.Info("SendMsgToClient SC_NewScene")
+
 	}
 
 }
 
-func (a *GameScene1Agent) DoPlayerOperate(data *protomsg.MsgBase) {
+func (a *GameScene1Agent) DoPlayerMove(data *protomsg.MsgBase) {
 
 	log.Info("---------DoPlayerOperate")
-	h2 := &protomsg.CS_PlayerOperate{}
+	h2 := &protomsg.CS_PlayerMove{}
 	err := proto.Unmarshal(data.Datas, h2)
 	if err != nil {
 		log.Info(err.Error())
 		return
 	}
+	log.Info("---------%v", h2)
 
-	//	player := a.Players.Get(h2.Uid)
-	//	if player == nil {
-	//		return
-	//	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
 
-	//	player.(*gamecore.Player).
+	player.(*gamecore.Player).MoveCmd(h2)
 
 }
 

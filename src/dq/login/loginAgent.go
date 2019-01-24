@@ -79,6 +79,7 @@ func (a *LoginAgent) DoQuickLoginData(data *protomsg.MsgBase) {
 	data.MsgType = "SC_Logined"
 	jd := &protomsg.SC_Logined{}
 	jd.Code = 1 //成功
+	jd.Uid = (uid)
 	a.WriteMsgBytes(datamsg.NewMsg1Bytes(data, jd))
 
 	//通知进入场景
@@ -92,6 +93,8 @@ func (a *LoginAgent) DoQuickLoginData(data *protomsg.MsgBase) {
 	d1.ModeType = "Hero/hero1"
 	d1.Experience = 1000
 	d1.Experience = 10000
+	d1.ControlID = uid
+	d1.BaseSpeed = 10
 	t2 := protomsg.MsgUserEnterScene{
 		Uid:            uid,
 		ConnectId:      data.ConnectId,

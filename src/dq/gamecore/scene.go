@@ -4,13 +4,11 @@ import (
 	"dq/conf"
 	"dq/cyward"
 	"dq/log"
-	"dq/protobuf"
+	//"dq/protobuf"
 	"dq/utils"
 	"dq/vec2d"
 	"time"
 )
-
-var SceneFrame = 20
 
 type Scene struct {
 	LastUpdateTime int64            //上次更新时间
@@ -28,7 +26,8 @@ type Scene struct {
 	NextAddPlayer    *utils.BeeMap //下一帧需要增加的玩家
 	NextRemovePlayer *utils.BeeMap //下一帧需要删除的玩家
 
-	Quit bool //是否退出
+	Quit       bool //是否退出
+	SceneFrame int32
 }
 
 func CreateScene(name string) *Scene {
@@ -41,6 +40,7 @@ func CreateScene(name string) *Scene {
 
 //初始化
 func (this *Scene) Init() {
+	this.SceneFrame = 20
 	this.CurFrame = 0
 
 	this.LastUpdateTime = time.Now().UnixNano()
@@ -82,11 +82,11 @@ func (this *Scene) Update() {
 
 		this.DoAddAndRemoveUnit()
 
+		this.DoLogic()
+
 		this.DoMove()
 
 		this.DoZone()
-
-		this.DoLogic()
 
 		this.DoSendData()
 
@@ -133,7 +133,7 @@ func (this *Scene) DoSendData() {
 
 //处理移动
 func (this *Scene) DoMove() {
-	this.MoveCore.Update(1 / float64(SceneFrame))
+	this.MoveCore.Update(1 / float64(this.SceneFrame))
 }
 
 //处理分区
@@ -151,17 +151,17 @@ func (this *Scene) DoZone() {
 func (this *Scene) DoLogic() {
 	//处理单位逻辑
 	for _, v := range this.Units {
-		v.PreUpdate(1 / float64(SceneFrame))
+		v.PreUpdate(1 / float64(this.SceneFrame))
 	}
 	for _, v := range this.Units {
-		v.Update(1 / float64(SceneFrame))
+		v.Update(1 / float64(this.SceneFrame))
 	}
 }
 
 //处理sleep
 func (this *Scene) DoSleep() {
 	sencond := time.Second
-	onetime := int64(1 / float64(SceneFrame) * float64(sencond))
+	onetime := int64(1 / float64(this.SceneFrame) * float64(sencond))
 	t1 := time.Now().UnixNano()
 	if (t1 - this.LastUpdateTime) < onetime {
 		time.Sleep(time.Duration(onetime - (t1 - this.LastUpdateTime)))
@@ -240,12 +240,6 @@ func (this *Scene) PlayerGoin(player *Player, datas []byte) {
 
 	this.NextAddPlayer.Set(player.Uid, player)
 
-	//发送场景信息给玩家
-	msg := &protomsg.SC_NewScene{}
-	msg.Name = this.SceneName
-	msg.LogicFps = int32(SceneFrame)
-	msg.CurFrame = this.CurFrame
-	player.SendMsgToClient("SC_NewScene", msg)
 }
 
 //玩家退出
