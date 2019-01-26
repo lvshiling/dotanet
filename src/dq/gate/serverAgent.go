@@ -39,12 +39,15 @@ func (a *ServersAgent) Init() {
 	a.handles[datamsg.GateMode] = a.DoGateData
 	a.handles[datamsg.ClientMode] = a.DoClientData
 	a.handles[datamsg.HallMode] = a.DoHallData
+	a.handles[datamsg.LoginMode] = a.DoLoginMode
 	//a.handles[datamsg.Game5GMode] = a.DoGame5GData
 	a.handles[datamsg.GameScene1] = a.DoGameScene1
 
 	a.gateHandles = make(map[string]func(data *protomsg.MsgBase))
 	a.gateHandles["Register"] = a.DoGateRegisterData
 	a.gateHandles["UserLogin"] = a.DoGateUserLoginData
+	//重新登录 旧连接强制断开
+	a.gateHandles["ReLoginForceDisconnect"] = a.ReLoginForceDisconnect
 }
 
 func (a *ServersAgent) DoGateRegisterData(data *protomsg.MsgBase) {
@@ -58,6 +61,25 @@ func (a *ServersAgent) DoGateRegisterData(data *protomsg.MsgBase) {
 	}
 	//}
 }
+
+func (a *ServersAgent) ReLoginForceDisconnect(data *protomsg.MsgBase) {
+	h1 := data
+	if h1.Uid <= 0 {
+		log.Info("--h1.Uid <= 0--")
+		return
+	}
+	ag1 := (a.gate.TcpServer.GetAgents().Get((h1.ConnectId)))
+	if ag1 != nil {
+		ag := ag1.(*agent)
+		//异地登录 强制下线
+		log.Info("--异地登录 强制下线--:%v", h1.Uid)
+		ag.Close()
+		return
+	}
+
+	log.Info("--not connect %d", (h1.ConnectId))
+}
+
 func (a *ServersAgent) DoGateUserLoginData(data *protomsg.MsgBase) {
 	h1 := data
 	if h1.Uid <= 0 {
@@ -70,20 +92,6 @@ func (a *ServersAgent) DoGateUserLoginData(data *protomsg.MsgBase) {
 		ag := ag1.(*agent)
 
 		ag.UserData.Set("uid", h1.Uid)
-		//检查是否重复登录
-		if a.gate.TcpServer.GetLoginedConnect().Check(h1.Uid) {
-			//重复登录 删除之前的连接
-			connectid := a.gate.TcpServer.GetLoginedConnect().Get(h1.Uid)
-
-			aglast := (a.gate.TcpServer.GetAgents().Get(connectid)).(*agent)
-			if aglast != nil {
-				//异地登录 强制下线
-				log.Info("--异地登录 强制下线--:%v", h1.Uid)
-				aglast.Close()
-			}
-		}
-		//设置登录连接表
-		a.gate.TcpServer.GetLoginedConnect().Set(h1.Uid, h1.ConnectId)
 
 		log.Info("--login--:%v", h1.Uid)
 
@@ -131,19 +139,15 @@ func (a *ServersAgent) DoClientData(data *protomsg.MsgBase) {
 			go a.SendToAll(data1)
 		} else {
 			ag := a.gate.TcpServer.GetAgents().Get(connectid)
-			if ag == nil {
+			//			if ag == nil {
 
-				//items := a.gate.TcpServer.GetLoginedConnect().Items()
-				//				for k, v := range items {
-				//					log.Info("--uid:%d---connectid:%d---k:%d--v:%d", uid, connectid, k, v.(int))
-				//				}
-				con := a.gate.TcpServer.GetLoginedConnect().Get(uid)
-				if con != nil {
-					connectid = (con).(int32)
-					ag = a.gate.TcpServer.GetAgents().Get(connectid)
-				}
+			//				con := a.gate.TcpServer.GetLoginedConnect().Get(uid)
+			//				if con != nil {
+			//					connectid = (con).(int32)
+			//					ag = a.gate.TcpServer.GetAgents().Get(connectid)
+			//				}
 
-			}
+			//			}
 
 			if ag != nil {
 				ag.(*agent).WriteMsgBytes(data1)
@@ -154,6 +158,22 @@ func (a *ServersAgent) DoClientData(data *protomsg.MsgBase) {
 	} else {
 		log.Info("--err:%s", err1.Error())
 	}
+}
+
+//
+func (a *ServersAgent) DoLoginMode(data *protomsg.MsgBase) {
+	h1 := data
+
+	if model := a.gate.Models.Get(h1.ModeType); model != nil {
+		data1, err1 := proto.Marshal(h1)
+		if err1 == nil {
+			model.(*ServersAgent).WriteMsgBytes(data1)
+		}
+
+	} else {
+		log.Info("not find ModeType:%s", h1.ModeType)
+	}
+
 }
 
 func (a *ServersAgent) DoHallData(data *protomsg.MsgBase) {

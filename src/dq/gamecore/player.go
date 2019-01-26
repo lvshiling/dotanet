@@ -36,6 +36,12 @@ func CreatePlayer(uid int32, connectid int32) *Player {
 	return re
 }
 
+func (this *Player) ClearShowData() {
+	this.LastShowUnit = make(map[int32]*Unit)
+	this.CurShowUnit = make(map[int32]*Unit)
+	this.Msg = &protomsg.SC_Update{}
+}
+
 //添加客户端显示单位数据包
 func (this *Player) AddUnitData(unit *Unit) {
 

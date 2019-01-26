@@ -1,7 +1,7 @@
 package gamecore
 
-var width = 5.0
-var height = 5.0
+var width = 16.0
+var height = 16.0
 
 type SceneZone struct {
 	ZoneX int32

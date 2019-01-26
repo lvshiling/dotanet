@@ -55,7 +55,7 @@ func (a *agent) Run() {
 				heartdata.MsgType = datamsg.SC_Heart
 				a.WriteMsgBytes(datamsg.NewMsg1Bytes(heartdata, nil))
 
-				log.Info("--heart")
+				//log.Info("--heart")
 				continue
 			}
 			//log.Info("------readmsg len%d:"+string(data), len(data))
@@ -103,23 +103,17 @@ func (a *agent) FilterNoLoginMode(modetype string) bool {
 }
 
 func (a *agent) OnClose() {
-	//	if a.gate.AgentChanRPC != nil {
-	//		err := a.gate.AgentChanRPC.Call0("CloseAgent", a)
-	//		if err != nil {
-	//			log.Error("chanrpc error: %v", err)
-	//		}
-	//	}
 
 	//从登录列表中删除连接id
 	if a.UserData.Check("uid") == true {
-		connectid := a.gate.TcpServer.GetLoginedConnect().Get(a.UserData.Get("uid"))
-		if connectid == nil {
-			return
-		}
-		if connectid == a.connectId {
-			a.gate.TcpServer.GetLoginedConnect().Delete(a.UserData.Get("uid"))
-			log.Info("--un login--:%v", a.UserData.Get("uid"))
-		}
+		//		connectid := a.gate.TcpServer.GetLoginedConnect().Get(a.UserData.Get("uid"))
+		//		if connectid == nil {
+		//			return
+		//		}
+		//		if connectid == a.connectId {
+		//			a.gate.TcpServer.GetLoginedConnect().Delete(a.UserData.Get("uid"))
+		//			log.Info("--un login--:%v", a.UserData.Get("uid"))
+		//		}
 
 		//给其他模块发送玩家断线消息
 		data := &protomsg.MsgBase{}

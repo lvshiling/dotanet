@@ -51,6 +51,7 @@ func (a *GameScene1Agent) Init() {
 
 	a.handles = make(map[string]func(data *protomsg.MsgBase))
 	a.handles["MsgUserEnterScene"] = a.DoMsgUserEnterScene
+	a.handles["Disconnect"] = a.DoDisconnect
 
 	a.handles["CS_PlayerMove"] = a.DoPlayerMove
 
@@ -66,6 +67,34 @@ func (a *GameScene1Agent) Init() {
 	}
 
 	//玩家进来
+
+}
+
+//
+func (a *GameScene1Agent) DoDisconnect(data *protomsg.MsgBase) {
+
+	log.Info("---------DoDisconnect")
+
+	player := a.Players.Get(data.Uid)
+	if player != nil {
+		//退出之前的场景
+		if player.(*gamecore.Player).ConnectId == data.ConnectId {
+
+			log.Info("---------DoDisconnect--delete")
+			player.(*gamecore.Player).OutScene()
+			a.Players.Delete(data.Uid)
+		}
+
+	}
+
+	//LoginOut
+	t1 := protomsg.MsgBase{
+		ModeType:  datamsg.LoginMode,
+		MsgType:   "LoginOut",
+		Uid:       data.Uid,
+		ConnectId: data.ConnectId,
+	}
+	a.WriteMsgBytes(datamsg.NewMsg1Bytes(&t1, nil))
 
 }
 
@@ -94,6 +123,13 @@ func (a *GameScene1Agent) DoMsgUserEnterScene(data *protomsg.MsgBase) {
 			player = gamecore.CreatePlayer(h2.Uid, h2.ConnectId)
 			player.(*gamecore.Player).ServerAgent = a
 			a.Players.Set(player.(*gamecore.Player).Uid, player)
+		} else {
+			//			//重新连接
+			//			if player.(*gamecore.Player).ConnectId != h2.ConnectId {
+			//				player.(*gamecore.Player).ConnectId = h2.ConnectId
+			//				player.(*gamecore.Player).ClearShowData()
+			//			}
+
 		}
 
 		//退出之前的场景

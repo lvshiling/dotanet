@@ -21,6 +21,8 @@ type LoginAgent struct {
 	userdata string
 
 	handles map[string]func(data *protomsg.MsgBase)
+
+	LoginPlayers *utils.BeeMap
 }
 
 func (a *LoginAgent) registerDataHandle(msgtype string, f func(data *protomsg.MsgBase)) {
@@ -39,13 +41,22 @@ func (a *LoginAgent) GetModeType() string {
 
 func (a *LoginAgent) Init() {
 
+	a.LoginPlayers = utils.NewBeeMap()
+
 	a.handles = make(map[string]func(data *protomsg.MsgBase))
 
 	a.registerDataHandle("CS_MsgQuickLogin", a.DoQuickLoginData)
 
+	a.registerDataHandle("LoginOut", a.DoLoginOut)
+
 	rand.Seed(time.Now().UnixNano())
 }
 
+//DoLoginOut
+func (a *LoginAgent) DoLoginOut(data *protomsg.MsgBase) {
+	a.LoginPlayers.Delete(data.Uid)
+	log.Info("-------loginout :%d", data.Uid)
+}
 func (a *LoginAgent) DoQuickLoginData(data *protomsg.MsgBase) {
 
 	log.Info("---------DoQuickLoginData")
@@ -70,6 +81,23 @@ func (a *LoginAgent) DoQuickLoginData(data *protomsg.MsgBase) {
 		log.Info("---------new user:%d", uid)
 	}
 
+	//检查是否重复登录
+	if a.LoginPlayers.Check(uid) {
+		a.ReLoginForceDisconnect(a.LoginPlayers.Get(uid).(int32), uid)
+
+		//回复客户端
+		data.ModeType = "Client"
+		data.Uid = (uid)
+		data.MsgType = "SC_Logined"
+		jd := &protomsg.SC_Logined{}
+		jd.Code = 0 //失败
+		jd.Uid = (uid)
+		a.WriteMsgBytes(datamsg.NewMsg1Bytes(data, jd))
+
+		return
+	}
+	a.LoginPlayers.Set(uid, data.ConnectId)
+
 	//--------------------
 	a.NotifyGateLogined(data.ConnectId, uid)
 
@@ -90,11 +118,11 @@ func (a *LoginAgent) DoQuickLoginData(data *protomsg.MsgBase) {
 	d1.MAX_MP = 1000
 	d1.Name = "t1"
 	d1.Level = 5
-	d1.ModeType = "Hero/hero1"
+	d1.ModeType = "Hero/hero2"
 	d1.Experience = 1000
 	d1.Experience = 10000
 	d1.ControlID = uid
-	d1.BaseSpeed = 10
+	d1.BaseSpeed = 5
 	t2 := protomsg.MsgUserEnterScene{
 		Uid:            uid,
 		ConnectId:      data.ConnectId,
@@ -117,6 +145,19 @@ func (a *LoginAgent) NotifyGateLogined(conncetid int32, uid int32) {
 	data.Uid = (uid)
 	data.ModeType = datamsg.GateMode
 	data.MsgType = "UserLogin"
+	data.ConnectId = (conncetid)
+
+	a.WriteMsgBytes(datamsg.NewMsg1Bytes(data, nil))
+
+}
+
+//重新登录 旧连接强制断开
+func (a *LoginAgent) ReLoginForceDisconnect(conncetid int32, uid int32) {
+
+	data := &protomsg.MsgBase{}
+	data.Uid = (uid)
+	data.ModeType = datamsg.GateMode
+	data.MsgType = "ReLoginForceDisconnect"
 	data.ConnectId = (conncetid)
 
 	a.WriteMsgBytes(datamsg.NewMsg1Bytes(data, nil))

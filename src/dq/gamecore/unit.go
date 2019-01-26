@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-var UnitID int32 = 10
+var UnitID int32 = 1000000
 
 type UnitProperty struct {
 	//基础数据 当前数据
@@ -21,7 +21,9 @@ type UnitProperty struct {
 	ModeType      string
 	Experience    int32
 	MaxExperience int32
-	ControlID     int32
+	ControlID     int32 //控制者ID
+
+	AnimotorState int32 //动画状态 1:idle 2:walk 3:attack 4:skill 5:death
 
 	BaseAttack      int32   //基础攻击力
 	BaseAttackRange float32 //基础攻击范围
@@ -61,9 +63,10 @@ func CreateUnit(scene *Scene) *Unit {
 	return unitre
 }
 
-func CreateUnitByPlayer(scene *Scene, id int32, player *Player, datas []byte) *Unit {
+func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 	unitre := &Unit{}
-	unitre.ID = id
+	unitre.ID = UnitID
+	UnitID++
 	unitre.InScene = scene
 	unitre.MyPlayer = player
 	utils.Bytes2Struct(datas, &unitre.UnitProperty)
@@ -127,6 +130,7 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.Experience = this.Experience
 	this.ClientData.MaxExperience = this.MaxExperience
 	this.ClientData.ControlID = this.ControlID
+	this.ClientData.AnimotorState = this.AnimotorState
 
 	this.ClientData.X = float32(this.Body.Position.X)
 	this.ClientData.Y = float32(this.Body.Position.Y)
@@ -156,6 +160,11 @@ func (this *Unit) FreshClientDataSub() {
 	if strings.Compare(this.ModeType, this.ClientData.ModeType) != 0 {
 		this.ClientDataSub.ModeType = this.ModeType
 	}
+	//
+	if this.AnimotorState != this.ClientData.AnimotorState {
+		this.ClientDataSub.AnimotorState = this.AnimotorState
+	}
+
 	//数值部分
 	this.ClientDataSub.HP = this.HP - this.ClientData.HP
 	this.ClientDataSub.MaxHP = this.MAX_HP - this.ClientData.MaxHP

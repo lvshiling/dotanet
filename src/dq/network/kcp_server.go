@@ -133,7 +133,7 @@ func (server *KCPServer) run() {
 
 			server.wgConns.Done()
 
-			log.Debug("conn close :%d", agent.GetConnectId())
+			log.Debug("conn close :%d ---conn size:%d", agent.GetConnectId(), server.Agents.Size())
 		}()
 	}
 }

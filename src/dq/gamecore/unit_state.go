@@ -44,6 +44,7 @@ func (this *IdleState) OnEnd() {
 }
 func (this *IdleState) OnStart() {
 	//this.OnTransform()
+	this.Parent.AnimotorState = 1
 }
 
 type MoveState struct {
@@ -99,5 +100,6 @@ func (this *MoveState) OnStart() {
 		return
 	}
 	this.Parent.Move = nil
+	this.Parent.AnimotorState = 2
 	this.Parent.Body.SetTarget(vec2d.Vec2{X: float64(this.MoveData.X), Y: float64(this.MoveData.Y)})
 }

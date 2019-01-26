@@ -74,6 +74,7 @@ message UnitDatas{
     int32   Experience = 11;
     int32   MaxExperience = 12;
     int32   ControlID = 13;//控制者id
+    int32   AnimotorState = 14;//动画状态 1:idle 2:walk 3:attack 4:skill 5:death
 
     //单位状态(idle walk attack skill die)
     //各种buff状态(单位身上的buff 包括剩余时间)
