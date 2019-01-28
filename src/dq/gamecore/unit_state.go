@@ -13,6 +13,7 @@ type UnitState interface {
 	OnStart()
 }
 
+//------------------------------休息状态-------------------------
 type IdleState struct {
 	Parent *Unit
 }
@@ -47,6 +48,7 @@ func (this *IdleState) OnStart() {
 	this.Parent.AnimotorState = 1
 }
 
+//------------------------------移动状态-------------------------
 type MoveState struct {
 	Parent *Unit
 

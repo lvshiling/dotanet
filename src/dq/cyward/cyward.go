@@ -84,10 +84,12 @@ func (this *MyPolygon) GetBigMyPolygonOnePoint(pointindex int, r vec2d.Vec2) vec
 }
 
 type Body struct {
-	Core           *WardCore
-	Position       vec2d.Vec2   //当前位置
-	R              vec2d.Vec2   //矩形半径
-	SpeedSize      float64      //移动速度大小
+	Core      *WardCore
+	Position  vec2d.Vec2 //当前位置
+	R         vec2d.Vec2 //矩形半径
+	SpeedSize float64    //移动速度大小
+
+	MoveDir        vec2d.Vec2   //移动目标方向
 	TargetPosition []vec2d.Vec2 //移动目标位置
 	DetourPath     []vec2d.Vec2 //绕路 路径
 
@@ -188,6 +190,16 @@ func (this *Body) Update(dt float64) {
 
 }
 
+//设置移动方向
+func (this *Body) SetMoveDir(dir vec2d.Vec2) {
+	//清空目的地
+	this.TargetPosition = this.TargetPosition[0:0]
+	this.DetourPath = this.DetourPath[0:0]
+	this.CollisoinStopTime = 0
+	this.MoveDir = dir
+}
+
+//设置目的地
 func (this *Body) SetTarget(pos vec2d.Vec2) {
 
 	log.Info("SetTarget %f  %f", pos.X, pos.Y)
@@ -195,6 +207,7 @@ func (this *Body) SetTarget(pos vec2d.Vec2) {
 	this.TargetPosition = this.TargetPosition[0:0]
 	this.DetourPath = this.DetourPath[0:0]
 	this.TargetPosition = append(this.TargetPosition, pos)
+	this.MoveDir = vec2d.Vec2{}
 	this.CollisoinStopTime = 0
 
 	t1 := time.Now().UnixNano()
@@ -263,55 +276,72 @@ func (this *Body) IsMove() bool {
 }
 
 func (this *Body) CalcNextPosition(dt float64) bool {
-	if (len(this.TargetPosition) <= 0 && len(this.DetourPath) <= 0) || this.CollisoinStopTime > 0 {
-		this.CurSpeedSize = 0
-		this.NextPosition = this.Position
+
+	//移动方向
+	if this.MoveDir.IsEqual(&vec2d.Vec2{}) == false {
+		startpos := this.Position
+		movedis := this.SpeedSize * dt
+
+		this.Direction = this.MoveDir.GetNormalized()
+		this.NextPosition = vec2d.Add(startpos, vec2d.Mul(this.Direction, movedis))
+
+		//设置最终值
+		//this.Position = this.NextPosition
+		//this.CurSpeedSize = this.SpeedSize
+
 		return false
-	}
-	//log.Info("CalcNextPosition tag:%d", this.Tag)
-
-	//var startpos vec2d.Vec2
-	startpos := this.Position
-
-	var targetpos vec2d.Vec2
-	this.GetTargetPos(0, &targetpos)
-	//目标方向
-	speeddir := vec2d.Sub(targetpos, this.Position)
-	//cocos2d::Vec2 speeddir = targetpos - Position;
-	//剩余到目标点的距离
-	targetdis := speeddir.Length()
-	//移动距离
-	movedis := this.SpeedSize * dt
-	this.TargetIndex = 0
-	//log.Info("targetdis:%f  movedis:%f ", targetdis, movedis)
-	//while () {
-	for {
-		if targetdis >= movedis {
-			break
+	} else { //移动目的地
+		if (len(this.TargetPosition) <= 0 && len(this.DetourPath) <= 0) || this.CollisoinStopTime > 0 {
+			this.CurSpeedSize = 0
+			this.NextPosition = this.Position
+			return false
 		}
+		//log.Info("CalcNextPosition tag:%d", this.Tag)
 
-		this.TargetIndex++
-		if this.TargetIndex >= len(this.TargetPosition)+len(this.DetourPath) {
-			this.NextPosition = targetpos
-			this.Direction = speeddir.GetNormalized()
-			return true
-		} else {
-			startpos = targetpos
-			movedis = movedis - targetdis
+		//var startpos vec2d.Vec2
+		startpos := this.Position
 
-			this.GetTargetPos(this.TargetIndex, &targetpos)
-			var lastpos vec2d.Vec2
-			this.GetTargetPos(this.TargetIndex-1, &lastpos)
-			speeddir = vec2d.Sub(targetpos, lastpos)
-			targetdis = speeddir.Length()
+		var targetpos vec2d.Vec2
+		this.GetTargetPos(0, &targetpos)
+		//目标方向
+		speeddir := vec2d.Sub(targetpos, this.Position)
+		//cocos2d::Vec2 speeddir = targetpos - Position;
+		//剩余到目标点的距离
+		targetdis := speeddir.Length()
+		//移动距离
+		movedis := this.SpeedSize * dt
+		this.TargetIndex = 0
+		//log.Info("targetdis:%f  movedis:%f ", targetdis, movedis)
+		//while () {
+		for {
+			if targetdis >= movedis {
+				break
+			}
+
+			this.TargetIndex++
+			if this.TargetIndex >= len(this.TargetPosition)+len(this.DetourPath) {
+				this.NextPosition = targetpos
+				this.Direction = speeddir.GetNormalized()
+				return true
+			} else {
+				startpos = targetpos
+				movedis = movedis - targetdis
+
+				this.GetTargetPos(this.TargetIndex, &targetpos)
+				var lastpos vec2d.Vec2
+				this.GetTargetPos(this.TargetIndex-1, &lastpos)
+				speeddir = vec2d.Sub(targetpos, lastpos)
+				targetdis = speeddir.Length()
+			}
+			//log.Info("11targetdis:%f  movedis:%f ", targetdis, movedis)
+
 		}
-		//log.Info("11targetdis:%f  movedis:%f ", targetdis, movedis)
+		this.Direction = speeddir.GetNormalized()
+		this.NextPosition = vec2d.Add(startpos, vec2d.Mul(this.Direction, movedis))
 
+		return true
 	}
-	this.Direction = speeddir.GetNormalized()
-	this.NextPosition = vec2d.Add(startpos, vec2d.Mul(this.Direction, movedis))
 
-	return true
 }
 
 //线段是否与矩形相交
@@ -1031,7 +1061,7 @@ func (this *WardCore) CreateBody(position vec2d.Vec2, r vec2d.Vec2, speedsize fl
 	body.Core = this
 	body.IsRect = true
 	body.M_MyPolygon = &MyPolygon{}
-
+	body.MoveDir = vec2d.Vec2{X: 0, Y: 0}
 	this.Bodys[body] = body
 	return body
 }
@@ -1043,6 +1073,7 @@ func (this *WardCore) CreateBodyPolygon(position vec2d.Vec2, points []vec2d.Vec2
 	body.IsRect = false
 	body.M_MyPolygon = &MyPolygon{}
 	body.OffsetPoints = points
+	body.MoveDir = vec2d.Vec2{X: 0, Y: 0}
 	this.Bodys[body] = body
 	return body
 }
