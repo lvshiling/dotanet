@@ -152,20 +152,26 @@ func (this *Unit) FreshClientDataSub() {
 		return
 	}
 
-	//当前数据与上一次数据对比 相减
+	//
 	//字符串部分
 	if strings.Compare(this.Name, this.ClientData.Name) != 0 {
 		this.ClientDataSub.Name = this.Name
+	} else {
+		this.ClientDataSub.Name = ""
 	}
 	if strings.Compare(this.ModeType, this.ClientData.ModeType) != 0 {
 		this.ClientDataSub.ModeType = this.ModeType
+	} else {
+		this.ClientDataSub.ModeType = ""
 	}
 	//
 	if this.AnimotorState != this.ClientData.AnimotorState {
 		this.ClientDataSub.AnimotorState = this.AnimotorState
+	} else {
+		this.ClientDataSub.AnimotorState = 0
 	}
 
-	//数值部分
+	//当前数据与上一次数据对比 相减 数值部分
 	this.ClientDataSub.HP = this.HP - this.ClientData.HP
 	this.ClientDataSub.MaxHP = this.MAX_HP - this.ClientData.MaxHP
 	this.ClientDataSub.MP = this.MP - this.ClientData.MP

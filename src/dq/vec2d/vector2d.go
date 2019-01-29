@@ -155,6 +155,25 @@ func Mul(v1 Vec2, mul float64) Vec2 {
 	return re
 }
 
+//float Vec2::angle(const Vec2& v1, const Vec2& v2)
+//{
+//    float dz = v1.x * v2.y - v1.y * v2.x;
+//    return atan2f(fabsf(dz) + MATH_FLOAT_SMALL, dot(v1, v2));
+//}
+
+//float Vec2::dot(const Vec2& v1, const Vec2& v2)
+//{
+//    return (v1.x * v2.x + v1.y * v2.y);
+//}
+func Dot(v1 Vec2, v2 Vec2) float64 {
+	return (v1.X*v2.X + v1.Y*v2.Y)
+}
+func Angle(v1 Vec2, v2 Vec2) float64 {
+	dz := v1.X*v2.Y - v1.Y*v2.X
+
+	return math.Atan2(math.Abs(dz)+math.SmallestNonzeroFloat32, Dot(v1, v2))
+}
+
 func CrossProduct2Vector(A Vec2, B Vec2, C Vec2, D Vec2) float64 {
 	return (D.Y-C.Y)*(B.X-A.X) - (D.X-C.X)*(B.Y-A.Y)
 }

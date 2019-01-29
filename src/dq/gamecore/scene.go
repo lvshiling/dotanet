@@ -77,7 +77,7 @@ func (this *Scene) Init() {
 			unit.ModeType = "Hero/hero1"
 			//设置移动核心body
 			pos := vec2d.Vec2{float64(-63 + j*6), float64(-63 + i*6)}
-			r := vec2d.Vec2{0.2, 0.2}
+			r := vec2d.Vec2{0.3, 0.3}
 			unit.Body = this.MoveCore.CreateBody(pos, r, 10)
 			this.Units[unit.ID] = unit
 		}
@@ -211,7 +211,7 @@ func (this *Scene) DoAddAndRemoveUnit() {
 
 		//设置移动核心body
 		pos := vec2d.Vec2{0, 0}
-		r := vec2d.Vec2{0.2, 0.2}
+		r := vec2d.Vec2{0.3, 0.3}
 
 		v.(*Unit).Body = this.MoveCore.CreateBody(pos, r, 0)
 

@@ -3,6 +3,7 @@ package cyward
 import (
 	"dq/log"
 	"dq/vec2d"
+	"math"
 	"time"
 )
 
@@ -189,6 +190,13 @@ func (this *Body) Update(dt float64) {
 	}
 
 }
+func (this *Body) ClearMoveDirAndMoveTarget() {
+	//清空目的地
+	this.TargetPosition = this.TargetPosition[0:0]
+	this.DetourPath = this.DetourPath[0:0]
+	this.CollisoinStopTime = 0
+	this.MoveDir = vec2d.Vec2{}
+}
 
 //设置移动方向
 func (this *Body) SetMoveDir(dir vec2d.Vec2) {
@@ -285,9 +293,40 @@ func (this *Body) CalcNextPosition(dt float64) bool {
 		this.Direction = this.MoveDir.GetNormalized()
 		this.NextPosition = vec2d.Add(startpos, vec2d.Mul(this.Direction, movedis))
 
+		collisionOne := this.CheckPositionCollisoin(0)
+		if collisionOne != nil {
+
+			mypolygon := collisionOne.GetMyPolygon(this)
+			var points2P1Index []int
+			this.Core.GetPointIndexFromSquare(mypolygon, this.Position, &points2P1Index)
+			//删掉中间点(只保留两端顶点)
+			if len(points2P1Index) >= 3 {
+				points2P1Index = append(points2P1Index[:1], points2P1Index[2:]...)
+			}
+			//获取2可通行的两点
+			point1 := mypolygon.GetBigMyPolygonOnePoint(points2P1Index[0], vec2d.Vec2{0.01, 0.01})
+			point2 := mypolygon.GetBigMyPolygonOnePoint(points2P1Index[1], vec2d.Vec2{0.01, 0.01})
+			d1 := vec2d.Sub(point1, this.Position)
+			d2 := vec2d.Sub(point2, this.Position)
+			a1 := vec2d.Angle(d1, this.Direction)
+			a2 := vec2d.Angle(d2, this.Direction)
+			if math.Abs(a1) < math.Abs(a2) {
+				this.Direction = d1
+			} else {
+				this.Direction = d2
+			}
+			this.NextPosition = vec2d.Add(startpos, vec2d.Mul(this.Direction.GetNormalized(), movedis))
+
+			collisionOne := this.CheckPositionCollisoin(0)
+			if collisionOne != nil {
+				return false
+			}
+
+		}
+
 		//设置最终值
-		//this.Position = this.NextPosition
-		//this.CurSpeedSize = this.SpeedSize
+		this.Position = this.NextPosition
+		this.CurSpeedSize = this.SpeedSize
 
 		return false
 	} else { //移动目的地

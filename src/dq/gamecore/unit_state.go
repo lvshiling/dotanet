@@ -2,7 +2,7 @@ package gamecore
 
 import (
 	"dq/log"
-	"dq/protobuf"
+	//"dq/protobuf"
 	"dq/vec2d"
 )
 
@@ -51,8 +51,6 @@ func (this *IdleState) OnStart() {
 //------------------------------移动状态-------------------------
 type MoveState struct {
 	Parent *Unit
-
-	MoveData *protomsg.CS_PlayerMove
 }
 
 func NewMoveState(p *Unit) *MoveState {
@@ -69,39 +67,41 @@ func (this *MoveState) OnTransform() {
 	//move := this.Parent.Move
 	//切换到idle状态
 	//if this.MoveData == nil || this.MoveData.IsStart == false || this.Parent.GetCanMove() == false {
-	//	if this.MoveData == nil || this.MoveData.IsStart == false || this.Parent.GetCanMove() == false {
-	//		this.OnEnd()
-	//		this.Parent.State = NewIdleState(this.Parent)
-
-	//		log.Info(" 111111")
-	//	}
-	if this.Parent.Body.IsMove() == false {
+	if this.Parent.Move == nil || this.Parent.Move.IsStart == false || this.Parent.GetCanMove() == false {
 		this.OnEnd()
 		this.Parent.State = NewIdleState(this.Parent)
 
-		log.Info(" 222222")
+		log.Info(" 111111")
 	}
+	//	if this.Parent.Body.IsMove() == false {
+	//		this.OnEnd()
+	//		this.Parent.State = NewIdleState(this.Parent)
+
+	//		log.Info(" 222222")
+	//	}
 }
 func (this *MoveState) Update(dt float64) {
-	move := this.Parent.Move
+	//move := this.Parent.Move
 
-	if move != nil && this.MoveData != move {
-		log.Info(" move:%v----%v---%d---%d", move, this.MoveData, move, this.MoveData)
-		this.MoveData = move
-		this.Parent.Body.SetTarget(vec2d.Vec2{X: float64(this.MoveData.X), Y: float64(this.MoveData.Y)})
+	if this.Parent.Move != nil && this.Parent.Move.IsStart == true {
+		//log.Info(" move:%v----%v---%d---%d", move, this.MoveData, move, this.MoveData)
+		//this.MoveData = move
+		//this.Parent.Body.SetTarget(vec2d.Vec2{X: float64(this.MoveData.X), Y: float64(this.MoveData.Y)})
+		this.Parent.Body.SetMoveDir(vec2d.Vec2{X: float64(this.Parent.Move.X), Y: float64(this.Parent.Move.Y)})
 	}
 
 }
 func (this *MoveState) OnEnd() {
-
+	this.Parent.Body.ClearMoveDirAndMoveTarget()
 }
 func (this *MoveState) OnStart() {
 	//this.OnTransform()
-	this.MoveData = this.Parent.Move
-	if this.MoveData.IsStart == false {
+	//this.MoveData = this.Parent.Move
+	if this.Parent.Move.IsStart == false {
 		return
 	}
-	this.Parent.Move = nil
+	//this.Parent.Move = nil
 	this.Parent.AnimotorState = 2
-	this.Parent.Body.SetTarget(vec2d.Vec2{X: float64(this.MoveData.X), Y: float64(this.MoveData.Y)})
+	//this.Parent.Body.SetTarget(vec2d.Vec2{X: float64(this.MoveData.X), Y: float64(this.MoveData.Y)})
+	this.Parent.Body.SetMoveDir(vec2d.Vec2{X: float64(this.Parent.Move.X), Y: float64(this.Parent.Move.Y)})
 }
