@@ -120,7 +120,7 @@ func (a *LoginAgent) DoQuickLoginData(data *protomsg.MsgBase) {
 	d1.Level = 5
 	d1.ModeType = "Hero/hero2"
 	d1.Experience = 1000
-	d1.Experience = 10000
+	d1.MaxExperience = 10000
 	d1.ControlID = uid
 	d1.BaseSpeed = 5
 	t2 := protomsg.MsgUserEnterScene{

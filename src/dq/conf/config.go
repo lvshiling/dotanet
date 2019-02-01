@@ -32,32 +32,6 @@ var (
 	SceneData    = make(map[string]*Scene)
 )
 
-//func LoadJsonFile(Path string,obj *interface){
-
-//	ApplicationDir, err := os.Getwd()
-//	if err != nil {
-//		log.Error(err.Error())
-//		return
-//	}
-
-//	confPath := fmt.Sprintf("%s"+Path, ApplicationDir)
-
-//	f, err := os.Open(confPath)
-//	if err != nil {
-//		log.Error(err.Error())
-//		return
-//	}
-
-//	err, data := readFileInto(Path)
-//	if err != nil {
-//		panic(err)
-//	}
-//	err = json.Unmarshal(data, obj)
-//	if err != nil {
-//		panic(err)
-//	}
-//}
-
 //场景配置文件
 func LoadScene(Path string) {
 	// Read config.

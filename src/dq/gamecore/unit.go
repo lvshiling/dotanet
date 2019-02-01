@@ -10,7 +10,42 @@ import (
 
 var UnitID int32 = 1000000
 
+//单位配置文件数据
+type UnitFileData struct {
+	//配置文件数据
+	TypeID                    int32   //类型ID
+	ModeType                  string  //模型
+	BaseHP                    int32   //基础HP
+	BaseMP                    int32   //基础MP
+	BaseAttackSpeed           int32   //基础攻击速度(141点攻击速度等于 1.20秒一次)
+	BaseAttack                int32   //基础攻击力
+	BaseAttackRange           float32 //基础攻击范围
+	BaseMoveSpeed             float32 //基础移动速度
+	BaseMagicScale            float32 //基础技能增强
+	BaseMPRegain              float32 //基础魔法恢复
+	BasePhysicalAmaor         float32 //基础物理护甲(-1)
+	BaseMagicAmaor            float32 //基础魔法抗性(0.25)
+	BaseStatusAmaor           float32 //基础状态抗性(0)
+	BaseDodge                 float32 //基础闪避(0)
+	BaseHPRegain              float32 //基础生命恢复
+	AttributePrimary          int8    //主属性(1:力量 2:敏捷 3:智力)
+	AttributeBaseStrength     float32 //基础力量
+	AttributeStrengthGain     float32 //力量成长
+	AttributeBaseIntelligence float32 //基础智力
+	AttributeIntelligenceGain float32 //智力成长
+	AttributeBaseAgility      float32 //基础敏捷
+	AttributeAgilityGain      float32 //敏捷成长
+	AttackAnimotionPoint      float32 //攻击前摇(0.3)
+	AttackRangeBuffer         float32 //前摇不中断攻击范围
+	ProjectileMode            string  //弹道模型
+	ProjectileSpeed           float32 //弹道速度
+	UnitType                  int8    //单位类型(1:英雄 2:普通单位 3:远古 4:boss)
+	AttackAcpabilities        int8    //(1:近程攻击 2:远程攻击)
+}
+
 type UnitProperty struct {
+	UnitFileData
+
 	//基础数据 当前数据
 	HP            int32
 	MAX_HP        int32
@@ -18,19 +53,15 @@ type UnitProperty struct {
 	MAX_MP        int32
 	Name          string
 	Level         int32
-	ModeType      string
 	Experience    int32
 	MaxExperience int32
-	ControlID     int32 //控制者ID
+
+	ControlID int32 //控制者ID
 
 	AnimotorState int32 //动画状态 1:idle 2:walk 3:attack 4:skill 5:death
 
-	BaseAttack      int32   //基础攻击力
-	BaseAttackRange float32 //基础攻击范围
-	BaseSpeed       float64 //基础移动速度
-
 	//复合数据 会随时变动的数据 比如受buff影响攻击力降低  (每帧动态计算)
-	Speed       float64
+	MoveSpeed   float64
 	Attack      int32   //攻击力 (基础攻击力+属性影响+buff影响)
 	AttackRange float32 //攻击范围
 }
@@ -107,9 +138,9 @@ func (this *Unit) Update(dt float64) {
 
 func (this *Unit) CalProperty() {
 
-	this.Speed = this.BaseSpeed
+	this.MoveSpeed = this.BaseMoveSpeed
 
-	this.Body.SpeedSize = this.Speed
+	this.Body.SpeedSize = this.MoveSpeed
 }
 
 //刷新客户端显示数据

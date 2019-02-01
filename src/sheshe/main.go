@@ -3,15 +3,18 @@
 package main
 
 import (
-	//"io/ioutil"
 	"dq/app"
+	"dq/gamecore"
 	"dq/log"
-	//"time"
-	//"dq/cyward"
-	//"dq/vec2d"
+	"dq/utils"
 )
 
 func main() {
+
+	_, m1 := utils.ReadXlsxData("bin/conf/units.xlsx", (*gamecore.UnitProperty)(nil))
+	for k, v := range m1 {
+		log.Info("data:%d %v", k, v)
+	}
 
 	app := new(app.DefaultApp)
 	app.Run()
