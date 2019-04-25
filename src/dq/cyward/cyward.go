@@ -115,13 +115,19 @@ type WardCore struct {
 }
 
 func (this *Body) GetMyPolygonBig(p1 *Body, big vec2d.Vec2) *MyPolygon {
+	p1r := vec2d.Vec2{}
+	p1r.X = 0
+	p1r.Y = 0
+	if p1 != nil {
+		p1r = p1.R
+	}
 
 	this.M_MyPolygon.Points = this.M_MyPolygon.Points[0:0]
 	this.M_MyPolygon.IsRect = this.IsRect
 	this.M_MyPolygon.Center = this.Position
 	if this.IsRect {
 
-		r := vec2d.Add(vec2d.Add(p1.R, this.R), big)
+		r := vec2d.Add(vec2d.Add(p1r, this.R), big)
 
 		//变成正方形
 		this.M_MyPolygon.Points = append(this.M_MyPolygon.Points, vec2d.Add(this.M_MyPolygon.Center, vec2d.Vec2{-r.X, r.Y}))
@@ -130,7 +136,7 @@ func (this *Body) GetMyPolygonBig(p1 *Body, big vec2d.Vec2) *MyPolygon {
 		this.M_MyPolygon.Points = append(this.M_MyPolygon.Points, vec2d.Add(this.M_MyPolygon.Center, vec2d.Vec2{-r.X, -r.Y}))
 
 	} else {
-		tt := vec2d.Add(p1.R, big)
+		tt := vec2d.Add(p1r, big)
 		addlen := tt.Length()
 		for i := 0; i < len(this.OffsetPoints); i++ {
 			add := vec2d.Add(vec2d.Add(this.M_MyPolygon.Center, this.OffsetPoints[i]), vec2d.Mul(this.OffsetPoints[i].GetNormalized(), addlen))
@@ -210,7 +216,7 @@ func (this *Body) SetMoveDir(dir vec2d.Vec2) {
 //设置目的地
 func (this *Body) SetTarget(pos vec2d.Vec2) {
 
-	log.Info("SetTarget %f  %f", pos.X, pos.Y)
+	//log.Info("SetTarget %f  %f", pos.X, pos.Y)
 
 	this.TargetPosition = this.TargetPosition[0:0]
 	this.DetourPath = this.DetourPath[0:0]
@@ -230,14 +236,14 @@ func (this *Body) SetTarget(pos vec2d.Vec2) {
 	dpNode.path1 = append(dpNode.path1, pos)
 
 	bodys := make([]*Body, 0)
-	this.Core.GetStaticBodys(&bodys)
+	this.Core.GetStaticBodysNoTarget(&bodys, pos)
 	if this.Core.CheckDetourPathNodeT(dpNode, &bodys, &this.DetourPath) {
-		log.Info("SetTarget %d", this.Tag)
-		for i := 0; i < len(this.DetourPath); i++ {
-			log.Info("x: %f  y:%f", this.DetourPath[i].X, this.DetourPath[i].Y)
-		}
+		//log.Info("SetTarget %d", this.Tag)
+		//		for i := 0; i < len(this.DetourPath); i++ {
+		//			log.Info("x: %f  y:%f", this.DetourPath[i].X, this.DetourPath[i].Y)
+		//		}
 	} else {
-		//cocos2d::log("SetTarget 222");
+		//log.Info("SetTarget 222")
 	}
 
 	t2 := time.Now().UnixNano()
@@ -749,7 +755,7 @@ func (this *WardCore) CheckDetourPathNode2(dpnode *DetourPathNode, staticbodys *
 				if this.IsSegmentCollionSquare(p1, p2, mypolygon) {
 					//继续绕路
 					if (*staticbodys)[i] == dpnode.collions {
-						log.Info("staticbodys[i] == dpnode->collions---%d", (*staticbodys)[i].Tag)
+						//log.Info("staticbodys[i] == dpnode->collions---%d", (*staticbodys)[i].Tag)
 					}
 					t1 := vec2d.Sub((*staticbodys)[i].Position, p1)
 					disSquared := t1.LengthSquared()
@@ -895,7 +901,7 @@ func (this *WardCore) CheckDetourPathNode1(dpnode *DetourPathNode, staticbodys *
 				if this.IsSegmentCollionSquare(p1, p2, mypolygon) {
 					//继续绕路
 					if (*staticbodys)[i] == dpnode.collions {
-						log.Info("staticbodys[i] == dpnode->collions---%d", (*staticbodys)[i].Tag)
+						//log.Info("staticbodys[i] == dpnode->collions---%d", (*staticbodys)[i].Tag)
 					}
 					t1 := vec2d.Sub((*staticbodys)[i].Position, p1)
 					disSquared := t1.LengthSquared()
@@ -1031,7 +1037,7 @@ func (this *WardCore) CalcDetourPath(my *Body, collion *Body, targetPos vec2d.Ve
 	dpNode.path2 = append(dpNode.path2, targetPos)
 
 	var bodys []*Body
-	this.GetStaticBodys(&bodys)
+	this.GetStaticBodysNoTarget(&bodys, targetPos)
 	if this.CheckDetourPathNodeT(&dpNode, &bodys, path) {
 		log.Info("1111111111111")
 	} else {
@@ -1039,6 +1045,21 @@ func (this *WardCore) CalcDetourPath(my *Body, collion *Body, targetPos vec2d.Ve
 	}
 }
 
+//获取静止且不包含目的点 的body
+func (this *WardCore) GetStaticBodysNoTarget(bodys *[]*Body, target vec2d.Vec2) {
+
+	for _, v := range this.Bodys {
+		if v.CurSpeedSize <= 0 {
+			mypolygon1 := v.GetMyPolygon(nil)
+			if mypolygon1.IsInMyPolygon(target) {
+				continue
+			}
+			(*bodys) = append((*bodys), v)
+		}
+	}
+}
+
+//获取静止的body
 func (this *WardCore) GetStaticBodys(bodys *[]*Body) {
 
 	for _, v := range this.Bodys {
@@ -1046,17 +1067,7 @@ func (this *WardCore) GetStaticBodys(bodys *[]*Body) {
 			(*bodys) = append((*bodys), v)
 		}
 	}
-
-	//	for i := 0; i < len(this.Bodys); i++ {
-	//		if this.Bodys[i].CurSpeedSize <= 0 {
-	//			(*bodys) = append((*bodys), this.Bodys[i])
-	//		}
-	//	}
 }
-
-//func (this *WardCore) GetBodys() *[]*Body {
-//	return &this.Bodys
-//}
 
 func (this *WardCore) GetNextPositionCollision(one *Body) *Body {
 

@@ -40,7 +40,7 @@ func CreateScene(name string) *Scene {
 
 //初始化
 func (this *Scene) Init() {
-	this.SceneFrame = 20
+	this.SceneFrame = 40
 	this.CurFrame = 0
 
 	this.FirstUpdateTime = time.Now().UnixNano()
@@ -75,6 +75,9 @@ func (this *Scene) Init() {
 		for j := 0; j < 20; j++ {
 			unit := CreateUnit(this)
 			unit.ModeType = "Hero/hero1"
+			unit.Camp = 2 //npc
+			unit.BaseMoveSpeed = 2
+			unit.SetAI(NewNormalAI(unit))
 			//设置移动核心body
 			pos := vec2d.Vec2{float64(-63 + j*6), float64(-63 + i*6)}
 			r := vec2d.Vec2{0.3, 0.3}
@@ -84,6 +87,31 @@ func (this *Scene) Init() {
 
 	}
 
+}
+
+//通过ID查找单位
+func (this *Scene) FindUnitByID(id int32) *Unit {
+	return this.Units[id]
+}
+
+//获取可视范围内的所有单位
+func (this *Scene) FindVisibleUnits(my *Unit) []*Unit {
+
+	units := make([]*Unit, 0)
+
+	zones := GetVisibleZones((my.Body.Position.X), (my.Body.Position.Y))
+	//遍历可视区域
+	for _, vzone := range zones {
+		if _, ok := this.ZoneUnits[vzone]; ok {
+			//遍历区域中的单位
+			for _, unit := range this.ZoneUnits[vzone] {
+				units = append(units, unit)
+
+			}
+		}
+	}
+
+	return units
 }
 
 func (this *Scene) Update() {

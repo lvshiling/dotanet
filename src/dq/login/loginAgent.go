@@ -114,7 +114,7 @@ func (a *LoginAgent) DoQuickLoginData(data *protomsg.MsgBase) {
 	d1 := &gamecore.UnitProperty{}
 	d1.HP = 1000
 	d1.MAX_HP = 1000
-	d1.MAX_MP = 1000
+	d1.MP = 1000
 	d1.MAX_MP = 1000
 	d1.Name = "t1"
 	d1.Level = 5
@@ -122,7 +122,7 @@ func (a *LoginAgent) DoQuickLoginData(data *protomsg.MsgBase) {
 	d1.Experience = 1000
 	d1.MaxExperience = 10000
 	d1.ControlID = uid
-	d1.BaseSpeed = 5
+	d1.BaseMoveSpeed = 3
 	t2 := protomsg.MsgUserEnterScene{
 		Uid:            uid,
 		ConnectId:      data.ConnectId,

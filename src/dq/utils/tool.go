@@ -7,9 +7,14 @@ import (
 	"errors"
 	"reflect"
 	"strconv"
+	"time"
 
 	"github.com/360EntSecGroup-Skylar/excelize"
 )
+
+func GetCurTimeOfSecond() float64 {
+	return float64(time.Now().UnixNano()) / 1000000000.0
+}
 
 func Struct2Bytes(data interface{}) []byte {
 	buf := bytes.NewBuffer(nil)

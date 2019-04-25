@@ -114,3 +114,12 @@ func (this *Player) MoveCmd(data *protomsg.CS_PlayerMove) {
 		}
 	}
 }
+
+//玩家攻击操作
+func (this *Player) AttackCmd(data *protomsg.CS_PlayerAttack) {
+	for _, v := range data.IDs {
+		if this.MainUnit.ID == v {
+			this.MainUnit.AttackCmd(data)
+		}
+	}
+}
