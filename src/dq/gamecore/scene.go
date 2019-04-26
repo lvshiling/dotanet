@@ -16,9 +16,9 @@ type Scene struct {
 	SceneName       string           //场景名字
 	CurFrame        int32            //当前帧
 
-	Players   map[int32]*Player     //游戏中所有的玩家
-	Units     map[int32]*Unit       //游戏中所有的单位
-	ZoneUnits map[SceneZone][]*Unit //区域中的单位
+	Players   map[int32]*Player           //游戏中所有的玩家
+	Units     map[int32]*Unit             //游戏中所有的单位
+	ZoneUnits map[utils.SceneZone][]*Unit //区域中的单位
 
 	NextAddUnit    *utils.BeeMap //下一帧需要增加的单位
 	NextRemoveUnit *utils.BeeMap //下一帧需要删除的单位
@@ -53,7 +53,7 @@ func (this *Scene) Init() {
 
 	this.Players = make(map[int32]*Player)
 	this.Units = make(map[int32]*Unit)
-	this.ZoneUnits = make(map[SceneZone][]*Unit)
+	this.ZoneUnits = make(map[utils.SceneZone][]*Unit)
 
 	scenedata := conf.GetSceneData(this.SceneName)
 
@@ -99,7 +99,7 @@ func (this *Scene) FindVisibleUnits(my *Unit) []*Unit {
 
 	units := make([]*Unit, 0)
 
-	zones := GetVisibleZones((my.Body.Position.X), (my.Body.Position.Y))
+	zones := utils.GetVisibleZones((my.Body.Position.X), (my.Body.Position.Y))
 	//遍历可视区域
 	for _, vzone := range zones {
 		if _, ok := this.ZoneUnits[vzone]; ok {
@@ -166,7 +166,7 @@ func (this *Scene) DoSendData() {
 		if v == nil {
 			continue
 		}
-		zones := GetVisibleZones((v.Body.Position.X), (v.Body.Position.Y))
+		zones := utils.GetVisibleZones((v.Body.Position.X), (v.Body.Position.Y))
 		//遍历可视区域
 		for _, vzone := range zones {
 			if _, ok := this.ZoneUnits[vzone]; ok {
@@ -187,10 +187,10 @@ func (this *Scene) DoMove() {
 
 //处理分区
 func (this *Scene) DoZone() {
-	this.ZoneUnits = make(map[SceneZone][]*Unit)
+	this.ZoneUnits = make(map[utils.SceneZone][]*Unit)
 	for _, v := range this.Units {
 
-		zone := GetSceneZone((v.Body.Position.X), (v.Body.Position.Y))
+		zone := utils.GetSceneZone((v.Body.Position.X), (v.Body.Position.Y))
 		this.ZoneUnits[zone] = append(this.ZoneUnits[zone], v)
 
 	}

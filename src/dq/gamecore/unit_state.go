@@ -116,7 +116,13 @@ func (this *MoveState) OnTransform() {
 
 func (this *MoveState) Update(dt float64) {
 
-	this.Parent.SetAnimotorState(2)
+	//如果速度小于等于0就休息(可能是 寻路失败)
+	if this.Parent.Body.CurSpeedSize <= 0 {
+		this.Parent.SetAnimotorState(1)
+	} else {
+		this.Parent.SetAnimotorState(2)
+	}
+
 	//先检查攻击对象
 	if this.Parent.HaveAttackCmd() {
 		//上次寻路的目标单位和本次相同则在1S内 不再寻路

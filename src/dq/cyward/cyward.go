@@ -2,6 +2,7 @@ package cyward
 
 import (
 	"dq/log"
+	"dq/utils"
 	"dq/vec2d"
 	"math"
 	"time"
@@ -108,12 +109,6 @@ type Body struct {
 	M_MyPolygon  *MyPolygon
 }
 
-//避障核心
-type WardCore struct {
-	Bodys map[*Body]*Body
-	//Bodys []*Body
-}
-
 func (this *Body) GetMyPolygonBig(p1 *Body, big vec2d.Vec2) *MyPolygon {
 	p1r := vec2d.Vec2{}
 	p1r.X = 0
@@ -164,7 +159,7 @@ func (this *Body) Update(dt float64) {
 		//检查碰撞
 		collisionOne := this.CheckPositionCollisoin(dt)
 		if collisionOne != nil {
-			log.Info("collisionOne:%d", collisionOne.Tag)
+			//log.Info("collisionOne:%d", collisionOne.Tag)
 			if collisionOne.CurSpeedSize > 0 {
 				this.CollisoinStopTime = 0.5
 				this.CurSpeedSize = 0
@@ -236,7 +231,7 @@ func (this *Body) SetTarget(pos vec2d.Vec2) {
 	dpNode.path1 = append(dpNode.path1, pos)
 
 	bodys := make([]*Body, 0)
-	this.Core.GetStaticBodysNoTarget(&bodys, pos)
+	this.Core.GetStaticBodysNoTarget(&bodys, this.Position, pos)
 	if this.Core.CheckDetourPathNodeT(dpNode, &bodys, &this.DetourPath) {
 		//log.Info("SetTarget %d", this.Tag)
 		//		for i := 0; i < len(this.DetourPath); i++ {
@@ -250,8 +245,14 @@ func (this *Body) SetTarget(pos vec2d.Vec2) {
 	log.Info("time:%d", (t2-t1)/1e6)
 }
 
+//如果已经在碰撞区域内  就可以直接走出来，不需要再检查碰撞
 func (this *Body) CheckPositionCollisoin(dt float64) *Body {
-	return this.Core.GetNextPositionCollision(this)
+
+	if this.Core.GetCurPositionCollision(this) == nil {
+		return this.Core.GetNextPositionCollision(this)
+	}
+
+	return nil
 }
 
 func (this *Body) IsCollisionPoint(p vec2d.Vec2) bool {
@@ -1037,26 +1038,53 @@ func (this *WardCore) CalcDetourPath(my *Body, collion *Body, targetPos vec2d.Ve
 	dpNode.path2 = append(dpNode.path2, targetPos)
 
 	var bodys []*Body
-	this.GetStaticBodysNoTarget(&bodys, targetPos)
+	this.GetStaticBodysNoTarget(&bodys, my.Position, targetPos)
 	if this.CheckDetourPathNodeT(&dpNode, &bodys, path) {
-		log.Info("1111111111111")
+		//log.Info("1111111111111")
 	} else {
-		log.Info("2222222222222")
+		//log.Info("2222222222222")
 	}
 }
 
-//获取静止且不包含目的点 的body
-func (this *WardCore) GetStaticBodysNoTarget(bodys *[]*Body, target vec2d.Vec2) {
+var gWardCore_ZoneWidth float64 = 4.0
+var gWardCore_ZoneHeight float64 = 4.0
 
-	for _, v := range this.Bodys {
-		if v.CurSpeedSize <= 0 {
-			mypolygon1 := v.GetMyPolygon(nil)
-			if mypolygon1.IsInMyPolygon(target) {
-				continue
+//避障核心
+type WardCore struct {
+	Bodys map[*Body]*Body
+	//Bodys []*Body
+	ZoneBodys map[utils.SceneZone][]*Body
+}
+
+//获取静止且不包含目的点 的body
+func (this *WardCore) GetStaticBodysNoTarget(bodys *[]*Body, mypos vec2d.Vec2, target vec2d.Vec2) {
+
+	zones := utils.GetVisibleZonesFromWH_Two((mypos.X), (mypos.Y), target.X, target.Y, gWardCore_ZoneWidth, gWardCore_ZoneHeight)
+	//遍历可视区域
+	for _, vzone := range zones {
+		if _, ok := this.ZoneBodys[vzone]; ok {
+			//遍历区域中的单位
+			for _, v := range this.ZoneBodys[vzone] {
+				if v.CurSpeedSize <= 0 {
+					mypolygon1 := v.GetMyPolygon(nil)
+					if mypolygon1.IsInMyPolygon(target) {
+						continue
+					}
+					(*bodys) = append((*bodys), v)
+				}
 			}
-			(*bodys) = append((*bodys), v)
 		}
 	}
+
+	//	for _, v := range this.Bodys {
+	//		if v.CurSpeedSize <= 0 {
+	//			mypolygon1 := v.GetMyPolygon(nil)
+	//			if mypolygon1.IsInMyPolygon(target) {
+	//				continue
+	//			}
+	//			(*bodys) = append((*bodys), v)
+	//		}
+	//	}
 }
 
 //获取静止的body
@@ -1067,6 +1095,20 @@ func (this *WardCore) GetStaticBodys(bodys *[]*Body) {
 			(*bodys) = append((*bodys), v)
 		}
 	}
+}
+func (this *WardCore) GetCurPositionCollision(one *Body) *Body {
+
+	for _, v := range this.Bodys {
+		if v != one {
+
+			mypolygon1 := v.GetMyPolygon(one)
+			if mypolygon1.IsInMyPolygon(one.Position) {
+				return v
+			}
+		}
+	}
+
+	return nil
 }
 
 func (this *WardCore) GetNextPositionCollision(one *Body) *Body {
@@ -1081,27 +1123,26 @@ func (this *WardCore) GetNextPositionCollision(one *Body) *Body {
 		}
 	}
 
-	//	for i := 0; i < len(this.Bodys); i++ {
-	//		if this.Bodys[i] != one {
-	//			//R := vec2d.Add(this.Bodys[i].R, one.R)
-	//			mypolygon1 := this.Bodys[i].GetMyPolygon(one)
-	//			if mypolygon1.IsInMyPolygon(one.NextPosition) {
-	//				return this.Bodys[i]
-	//			}
-	//		}
-	//	}
 	return nil
+}
+
+//处理分区
+func (this *WardCore) DoZone() {
+	this.ZoneBodys = make(map[utils.SceneZone][]*Body)
+	for _, v := range this.Bodys {
+
+		zone := utils.GetSceneZoneFromWH((v.Position.X), (v.Position.Y), gWardCore_ZoneWidth, gWardCore_ZoneHeight)
+		this.ZoneBodys[zone] = append(this.ZoneBodys[zone], v)
+
+	}
 }
 
 func (this *WardCore) Update(dt float64) {
 
-	//log.Info("len:%d-", len(this.Bodys))
+	this.DoZone()
 	for _, v := range this.Bodys {
 		v.Update(dt)
 	}
-	//	for i := 0; i < len(this.Bodys); i++ {
-	//		this.Bodys[i].Update(dt)
-	//	}
 }
 func (this *WardCore) CreateBody(position vec2d.Vec2, r vec2d.Vec2, speedsize float64) *Body {
 	body := &Body{}
@@ -1131,25 +1172,12 @@ func (this *WardCore) CreateBodyPolygon(position vec2d.Vec2, points []vec2d.Vec2
 func (this *WardCore) RemoveBody(body *Body) {
 
 	delete(this.Bodys, body)
-	//this.Bodys = append(this.Bodys, body)
-	//return body
 }
 
 func CreateWardCore() *WardCore {
 	re := &WardCore{}
 	re.Bodys = make(map[*Body]*Body)
+	re.ZoneBodys = make(map[utils.SceneZone][]*Body)
 
 	return re
 }
-
-//	Body* Core::CreateBody(cocos2d::Vec2 position, cocos2d::Vec2 r, float speedsize)
-//	{
-//		Body* body = new Body(this);
-//		body->Position = position;
-//		body->R = r;
-//		body->SpeedSize = speedsize;
-//		//body->TargetPosition.push_back(targetPos);
-
-//		Bodys.push_back(body);
-//		return body;
-//	}
