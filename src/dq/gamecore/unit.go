@@ -41,14 +41,14 @@ type UnitFileData struct {
 	AttackRangeBuffer         float32 //前摇不中断攻击范围
 	ProjectileMode            string  //弹道模型
 	ProjectileSpeed           float32 //弹道速度
-	UnitType                  int8    //单位类型(1:英雄 2:普通单位 3:远古 4:boss)
-	AttackAcpabilities        int8    //(1:近程攻击 2:远程攻击)
+	UnitType                  int32   //单位类型(1:英雄 2:普通单位 3:远古 4:boss)
+	AttackAcpabilities        int32   //(1:近程攻击 2:远程攻击)
 
 	//-------------新加----
 	AutoAttackTraceRange    float32 //自动攻击的追击范围
 	AutoAttackTraceOutRange float32 //自动攻击的取消追击范围
 	//-----
-	Camp int8 //阵营(1:玩家 2:NPC)
+	Camp int32 //阵营(1:玩家 2:NPC)
 }
 
 func (this *Unit) TestData() {
@@ -60,6 +60,11 @@ func (this *Unit) TestData() {
 
 	this.AutoAttackTraceRange = 5
 	this.AutoAttackTraceOutRange = 10
+
+	this.HP = 1000
+	this.MP = 1000
+	this.MAX_HP = 1000
+	this.MAX_MP = 1000
 }
 
 type UnitProperty struct {
@@ -76,6 +81,7 @@ type UnitProperty struct {
 	MaxExperience int32
 
 	ControlID int32 //控制者ID
+	IsMain    int32 //是否是主单位 1:是  2:不是
 
 	AnimotorState int32 //动画状态 1:idle 2:walk 3:attack 4:skill 5:death
 
@@ -85,9 +91,9 @@ type UnitProperty struct {
 	AttackRange float32 //攻击范围
 
 	//-------------新加----------
-	AttackMode int8 //攻击模式(1:和平模式 2:组队模式 3:全体模式 4:阵营模式(玩家,NPC) 5:行会模式)
+	AttackMode int32 //攻击模式(1:和平模式 2:组队模式 3:全体模式 4:阵营模式(玩家,NPC) 5:行会模式)
 
-	IsDeath int8 //是否死亡(1:死亡 2:没死)
+	IsDeath int32 //是否死亡(1:死亡 2:没死)
 
 	//	IsDizzy     int8 //是否眩晕(1:眩晕 2:不眩晕)
 	//	IsTwine     int8 //是否缠绕(1:缠绕 2:不缠绕)
@@ -352,6 +358,9 @@ func CreateUnit(scene *Scene) *Unit {
 	UnitID++
 	unitre.InScene = scene
 	unitre.Init()
+	unitre.IsMain = 2
+	unitre.UnitType = 2
+	unitre.ControlID = -1
 
 	return unitre
 }
@@ -364,6 +373,9 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 	unitre.MyPlayer = player
 	utils.Bytes2Struct(datas, &unitre.UnitProperty)
 	unitre.Init()
+	unitre.IsMain = 1
+	unitre.UnitType = 1
+	unitre.ControlID = player.Uid
 
 	return unitre
 }
@@ -439,6 +451,12 @@ func (this *Unit) FreshClientData() {
 
 	this.ClientData.DirectionX = float32(this.Body.Direction.X)
 	this.ClientData.DirectionY = float32(this.Body.Direction.Y)
+
+	this.ClientData.UnitType = this.UnitType
+	this.ClientData.AttackAcpabilities = this.AttackAcpabilities
+	this.ClientData.AttackMode = this.AttackMode
+	this.ClientData.IsMain = this.IsMain
+
 }
 
 //func (this *Unit) OnePropSub(prop interface{}){
@@ -496,6 +514,13 @@ func (this *Unit) FreshClientDataSub() {
 
 	this.ClientDataSub.DirectionX = float32(this.Body.Direction.X) - this.ClientData.DirectionX
 	this.ClientDataSub.DirectionY = float32(this.Body.Direction.Y) - this.ClientData.DirectionY
+
+	this.ClientDataSub.UnitType = this.UnitType - this.ClientData.UnitType
+	this.ClientDataSub.AttackAcpabilities = this.AttackAcpabilities - this.ClientData.AttackAcpabilities
+	this.ClientDataSub.AttackMode = this.AttackMode - this.ClientData.AttackMode
+
+	this.ClientDataSub.IsMain = this.IsMain - this.ClientData.IsMain
+
 }
 
 //即时属性获取
