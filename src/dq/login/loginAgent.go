@@ -101,6 +101,18 @@ func (a *LoginAgent) DoQuickLoginData(data *protomsg.MsgBase) {
 	//--------------------
 	a.NotifyGateLogined(data.ConnectId, uid)
 
+	//获取角色信息
+	log.Info("获取角色信息")
+	players := make([]db.DB_CharacterInfo, 0)
+	db.DbOne.GetCharactersInfo(uid, &players)
+	for k, v := range players {
+		log.Info("data:%d %v", k, v)
+	}
+
+	if len(players) <= 0 {
+		db.DbOne.CreateCharacter(uid, "test11", 1)
+	}
+
 	//回复客户端
 	data.ModeType = "Client"
 	data.Uid = (uid)

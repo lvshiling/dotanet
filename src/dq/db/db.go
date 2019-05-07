@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"dq/conf"
 	"dq/log"
+	"encoding/json"
 	"strconv"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -38,6 +39,52 @@ func (a *DB) Init() {
 	a.Mydb.SetMaxOpenConns(10000)
 	a.Mydb.SetMaxIdleConns(500)
 	a.Mydb.Ping()
+}
+
+func (a *DB) GetJSON(sqlString string) (string, error) {
+	stmt, err := a.Mydb.Prepare(sqlString)
+	if err != nil {
+		return "", err
+	}
+	defer stmt.Close()
+	rows, err := stmt.Query()
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	columns, err := rows.Columns()
+	if err != nil {
+		return "", err
+	}
+	count := len(columns)
+	tableData := make([]map[string]interface{}, 0)
+	values := make([]interface{}, count)
+	valuePtrs := make([]interface{}, count)
+	for rows.Next() {
+		for i := 0; i < count; i++ {
+			valuePtrs[i] = &values[i]
+		}
+		rows.Scan(valuePtrs...)
+		entry := make(map[string]interface{})
+		for i, col := range columns {
+			var v interface{}
+			val := values[i]
+			b, ok := val.([]byte)
+			if ok {
+				v = string(b)
+			} else {
+				v = val
+			}
+			entry[col] = v
+		}
+		tableData = append(tableData, entry)
+	}
+	jsonData, err := json.Marshal(tableData)
+	if err != nil {
+		return "", err
+	}
+	//log.Info(string(jsonData))
+	return string(jsonData), nil
 }
 
 //创建快速新玩家
@@ -139,6 +186,45 @@ func (a *DB) CheckQuickLogin(machineid string, platfom string) int {
 
 	return uid
 
+}
+func (a *DB) QueryAnything(sqlstr string, rowStruct interface{}) error {
+	str, err := a.GetJSON(sqlstr)
+	if err != nil {
+		log.Info(err.Error())
+		return err
+	}
+
+	//h2 := datamsg.MailInfo{}
+	err = json.Unmarshal([]byte(str), rowStruct)
+	if err != nil {
+		log.Info(err.Error())
+		return err
+	}
+	return nil
+}
+
+//获取玩家信息
+func (a *DB) GetCharactersInfo(uid int32, playersInfo *[]DB_CharacterInfo) error {
+	sqlstr := "SELECT * FROM playerinfo where uid=" + strconv.Itoa(int(uid))
+	return a.QueryAnything(sqlstr, playersInfo)
+}
+
+//创建角色
+func (a *DB) CreateCharacter(uid int32, name string, typeid int32) error {
+	tx, _ := a.Mydb.Begin()
+
+	res, err1 := tx.Exec("INSERT playerinfo (uid,name,typeid) values (?,?,?)",
+		uid, name, typeid)
+	n, e := res.RowsAffected()
+	//id, err2 := res.LastInsertId()
+	if err1 != nil || n == 0 || e != nil {
+		log.Info("INSERT playerinfo err")
+		return tx.Rollback()
+	}
+
+	err1 = tx.Commit()
+
+	return err1
 }
 
 func (a *DB) test() {
