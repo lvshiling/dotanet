@@ -257,6 +257,7 @@ func (this *Scene) DoAddAndRemoveUnit() {
 		this.MoveCore.RemoveBody(v.(*Unit).Body)
 		//v.(*Unit).Body
 		//this.Units.Delete(k)
+		v.(*Unit).OnDestroy()
 		delete(this.Units, k.(int32))
 
 		this.NextRemoveUnit.Delete(k)

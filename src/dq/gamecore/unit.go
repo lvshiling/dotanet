@@ -88,6 +88,16 @@ func (this *Unit) IsCanBeAttack() bool {
 	return true
 }
 
+//单位是否消失 (单位离线 单位死亡 单位在另一个空间:黑鸟的关..  开雾的状态下)
+func (this *Unit) IsDisappear() bool {
+
+	if this.IsDelete == true || this.IsDeath == 1 {
+		return true
+	}
+
+	return false
+}
+
 //目标是否在攻击范围内
 func (this *Unit) IsInAttackRange(target *Unit) bool {
 	//this.Body.Position.X
@@ -168,7 +178,7 @@ func (this *Unit) AttackCmd(data *protomsg.CS_PlayerAttack) {
 		return
 	}
 	at := this.InScene.FindUnitByID(data.TargetUnitID)
-	if at == nil {
+	if at == nil || at.IsDisappear() {
 		return
 	}
 	//判断阵营 攻击模式 是否允许本次攻击
@@ -180,7 +190,7 @@ func (this *Unit) AttackCmd(data *protomsg.CS_PlayerAttack) {
 
 }
 
-//检查攻击指令的有效性 如果目标单位被场景删除 则无需
+//检查攻击指令的有效性 如果目标单位被场景删除 则无效
 func (this *Unit) CheckAttackCmd() {
 	if this.InScene == nil {
 		return
@@ -191,8 +201,8 @@ func (this *Unit) CheckAttackCmd() {
 	if this.AttackCmdDataTarget == nil {
 		return
 	}
-	at := this.InScene.FindUnitByID(this.AttackCmdDataTarget.ID)
-	if at == nil {
+	///at := this.InScene.FindUnitByID(this.AttackCmdDataTarget.ID)
+	if this.AttackCmdDataTarget.IsDisappear() {
 		this.StopAttackCmd()
 	}
 }
@@ -317,6 +327,8 @@ type Unit struct {
 	Body     *cyward.Body //移动相关(位置信息) 需要设置移动速度
 	State    UnitState    //逻辑状态
 	AI       UnitAI
+
+	IsDelete bool //是否被删除
 
 	//发送数据部分
 	ClientData    *protomsg.UnitDatas //客户端显示数据
@@ -762,6 +774,11 @@ func (this *Unit) FreshClientDataSub() {
 
 	this.ClientDataSub.IsMain = this.IsMain - this.ClientData.IsMain
 
+}
+
+//被删除的时候
+func (this *Unit) OnDestroy() {
+	this.IsDelete = true
 }
 
 //即时属性获取

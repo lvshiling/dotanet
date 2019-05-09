@@ -102,7 +102,8 @@ func (this *NormalAI) UpdateEnemies() {
 			delete(this.AllEnemies, k)
 		}
 
-		if v.Target.InScene.FindUnitByID(v.Target.ID) == nil {
+		//if v.Target.InScene.FindUnitByID(v.Target.ID) == nil {
+		if v.Target.IsDisappear() {
 			delete(this.AllEnemies, k)
 		}
 	}
