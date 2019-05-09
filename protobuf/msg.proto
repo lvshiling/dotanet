@@ -34,6 +34,12 @@ message CS_Login {
     string Wechat_id = 4;
     string QQ_id = 5;
 }
+//登录成功后的 选择角色
+message CS_SelectCharacter {
+    CharacterBaseDatas SelectCharacter = 1;//选择角色
+}
+
+
 
 
 //玩家移动操作
@@ -119,8 +125,23 @@ message SC_NewScene{
 }
 
 
+//单位数据
+message CharacterBaseDatas{
+    int32   Characterid = 1;
+    string  Name = 2;
+    int32   Typeid = 3;
+    int32   Level = 4;
+}
+
 message SC_Logined {
     int32 Code = 1;//登录结果 1表示成功 0表示失败
     int32 Uid = 2;//UID
     string Error = 3;//失败原因
+    repeated CharacterBaseDatas Characters = 4;//已经拥有的角色
+}
+//选择角色结果()
+message SC_SelectCharacterResult {
+    int32 Code = 1;//选择角色结果 1表示成功 0表示失败
+    int32 Characterid = 2;//Characterid
+    string Error = 3;//失败原因  名字重复
 }
