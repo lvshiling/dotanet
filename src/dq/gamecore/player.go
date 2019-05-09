@@ -14,6 +14,7 @@ type Server interface {
 type Player struct {
 	Uid         int32
 	ConnectId   int32
+	Characterid int32 //角色id
 	MainUnit    *Unit //主单位
 	CurScene    *Scene
 	ServerAgent Server
@@ -26,10 +27,11 @@ type Player struct {
 	Msg          *protomsg.SC_Update
 }
 
-func CreatePlayer(uid int32, connectid int32) *Player {
+func CreatePlayer(uid int32, connectid int32, characterid int32) *Player {
 	re := &Player{}
 	re.Uid = uid
 	re.ConnectId = connectid
+	re.Characterid = characterid
 	re.LastShowUnit = make(map[int32]*Unit)
 	re.CurShowUnit = make(map[int32]*Unit)
 	re.Msg = &protomsg.SC_Update{}

@@ -1,7 +1,9 @@
 package gamecore
 
 import (
+	"dq/conf"
 	"dq/cyward"
+	"dq/db"
 	"dq/log"
 	"dq/protobuf"
 	"dq/utils"
@@ -11,45 +13,6 @@ import (
 )
 
 var UnitID int32 = 1000000
-
-//单位配置文件数据
-type UnitFileData struct {
-	//配置文件数据
-	TypeID                    int32   //类型ID
-	ModeType                  string  //模型
-	BaseHP                    int32   //基础HP
-	BaseMP                    int32   //基础MP
-	BaseAttackSpeed           int32   //基础攻击速度(141点攻击速度等于 1.20秒一次)
-	BaseAttack                int32   //基础攻击力
-	BaseAttackRange           float32 //基础攻击范围
-	BaseMoveSpeed             float32 //基础移动速度
-	BaseMagicScale            float32 //基础技能增强
-	BaseMPRegain              float32 //基础魔法恢复
-	BasePhysicalAmaor         float32 //基础物理护甲(-1)
-	BaseMagicAmaor            float32 //基础魔法抗性(0.25)
-	BaseStatusAmaor           float32 //基础状态抗性(0)
-	BaseDodge                 float32 //基础闪避(0)
-	BaseHPRegain              float32 //基础生命恢复
-	AttributePrimary          int8    //主属性(1:力量 2:敏捷 3:智力)
-	AttributeBaseStrength     float32 //基础力量
-	AttributeStrengthGain     float32 //力量成长
-	AttributeBaseIntelligence float32 //基础智力
-	AttributeIntelligenceGain float32 //智力成长
-	AttributeBaseAgility      float32 //基础敏捷
-	AttributeAgilityGain      float32 //敏捷成长
-	AttackAnimotionPoint      float32 //攻击前摇(0.3)
-	AttackRangeBuffer         float32 //前摇不中断攻击范围
-	ProjectileMode            string  //弹道模型
-	ProjectileSpeed           float32 //弹道速度
-	UnitType                  int32   //单位类型(1:英雄 2:普通单位 3:远古 4:boss)
-	AttackAcpabilities        int32   //(1:近程攻击 2:远程攻击)
-
-	//-------------新加----
-	AutoAttackTraceRange    float32 //自动攻击的追击范围
-	AutoAttackTraceOutRange float32 //自动攻击的取消追击范围
-	//-----
-	Camp int32 //阵营(1:玩家 2:NPC)
-}
 
 func (this *Unit) TestData() {
 	this.AttackRange = 2
@@ -67,43 +30,10 @@ func (this *Unit) TestData() {
 	this.MAX_MP = 1000
 }
 
-type UnitProperty struct {
-	UnitFileData //单位配置文件数据
-
-	//基础数据 当前数据
-	HP            int32
-	MAX_HP        int32
-	MP            int32
-	MAX_MP        int32
-	Name          string
-	Level         int32
-	Experience    int32
-	MaxExperience int32
-
-	ControlID int32 //控制者ID
-	IsMain    int32 //是否是主单位 1:是  2:不是
-
-	AnimotorState int32 //动画状态 1:idle 2:walk 3:attack 4:skill 5:death
-
-	//复合数据 会随时变动的数据 比如受buff影响攻击力降低  (每帧动态计算)
-	MoveSpeed   float64
-	Attack      int32   //攻击力 (基础攻击力+属性影响+buff影响)
-	AttackRange float32 //攻击范围
-
-	//-------------新加----------
-	AttackMode int32 //攻击模式(1:和平模式 2:组队模式 3:全体模式 4:阵营模式(玩家,NPC) 5:行会模式)
-
-	IsDeath int32 //是否死亡(1:死亡 2:没死)
-
-	//	IsDizzy     int8 //是否眩晕(1:眩晕 2:不眩晕)
-	//	IsTwine     int8 //是否缠绕(1:缠绕 2:不缠绕)
-	//	IsForceMove int8 //是否强制移动(1:强制移动 2:不强制移动) (推推棒等等)
-
-}
-
-//获取1次攻击所需的时间 (141点攻击速度等于 1.20秒一次)
+//获取1次攻击所需的时间 (141点攻击速度等于 1.20秒一次) 170/攻击速度 等于攻击时间
 func (this *Unit) GetOneAttackTime() float32 {
-	return 1.5
+
+	return 170.0 / this.AttackSpeed
 }
 
 //目标离自动攻击范围的距离 小于0 表示在内
@@ -332,6 +262,52 @@ func (this *Unit) MoveCmd(data *protomsg.CS_PlayerMove) {
 }
 
 //------------------单位本体------------------
+type UnitProperty struct {
+	conf.UnitFileData //单位配置文件数据
+
+	// 当前数据
+	ControlID int32 //控制者ID
+	IsMain    int32 //是否是主单位 1:是  2:不是
+
+	AnimotorState int32 //动画状态 1:idle 2:walk 3:attack 4:skill 5:death
+	//-------------新加----------
+	AttackMode int32 //攻击模式(1:和平模式 2:组队模式 3:全体模式 4:阵营模式(玩家,NPC) 5:行会模式)
+
+	IsDeath int32 //是否死亡(1:死亡 2:没死)
+	Name    string
+
+	//复合数据 会随时变动的数据 比如受buff影响攻击力降低  (每帧动态计算)
+	HP            int32
+	MAX_HP        int32
+	MP            int32
+	MAX_MP        int32
+	Level         int32 //等级 会影响属性
+	Experience    int32
+	MaxExperience int32
+	//-
+	AttributeStrength     float32 //当前力量属性
+	AttributeIntelligence float32 //当前智力属性
+	AttributeAgility      float32 //当前敏捷属性
+	//------攻击---------
+	AttackSpeed float32 //攻击速度
+	Attack      int32   //攻击力 (基础攻击力+属性影响+buff影响)
+	AttackRange float32 //攻击范围 攻击距离
+	MoveSpeed   float64 //移动速度
+	MagicScale  float32 //技能增强
+	MPRegain    float32 //魔法恢复
+	//------防御---------
+	PhysicalAmaor  float32 //物理护甲(-1)
+	PhysicalResist float32 //物理伤害抵挡
+	MagicAmaor     float32 //魔法抗性(0.25)
+	StatusAmaor    float32 //状态抗性(0)
+	Dodge          float32 //闪避(0)
+	HPRegain       float32 //生命恢复
+
+	//	IsDizzy     int8 //是否眩晕(1:眩晕 2:不眩晕)
+	//	IsTwine     int8 //是否缠绕(1:缠绕 2:不缠绕)
+	//	IsForceMove int8 //是否强制移动(1:强制移动 2:不强制移动) (推推棒等等)
+
+}
 type Unit struct {
 	UnitProperty
 	UnitCmd
@@ -357,9 +333,14 @@ func CreateUnit(scene *Scene) *Unit {
 	unitre.ID = UnitID
 	UnitID++
 	unitre.InScene = scene
+	//	文件数据
+	unitre.UnitFileData = *(conf.GetUnitFileData(2))
+	unitre.Name = unitre.UnitName
+	unitre.Level = 1
+
 	unitre.Init()
 	unitre.IsMain = 2
-	unitre.UnitType = 2
+	//unitre.UnitType = 2 //单位类型(1:英雄 2:普通单位 3:远古 4:boss)
 	unitre.ControlID = -1
 
 	return unitre
@@ -371,10 +352,23 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 	UnitID++
 	unitre.InScene = scene
 	unitre.MyPlayer = player
-	utils.Bytes2Struct(datas, &unitre.UnitProperty)
+
+	//---------db.DB_CharacterInfo
+	characterinfo := db.DB_CharacterInfo{}
+	utils.Bytes2Struct(datas, &characterinfo)
+
+	log.Info("---DB_CharacterInfo---%v", characterinfo)
+
+	//名字 等级 经验
+	unitre.Name = characterinfo.Name
+	unitre.Level = characterinfo.Level
+	unitre.Experience = characterinfo.Experience
+	//	文件数据
+	unitre.UnitFileData = *(conf.GetUnitFileData(characterinfo.Typeid))
+
 	unitre.Init()
 	unitre.IsMain = 1
-	unitre.UnitType = 1
+	//unitre.UnitType = 1 //单位类型(1:英雄 2:普通单位 3:远古 4:boss)
 	unitre.ControlID = player.Uid
 
 	return unitre
@@ -390,7 +384,15 @@ func (this *Unit) Init() {
 	//	this.IsForceMove = 2
 	this.AttackMode = 1 //和平攻击模式
 
-	this.TestData()
+	this.IsDeath = 2
+
+	//满血 满蓝
+	this.MAX_HP = this.BaseHP
+	this.HP = this.MAX_HP
+	this.MAX_MP = this.BaseMP
+	this.MP = this.MAX_MP
+
+	//this.TestData()
 }
 
 //
@@ -417,12 +419,251 @@ func (this *Unit) Update(dt float64) {
 	this.State.Update(dt)
 }
 
+//AttributeStrength float32//当前力量属性
+//	AttributeIntelligence float32//当前智力属性
+//	AttributeAgility float32//当前敏捷属性
+//计算属性(力量 智力 敏捷)
+func (this *Unit) CalAttribute() {
+	//基础力量+等级带来的力量成长
+	this.AttributeStrength = this.AttributeBaseStrength + float32(this.Level-1)*this.AttributeStrengthGain
+
+	this.AttributeIntelligence = this.AttributeBaseIntelligence + float32(this.Level-1)*this.AttributeIntelligenceGain
+
+	this.AttributeAgility = this.AttributeBaseAgility + float32(this.Level-1)*this.AttributeAgilityGain
+
+	//装备
+	//技能
+	//buff
+}
+
+//改变血量
+func (this *Unit) ChangeHP(hp int32) {
+	this.HP += hp
+	if this.HP <= 0 {
+		//死亡处理
+		this.IsDeath = 1
+	}
+	if this.HP >= this.MAX_HP {
+		this.HP = this.MAX_HP
+	}
+}
+
+//改变MP
+func (this *Unit) ChangeMP(mp int32) {
+	this.MP += mp
+	if this.MP <= 0 {
+		this.MP = 0
+	}
+	if this.MP >= this.MAX_MP {
+		this.MP = this.MAX_MP
+	}
+}
+
+//计算MAX_HP和MAX_MP
+func (this *Unit) CalMaxHP_MaxHP() {
+	maxhp := this.BaseHP + int32(this.AttributeStrength*conf.StrengthAddHP)
+	//装备
+	//技能
+	//buff
+
+	if maxhp != this.MAX_HP {
+
+		//按百分比增减当前血量
+		changehp := float32(maxhp)/float32(this.MAX_HP)*float32(this.HP) - float32(this.HP)
+		//log.Info("change hp:%d-----%d---%d----%d", int32(changehp), maxhp, this.MAX_HP, this.HP)
+		this.MAX_HP = maxhp
+		this.ChangeHP(int32(changehp))
+
+	}
+
+	//MP
+	maxmp := this.BaseMP + int32(this.AttributeIntelligence*conf.IntelligenceAddMP)
+	if maxmp != this.MAX_MP {
+
+		changemp := float32(maxmp)/float32(this.MAX_MP)*float32(this.MP) - float32(this.MP)
+		this.MAX_MP = maxmp
+		this.ChangeMP(int32(changemp))
+
+	}
+}
+
+//计算攻击速度
+func (this *Unit) CalAttackSpeed() {
+	//基础攻击加上敏捷增加的攻击
+	this.AttackSpeed = float32(this.BaseAttackSpeed) + float32(this.AttributeAgility*conf.AgilityAddAttackSpeed)
+	//装备
+	//技能
+	//buff
+
+	//攻击速度取值范围
+	if this.AttackSpeed <= 10 {
+		this.AttackSpeed = 10
+	} else if this.AttackSpeed >= float32(this.BaseMaxAttackSpeed) {
+		this.AttackSpeed = float32(this.BaseMaxAttackSpeed)
+	}
+
+}
+
+//计算攻击力
+func (this *Unit) CalAttack() {
+	//主属性(1:力量 2:敏捷 3:智力)
+	//基础攻击力+主属性增减攻击力
+	switch this.AttributePrimary {
+	case 1:
+		this.Attack = this.BaseAttack + int32(this.AttributeStrength*conf.AttributePrimaryAddAttack)
+		break
+	case 2:
+		this.Attack = this.BaseAttack + int32(this.AttributeAgility*conf.AttributePrimaryAddAttack)
+		break
+	case 3:
+		this.Attack = this.BaseAttack + int32(this.AttributeIntelligence*conf.AttributePrimaryAddAttack)
+		break
+	}
+
+	//装备
+	//技能
+	//buff
+
+}
+
+//计算攻击距离
+func (this *Unit) CalAttackRange() {
+	//攻击范围
+	this.AttackRange = this.BaseAttackRange
+
+	//装备
+	//技能
+	//buff
+}
+
+//计算移动速度
+func (this *Unit) CalMoveSpeed() {
+	//基础移动速度+敏捷对移动速度的提升
+	agilityaddspeed := float64(this.BaseMoveSpeed) * float64(this.AttributeAgility*conf.AgilityAddMoveSpeed)
+	this.MoveSpeed = float64(this.BaseMoveSpeed) + agilityaddspeed
+
+	//装备
+	//技能
+	//buff
+
+	//移动行为逻辑速度设置
+	this.Body.SpeedSize = this.MoveSpeed
+}
+
+//计算技能增强IntelligenceAddMagicScale
+func (this *Unit) CalMagicScale() {
+	//通过智力计算
+	this.MagicScale = float32(this.AttributeIntelligence * conf.IntelligenceAddMagicScale)
+	//装备
+	//技能
+	//buff
+}
+
+//计算魔法回复
+func (this *Unit) CalMPRegain() {
+	this.MPRegain = this.BaseMPRegain + float32(this.AttributeIntelligence*conf.IntelligenceAddMPRegain)
+	//装备
+	//技能
+	//buff
+}
+
+////------防御---------
+//	PhysicalAmaor  float32 //物理护甲(-1)
+//	PhysicalResist float32 //物理伤害抵挡
+//	MagicAmaor     float32 //魔法抗性(0.25)
+//	StatusAmaor    float32 //状态抗性(0)
+//	Dodge          float32 //闪避(0)
+//	HPRegain       float32 //生命恢复
+//计算护甲和物理抵抗
+func (this *Unit) CalPhysicalAmaor() {
+	//基础护甲+敏捷增减的护甲
+	this.PhysicalAmaor = this.BasePhysicalAmaor + float32(this.AttributeAgility*conf.AgilityAddPhysicalAmaor)
+
+	//装备
+	//技能
+	//buff
+
+	//计算物理伤害抵挡
+	this.PhysicalResist = 0.052 * this.PhysicalAmaor / (0.9 + 0.048*this.PhysicalAmaor)
+
+}
+
+//计算魔抗
+func (this *Unit) CalMagicAmaor() {
+	//非线性叠加
+	//基础魔抗叠加力量带来的魔抗
+
+	strenth := float32(this.AttributeStrength * conf.StrengthAddMagicAmaor)
+	magicamaor := (1 - this.BaseMagicAmaor) * (1 - strenth)
+
+	//装备
+	//技能
+	//buff
+
+	this.MagicAmaor = 1 - magicamaor
+}
+
+//计算状态抗性
+func (this *Unit) CalStatusAmaor() {
+	//非线性叠加
+	statusamaor := (1 - this.BaseStatusAmaor)
+
+	//装备
+	//技能
+	//buff
+
+	this.StatusAmaor = 1 - statusamaor
+}
+
+//计算闪避
+func (this *Unit) CalDodge() {
+	//非线性叠加
+	dodge := (1 - this.BaseDodge)
+
+	//装备
+	//技能
+	//buff
+
+	this.Dodge = (1 - dodge)
+}
+
+//计算生命回复
+func (this *Unit) CalHPRegain() {
+	this.HPRegain = this.BaseHPRegain + float32(this.AttributeStrength*conf.StrengthAddHPRegain)
+	//装备
+	//技能
+	//buff
+}
+
 //计算属性 (每一帧 都可能会变)
 func (this *Unit) CalProperty() {
+	//计算属性
+	this.CalAttribute()
+	//计算MAXHP MP
+	this.CalMaxHP_MaxHP()
+	//计算攻击速度
+	this.CalAttackSpeed()
+	//计算攻击力
+	this.CalAttack()
+	//计算攻击距离
+	this.CalAttackRange()
+	//计算移动速度
+	this.CalMoveSpeed()
+	//计算技能增强
+	this.CalMagicScale()
+	//计算魔法回复
+	this.CalMPRegain()
+	//计算护甲 物理伤害抵挡
+	this.CalPhysicalAmaor()
+	//计算魔抗
+	this.CalMagicAmaor()
+	//计算状态抗性
+	this.CalStatusAmaor()
+	//计算闪避
+	this.CalDodge()
+	//计算生命回复
+	this.CalHPRegain()
 
-	this.MoveSpeed = float64(this.BaseMoveSpeed)
-
-	this.Body.SpeedSize = this.MoveSpeed
 }
 
 //刷新客户端显示数据

@@ -3,7 +3,6 @@ package login
 import (
 	"dq/datamsg"
 	"dq/db"
-	"dq/gamecore"
 	"dq/log"
 	"dq/network"
 	"dq/protobuf"
@@ -46,6 +45,8 @@ func (a *LoginAgent) Init() {
 	a.handles = make(map[string]func(data *protomsg.MsgBase))
 
 	a.registerDataHandle("CS_MsgQuickLogin", a.DoQuickLoginData)
+
+	a.registerDataHandle("CS_SelectCharacter", a.DoSelectCharacter)
 
 	a.registerDataHandle("LoginOut", a.DoLoginOut)
 
@@ -105,13 +106,14 @@ func (a *LoginAgent) DoQuickLoginData(data *protomsg.MsgBase) {
 	log.Info("获取角色信息")
 	players := make([]db.DB_CharacterInfo, 0)
 	db.DbOne.GetCharactersInfo(uid, &players)
+	//log.Info("testerr:%s", testerr.Error())
 	for k, v := range players {
 		log.Info("data:%d %v", k, v)
 	}
 
-	if len(players) <= 0 {
-		db.DbOne.CreateCharacter(uid, "test11", 1)
-	}
+	//	if len(players) <= 0 {
+	//		db.DbOne.CreateCharacter(uid, "test11", 1)
+	//	}
 
 	//回复客户端
 	data.ModeType = "Client"
@@ -120,28 +122,107 @@ func (a *LoginAgent) DoQuickLoginData(data *protomsg.MsgBase) {
 	jd := &protomsg.SC_Logined{}
 	jd.Code = 1 //成功
 	jd.Uid = (uid)
+	jd.Characters = make([]*protomsg.CharacterBaseDatas, 0)
+	for _, v := range players {
+		cbd := &protomsg.CharacterBaseDatas{}
+		cbd.Characterid = v.Characterid
+		cbd.Name = v.Name
+		cbd.Typeid = v.Typeid
+		cbd.Level = v.Level
+		jd.Characters = append(jd.Characters, cbd)
+	}
 	a.WriteMsgBytes(datamsg.NewMsg1Bytes(data, jd))
 
 	//通知进入场景
-	d1 := &gamecore.UnitProperty{}
-	d1.HP = 1000
-	d1.MAX_HP = 1000
-	d1.MP = 1000
-	d1.MAX_MP = 1000
-	d1.Name = "t1"
-	d1.Level = 5
-	d1.ModeType = "Hero/hero2"
-	d1.Experience = 1000
-	d1.MaxExperience = 10000
-	d1.ControlID = uid
-	d1.BaseMoveSpeed = 3
+	//	d1 := &gamecore.UnitProperty{}
+	//	d1.HP = 1000
+	//	d1.MAX_HP = 1000
+	//	d1.MP = 1000
+	//	d1.MAX_MP = 1000
+	//	d1.Name = "t1"
+	//	d1.Level = 5
+	//	d1.ModeType = "Hero/hero2"
+	//	d1.Experience = 1000
+	//	d1.MaxExperience = 10000
+	//	d1.ControlID = uid
+	//	d1.BaseMoveSpeed = 3
+	//	t2 := protomsg.MsgUserEnterScene{
+	//		Uid:            uid,
+	//		ConnectId:      data.ConnectId,
+	//		SrcServerName:  "",
+	//		DestServerName: "GameScene1",
+	//		SceneName:      "Map/set_5v5",
+	//		Datas:          utils.Struct2Bytes(d1),
+	//	}
+	//	t1 := protomsg.MsgBase{
+	//		ModeType: datamsg.GameScene1,
+	//		MsgType:  "MsgUserEnterScene",
+	//	}
+	//	a.WriteMsgBytes(datamsg.NewMsg1Bytes(&t1, &t2))
+
+}
+
+func (a *LoginAgent) DoSelectCharacter(data *protomsg.MsgBase) {
+
+	uid := data.Uid
+	log.Info("---------DoSelectCharacter")
+	h2 := &protomsg.CS_SelectCharacter{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+
+	characterid := h2.SelectCharacter.Characterid
+	//检查是否是新创建角色
+	if h2.SelectCharacter.Characterid < 0 {
+		err, characterid = db.DbOne.CreateCharacter(data.Uid, h2.SelectCharacter.Name, h2.SelectCharacter.Typeid)
+		if err != nil {
+			//回复客户端
+			data.ModeType = "Client"
+			data.Uid = (uid)
+			data.MsgType = "SC_SelectCharacterResult"
+			jd := &protomsg.SC_SelectCharacterResult{}
+			jd.Code = 0 //失败
+			jd.Error = "create fail :name repeat"
+			a.WriteMsgBytes(datamsg.NewMsg1Bytes(data, jd))
+			return
+		}
+	}
+
+	log.Info("获取角色信息")
+	players := make([]db.DB_CharacterInfo, 0)
+	db.DbOne.GetCharactersInfoByCharacterid(characterid, &players)
+	if len(players) <= 0 {
+		//回复客户端
+		data.ModeType = "Client"
+		data.Uid = (uid)
+		data.MsgType = "SC_SelectCharacterResult"
+		jd := &protomsg.SC_SelectCharacterResult{}
+		jd.Code = 0 //失败
+		jd.Error = "find fail :no characterid"
+		a.WriteMsgBytes(datamsg.NewMsg1Bytes(data, jd))
+		return
+	}
+
+	//回复客户端
+	data.ModeType = "Client"
+	data.Uid = (uid)
+	data.MsgType = "SC_SelectCharacterResult"
+	jd := &protomsg.SC_SelectCharacterResult{}
+	jd.Code = 1 //成功
+	jd.Characterid = characterid
+	a.WriteMsgBytes(datamsg.NewMsg1Bytes(data, jd))
+
+	//通知进入场景
+	//d1 := players[0]
 	t2 := protomsg.MsgUserEnterScene{
 		Uid:            uid,
 		ConnectId:      data.ConnectId,
 		SrcServerName:  "",
-		DestServerName: "GameScene1",
+		DestServerName: datamsg.GameScene1, //
 		SceneName:      "Map/set_5v5",
-		Datas:          utils.Struct2Bytes(d1),
+		Datas:          utils.Struct2Bytes(players[0]), //数据库中的角色信息
 	}
 	t1 := protomsg.MsgBase{
 		ModeType: datamsg.GameScene1,

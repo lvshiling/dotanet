@@ -85,6 +85,9 @@ func (a *GameScene1Agent) DoDisconnect(data *protomsg.MsgBase) {
 			log.Info("---------DoDisconnect--delete")
 			player.(*gamecore.Player).OutScene()
 			a.Players.Delete(data.Uid)
+			//存档 数据库
+		} else {
+			log.Info("---------DoDisconnect--ConnectId fail")
 		}
 
 	}
@@ -122,7 +125,7 @@ func (a *GameScene1Agent) DoMsgUserEnterScene(data *protomsg.MsgBase) {
 
 		player := a.Players.Get(h2.Uid)
 		if player == nil {
-			player = gamecore.CreatePlayer(h2.Uid, h2.ConnectId)
+			player = gamecore.CreatePlayer(h2.Uid, h2.ConnectId, -1)
 			player.(*gamecore.Player).ServerAgent = a
 			a.Players.Set(player.(*gamecore.Player).Uid, player)
 		} else {

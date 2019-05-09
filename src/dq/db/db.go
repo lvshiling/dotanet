@@ -5,6 +5,7 @@ import (
 	"dq/conf"
 	"dq/log"
 	"encoding/json"
+	"errors"
 	"strconv"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -203,28 +204,56 @@ func (a *DB) QueryAnything(sqlstr string, rowStruct interface{}) error {
 	return nil
 }
 
+//func ()players := make([]db.DB_CharacterInfo, 0)
+
 //获取玩家信息
 func (a *DB) GetCharactersInfo(uid int32, playersInfo *[]DB_CharacterInfo) error {
-	sqlstr := "SELECT * FROM playerinfo where uid=" + strconv.Itoa(int(uid))
+	sqlstr := "SELECT * FROM characterinfo where uid=" + strconv.Itoa(int(uid))
+	return a.QueryAnything(sqlstr, playersInfo)
+}
+
+//获取角色信息通过名字
+func (a *DB) GetCharactersInfoByName(name string, playersInfo *[]DB_CharacterInfo) error {
+	sqlstr := "SELECT * FROM characterinfo where name=" + "'" + name + "'"
+	return a.QueryAnything(sqlstr, playersInfo)
+}
+
+//获取角色信息通过characterid
+func (a *DB) GetCharactersInfoByCharacterid(characterid int32, playersInfo *[]DB_CharacterInfo) error {
+	sqlstr := "SELECT * FROM characterinfo where characterid=" + strconv.Itoa(int(characterid))
 	return a.QueryAnything(sqlstr, playersInfo)
 }
 
 //创建角色
-func (a *DB) CreateCharacter(uid int32, name string, typeid int32) error {
+func (a *DB) CreateCharacter(uid int32, name string, typeid int32) (error, int32) {
+
+	//检查是否有重名的角色了
+	players := make([]DB_CharacterInfo, 0)
+	nameerr := a.GetCharactersInfoByName(name, &players)
+	if nameerr != nil || len(players) > 0 {
+		return errors.New("name repeat"), -1
+	}
+
+	//检查是否有重名的角色了
+	//	sqlstr := "SELECT * FROM characterinfo where name=" + name
+	//	if repeatnameerr := a.QueryAnything(sqlstr, playersInfo); repeatnameerr != nil {
+	//		return repeatnameerr
+	//	}
+
 	tx, _ := a.Mydb.Begin()
 
-	res, err1 := tx.Exec("INSERT playerinfo (uid,name,typeid) values (?,?,?)",
+	res, err1 := tx.Exec("INSERT characterinfo (uid,name,typeid) values (?,?,?)",
 		uid, name, typeid)
 	n, e := res.RowsAffected()
-	//id, err2 := res.LastInsertId()
-	if err1 != nil || n == 0 || e != nil {
-		log.Info("INSERT playerinfo err")
-		return tx.Rollback()
+	characterid, err2 := res.LastInsertId()
+	if err1 != nil || n == 0 || e != nil || err2 != nil {
+		log.Info("INSERT characterinfo err")
+		return tx.Rollback(), -1
 	}
 
 	err1 = tx.Commit()
 
-	return err1
+	return err1, int32(characterid)
 }
 
 func (a *DB) test() {
