@@ -73,10 +73,7 @@ func (this *Scene) Init() {
 	//场景分区数据 创建100个单位
 	for i := 0; i < 20; i++ {
 		for j := 0; j < 20; j++ {
-			unit := CreateUnit(this)
-			unit.ModeType = "Hero/hero1"
-			unit.Camp = 2 //npc
-			unit.BaseMoveSpeed = 2
+			unit := CreateUnit(this, 2)
 			unit.SetAI(NewNormalAI(unit))
 			//设置移动核心body
 			pos := vec2d.Vec2{float64(-63 + j*6), float64(-63 + i*6)}
@@ -187,6 +184,7 @@ func (this *Scene) DoMove() {
 
 //处理分区
 func (this *Scene) DoZone() {
+	//单位分区
 	this.ZoneUnits = make(map[utils.SceneZone][]*Unit)
 	for _, v := range this.Units {
 
@@ -194,6 +192,8 @@ func (this *Scene) DoZone() {
 		this.ZoneUnits[zone] = append(this.ZoneUnits[zone], v)
 
 	}
+	//子弹分区
+
 }
 
 //处理单位逻辑

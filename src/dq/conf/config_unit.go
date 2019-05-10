@@ -96,6 +96,8 @@ type UnitFileData struct {
 	AttackRangeBuffer         float32 //前摇不中断攻击范围
 	ProjectileMode            string  //弹道模型
 	ProjectileSpeed           float32 //弹道速度
+	ProjectileStartPos        string  //弹道起始点 1,0.5  1表示单位正前方1米0.5表示单位高度0.5米的位置
+	ProjectileEndPos          string  //弹道结束点 0,0.5  0表示单位正前方1米0.5表示单位高度0.5米的位置
 	UnitType                  int32   //单位类型(1:英雄 2:普通单位 3:远古 4:boss)
 	AttackAcpabilities        int32   //(1:近程攻击 2:远程攻击)
 

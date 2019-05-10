@@ -271,9 +271,44 @@ func (this *Unit) MoveCmd(data *protomsg.CS_PlayerMove) {
 	log.Info("---------MoveCmd")
 }
 
+//创建子弹的时候需要使用
+type UnitProjectilePos struct {
+	//弹道起始位置距离
+	ProjectileStartPosDis float32
+	//弹道起始位置高度
+	ProjectileStartPosHeight float32
+	//弹道结束位置距离
+	ProjectileEndPosDis float32
+	//弹道结束位置高度
+	ProjectileEndPosHeight float32
+}
+
+//获取弹道起始位置
+func (this *Unit) GetProjectileStartPos() vec2d.Vector3 {
+	if this.Body == nil {
+		return vec2d.NewVector3(0, 0, 0.5)
+	}
+	pos := vec2d.Add(this.Body.Position, vec2d.Mul(this.Body.Direction.GetNormalized(), float64(this.ProjectileStartPosDis)))
+
+	//后期可能需要单位的z坐标参与计算
+	return vec2d.NewVector3(pos.X, pos.Y, float64(this.ProjectileStartPosHeight))
+}
+
+//获取弹道结束位置
+func (this *Unit) GetProjectileEndPos() vec2d.Vector3 {
+	if this.Body == nil {
+		return vec2d.NewVector3(0, 0, 0.5)
+	}
+	pos := vec2d.Add(this.Body.Position, vec2d.Mul(this.Body.Direction.GetNormalized(), float64(this.ProjectileEndPosDis)))
+
+	//后期可能需要单位的z坐标参与计算
+	return vec2d.NewVector3(pos.X, pos.Y, float64(this.ProjectileEndPosHeight))
+}
+
 //------------------单位本体------------------
 type UnitProperty struct {
 	conf.UnitFileData //单位配置文件数据
+	UnitProjectilePos
 
 	// 当前数据
 	ControlID int32 //控制者ID
@@ -340,13 +375,13 @@ func (this *Unit) SetAI(ai UnitAI) {
 
 }
 
-func CreateUnit(scene *Scene) *Unit {
+func CreateUnit(scene *Scene, typeid int32) *Unit {
 	unitre := &Unit{}
 	unitre.ID = UnitID
 	UnitID++
 	unitre.InScene = scene
 	//	文件数据
-	unitre.UnitFileData = *(conf.GetUnitFileData(2))
+	unitre.UnitFileData = *(conf.GetUnitFileData(typeid))
 	unitre.Name = unitre.UnitName
 	unitre.Level = 1
 
@@ -403,6 +438,11 @@ func (this *Unit) Init() {
 	this.HP = this.MAX_HP
 	this.MAX_MP = this.BaseMP
 	this.MP = this.MAX_MP
+
+	//弹道位置计算
+
+	utils.GetFloat32FromString(this.ProjectileStartPos, &this.ProjectileStartPosDis, &this.ProjectileStartPosHeight)
+	utils.GetFloat32FromString(this.ProjectileEndPos, &this.ProjectileEndPosDis, &this.ProjectileEndPosHeight)
 
 	//this.TestData()
 }
