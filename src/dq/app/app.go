@@ -38,6 +38,7 @@ import (
 	"dq/login"
 	"dq/model"
 	"errors"
+	"math/rand"
 	"strings"
 	"sync"
 )
@@ -101,6 +102,7 @@ func (app *DefaultApp) Init() {
 func (app *DefaultApp) Run() error {
 
 	app.Init()
+	rand.Seed(time.Now().UnixNano())
 
 	mods := flag.String("models", "tt", "Log file directory?")
 	flag.Parse() //解析输入的参数

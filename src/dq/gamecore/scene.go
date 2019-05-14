@@ -20,6 +20,9 @@ type Scene struct {
 	Units     map[int32]*Unit             //游戏中所有的单位
 	ZoneUnits map[utils.SceneZone][]*Unit //区域中的单位
 
+	Bullets     map[int32]*Bullet             //游戏中所有的子弹
+	ZoneBullets map[utils.SceneZone][]*Bullet //区域中的的子弹
+
 	NextAddUnit    *utils.BeeMap //下一帧需要增加的单位
 	NextRemoveUnit *utils.BeeMap //下一帧需要删除的单位
 
@@ -54,6 +57,9 @@ func (this *Scene) Init() {
 	this.Players = make(map[int32]*Player)
 	this.Units = make(map[int32]*Unit)
 	this.ZoneUnits = make(map[utils.SceneZone][]*Unit)
+
+	this.Bullets = make(map[int32]*Bullet)
+	this.ZoneBullets = make(map[utils.SceneZone][]*Bullet)
 
 	scenedata := conf.GetSceneData(this.SceneName)
 
@@ -120,10 +126,13 @@ func (this *Scene) Update() {
 		//log.Info("Update loop")
 		//t1 := time.Now().UnixNano()
 		//log.Info("main time:%d", (t1)/1e6)
+		this.DoRemoveBullet()
 
 		this.DoAddAndRemoveUnit()
 
 		this.DoLogic()
+
+		this.UpdateBullet(1 / float32(this.SceneFrame))
 
 		this.DoMove()
 
@@ -156,6 +165,11 @@ func (this *Scene) DoSendData() {
 		v.FreshClientDataSub()
 		v.FreshClientData()
 	}
+	//生成子弹的 客户端 显示数据
+	for _, v := range this.Bullets {
+		v.FreshClientDataSub()
+		v.FreshClientData()
+	}
 
 	//遍历所有玩家
 	for _, player := range this.Players {
@@ -170,6 +184,12 @@ func (this *Scene) DoSendData() {
 				//遍历区域中的单位
 				for _, unit := range this.ZoneUnits[vzone] {
 					player.AddUnitData(unit)
+				}
+			}
+			if _, ok := this.ZoneBullets[vzone]; ok {
+				//遍历区域中的单位
+				for _, bullet := range this.ZoneBullets[vzone] {
+					player.AddBulletData(bullet)
 				}
 			}
 		}
@@ -193,6 +213,12 @@ func (this *Scene) DoZone() {
 
 	}
 	//子弹分区
+	this.ZoneBullets = make(map[utils.SceneZone][]*Bullet)
+	for _, v := range this.Bullets {
+
+		zone := utils.GetSceneZone((v.Position.X), (v.Position.Y))
+		this.ZoneBullets[zone] = append(this.ZoneBullets[zone], v)
+	}
 
 }
 
@@ -225,6 +251,28 @@ func (this *Scene) DoSleep() {
 
 	}
 
+}
+
+//增加子弹
+func (this *Scene) AddBullet(bullet *Bullet) {
+	this.Bullets[bullet.ID] = bullet
+}
+
+//删除子弹
+func (this *Scene) DoRemoveBullet() {
+	//ZoneBullets
+	for k, v := range this.Bullets {
+		if v.IsDone() {
+			delete(this.Bullets, k)
+		}
+	}
+}
+
+//更新子弹
+func (this *Scene) UpdateBullet(dt float32) {
+	for _, v := range this.Bullets {
+		v.Update(dt)
+	}
 }
 
 //增加单位

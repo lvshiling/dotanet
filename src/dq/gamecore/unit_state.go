@@ -12,6 +12,24 @@ type UnitState interface {
 	Update(dt float64)
 	OnEnd()
 	OnStart()
+	GetParent() *Unit
+	GetStateID() int32 //1:idle 2:move 3:attack 4:death
+}
+
+//全局状态切换检查
+func GTransform(this UnitState) bool {
+
+	parent := this.GetParent()
+	if parent == nil {
+		return false
+	}
+	//死亡
+	if parent.IsDeath == 1 && this.GetStateID() != 4 {
+		this.OnEnd()
+		parent.SetState(NewDeathState(parent))
+		return true
+	}
+	return false
 }
 
 //------------------------------休息状态-------------------------
@@ -27,8 +45,20 @@ func NewIdleState(p *Unit) *IdleState {
 	return re
 }
 
+func (this *IdleState) GetParent() *Unit {
+	return this.Parent
+}
+func (this *IdleState) GetStateID() int32 {
+	return 1
+}
+
 //检查状态变换
 func (this *IdleState) OnTransform() {
+
+	//全局状态切换检查
+	if GTransform(this) {
+		return
+	}
 
 	//攻击命令
 	if this.Parent.HaveAttackCmd() {
@@ -84,8 +114,20 @@ func NewMoveState(p *Unit) *MoveState {
 	return re
 }
 
+func (this *MoveState) GetParent() *Unit {
+	return this.Parent
+}
+func (this *MoveState) GetStateID() int32 {
+	return 2
+}
+
 //检查状态变换
 func (this *MoveState) OnTransform() {
+
+	//全局状态切换检查
+	if GTransform(this) {
+		return
+	}
 
 	//攻击命令
 	if this.Parent.HaveAttackCmd() {
@@ -176,8 +218,20 @@ func NewAttackState(p *Unit) *AttackState {
 	return re
 }
 
+func (this *AttackState) GetParent() *Unit {
+	return this.Parent
+}
+func (this *AttackState) GetStateID() int32 {
+	return 3
+}
+
 //检查状态变换
 func (this *AttackState) OnTransform() {
+
+	//全局状态切换检查
+	if GTransform(this) {
+		return
+	}
 
 	//攻击完成
 	if this.IsDone == true {
@@ -225,6 +279,10 @@ func (this *AttackState) Update(dt float64) {
 		if dotime/this.OneAttackTime >= float64(this.Parent.AttackAnimotionPoint) {
 			//创建子弹
 
+			b := NewBullet1(this.Parent, this.AttackTarget)
+			b.SetNormalHurtRatio(1)
+			this.Parent.CreateBullet(b)
+
 			this.IsDoBullet = true
 		}
 	}
@@ -251,6 +309,57 @@ func (this *AttackState) OnStart() {
 	this.IsDoBullet = false
 	this.IsDone = false
 	this.OneAttackTime = float64(this.Parent.GetOneAttackTime())
+}
+
+//------------------------------死亡状态-------------------------
+type DeathState struct {
+	Parent *Unit
+
+	StartTime float64 //开始的时间
+}
+
+func NewDeathState(p *Unit) *DeathState {
+	//log.Info(" NewDeathState")
+	re := &DeathState{}
+	re.Parent = p
+	re.OnStart()
+	return re
+}
+
+func (this *DeathState) GetParent() *Unit {
+	return this.Parent
+}
+func (this *DeathState) GetStateID() int32 {
+	return 4
+}
+
+//检查状态变换
+func (this *DeathState) OnTransform() {
+	//全局状态切换检查
+	if GTransform(this) {
+		return
+	}
+	//复活
+	if this.Parent.IsDeath != 1 {
+		this.OnEnd()
+		this.Parent.SetState(NewIdleState(this.Parent))
+	}
+
+}
+func (this *DeathState) Update(dt float64) {
+	//this.Parent.SetAnimotorState(1)
+	dotime := utils.GetCurTimeOfSecond() - this.StartTime
+	if dotime >= 2 {
+		this.Parent.SetAnimotorState(5)
+	}
+}
+func (this *DeathState) OnEnd() {
+
+}
+func (this *DeathState) OnStart() {
+	this.Parent.SetAnimotorState(4)
+
+	this.StartTime = utils.GetCurTimeOfSecond()
 }
 
 ////------------------------------吟唱状态--------------(玩家使用有吟唱时间的道具或者技能  或者攻击)-----------

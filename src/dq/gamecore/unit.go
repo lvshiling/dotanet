@@ -348,6 +348,8 @@ type UnitProperty struct {
 	Dodge          float32 //闪避(0)
 	HPRegain       float32 //生命恢复
 
+	NoCareDodge float32 //无视闪避几率
+
 	//	IsDizzy     int8 //是否眩晕(1:眩晕 2:不眩晕)
 	//	IsTwine     int8 //是否缠绕(1:缠绕 2:不缠绕)
 	//	IsForceMove int8 //是否强制移动(1:强制移动 2:不强制移动) (推推棒等等)
@@ -494,10 +496,14 @@ func (this *Unit) ChangeHP(hp int32) {
 	if this.HP <= 0 {
 		//死亡处理
 		this.IsDeath = 1
+	} else {
+		//死亡处理
+		this.IsDeath = 2
 	}
 	if this.HP >= this.MAX_HP {
 		this.HP = this.MAX_HP
 	}
+	log.Info("---ChangeHP---:%d   :%d", hp, this.HP)
 }
 
 //改变MP
@@ -677,6 +683,12 @@ func (this *Unit) CalDodge() {
 	//buff
 
 	this.Dodge = (1 - dodge)
+
+	//计算无视闪避几率
+	//装备
+	//技能
+	//buff
+	this.NoCareDodge = 0
 }
 
 //计算生命回复
@@ -716,6 +728,50 @@ func (this *Unit) CalProperty() {
 	//计算生命回复
 	this.CalHPRegain()
 
+}
+
+//受到来自子弹的伤害
+func (this *Unit) BeAttacked(bullet *Bullet) {
+	//计算闪避
+	if bullet.SkillID == -1 {
+		//普通攻击
+		isDodge := false //闪避
+		//无视闪避
+		if utils.CheckRandom(this.NoCareDodge) {
+			isDodge = false
+		} else {
+			if utils.CheckRandom(this.Dodge) {
+				isDodge = true
+			} else {
+				isDodge = false
+			}
+		}
+
+		//闪避了
+		if isDodge {
+			return
+		}
+	}
+	//计算伤害
+	physicAttack := bullet.GetAttackOfType(1) //物理攻击
+	magicAttack := bullet.GetAttackOfType(2)  //魔法攻击
+	pureAttack := bullet.GetAttackOfType(3)   //纯粹攻击
+	//计算护甲抵消后伤害
+	physicAttack = int32(float32(physicAttack) * (1 - this.PhysicalResist))
+	//计算魔抗抵消后伤害
+	magicAttack = int32(float32(magicAttack) * (1 - this.MagicAmaor))
+
+	//-----扣血--
+	hurtvalue := -(physicAttack + magicAttack + pureAttack)
+	log.Info("---hurtvalue---%d   %f", hurtvalue, this.PhysicalResist)
+	this.ChangeHP(hurtvalue)
+}
+
+//创建子弹
+func (this *Unit) CreateBullet(bullet *Bullet) {
+	if this.InScene != nil {
+		this.InScene.AddBullet(bullet)
+	}
 }
 
 //刷新客户端显示数据

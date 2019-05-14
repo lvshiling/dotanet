@@ -5,6 +5,7 @@ import (
 	"dq/log"
 	"encoding/gob"
 	"errors"
+	"math/rand"
 	"reflect"
 	"strconv"
 	"strings"
@@ -12,6 +13,14 @@ import (
 
 	"github.com/360EntSecGroup-Skylar/excelize"
 )
+
+//检查随机概率是否命中
+func CheckRandom(radio float32) bool {
+	if rand.Intn(10000) < int(10000.0*radio) {
+		return true
+	}
+	return false
+}
 
 //从字符串中获取数据 逗号分隔
 func GetFloat32FromString(str string, params ...(*float32)) {
