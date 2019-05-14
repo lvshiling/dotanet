@@ -95,6 +95,21 @@ message UnitDatas{
     //单位的技能
 
 }
+message BulletDatas{
+    int32 ID = 1;//子弹唯一ID
+    string ModeType = 2;//弹道特效模型 (客户端使用的模型名字)
+    float X = 3;
+    float Y = 4;
+    float Z = 5;
+    int32 State = 6;//状态 子弹状态(1:创建 需要创建特效,2:移动,3:到达后计算结果(伤害和回血) 4:完成 可以删除了)
+    float StartX = 7;
+    float StartY = 8;
+    float StartZ = 9;
+    float EndX = 10;
+    float EndY = 11;
+    float EndZ = 12;
+
+}
 
 
 
@@ -114,6 +129,10 @@ message SC_Update  {
     repeated UnitDatas NewUnits = 2;//新的单位数据
     repeated UnitDatas OldUnits = 3;//旧单位(只更新变化的值)
     repeated int32 RemoveUnits = 4;//删除单位(单位ID)
+
+    repeated BulletDatas NewBullets = 5;//新的子弹
+    repeated BulletDatas OldBullets = 6;//旧子弹(只更新变化值)
+    repeated int32 RemoveBullets = 7;//删除子弹(子弹ID)
 }
 
 //玩家进入新场景时的场景信息
