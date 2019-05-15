@@ -1,7 +1,7 @@
 package gamecore
 
 import (
-	"dq/log"
+	//"dq/log"
 	"dq/protobuf"
 	"dq/utils"
 	//"dq/vec2d"
@@ -36,7 +36,7 @@ type NormalAI struct {
 }
 
 func NewNormalAI(p *Unit) *NormalAI {
-	log.Info(" NewNormalAI")
+	//log.Info(" NewNormalAI")
 	re := &NormalAI{}
 	re.Parent = p
 	re.OnStart()

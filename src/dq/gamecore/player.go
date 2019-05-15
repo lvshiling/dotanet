@@ -111,6 +111,9 @@ func (this *Player) SendUpdateMsg(curframe int32) {
 	//重置数据
 	this.LastShowUnit = this.CurShowUnit
 	this.CurShowUnit = make(map[int32]*Unit)
+
+	this.LastShowBullet = this.CurShowBullet
+	this.CurShowBullet = make(map[int32]*Bullet)
 	this.Msg = &protomsg.SC_Update{}
 }
 

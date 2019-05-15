@@ -290,6 +290,8 @@ func (this *Unit) GetProjectileStartPos() vec2d.Vector3 {
 	}
 	pos := vec2d.Add(this.Body.Position, vec2d.Mul(this.Body.Direction.GetNormalized(), float64(this.ProjectileStartPosDis)))
 
+	log.Info("GetProjectileStartPos---:%f---:%f", this.ProjectileStartPosDis, this.ProjectileStartPosHeight)
+
 	//后期可能需要单位的z坐标参与计算
 	return vec2d.NewVector3(pos.X, pos.Y, float64(this.ProjectileStartPosHeight))
 }
@@ -495,6 +497,7 @@ func (this *Unit) ChangeHP(hp int32) {
 	this.HP += hp
 	if this.HP <= 0 {
 		//死亡处理
+		this.HP = 0
 		this.IsDeath = 1
 	} else {
 		//死亡处理

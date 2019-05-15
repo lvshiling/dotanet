@@ -93,6 +93,17 @@ func (this *Bullet) Init() {
 	this.MoveType = 1            //瞬间移动
 }
 
+//设置弹道
+func (this *Bullet) SetProjectileMode(modetype string, speed float32) {
+	this.ModeType = modetype
+	this.Speed = speed
+	if this.Speed <= 0 || this.Speed >= 1000000 {
+		this.MoveType = 1
+	} else {
+		this.MoveType = 2
+	}
+}
+
 //设置普通攻击伤害百分比
 func (this *Bullet) SetNormalHurtRatio(ratio float32) {
 	if this.SrcUnit == nil {
@@ -119,6 +130,10 @@ func (this *Bullet) OnCreate() {
 		this.Position = this.SrcUnit.GetProjectileStartPos()
 		//开始位置
 		this.StartPosition = this.Position.Clone()
+
+		if this.DestUnit != nil {
+			this.DestPos = this.DestUnit.GetProjectileEndPos()
+		}
 
 	}
 
@@ -221,7 +236,7 @@ func (this *Bullet) Update(dt float32) {
 
 //子弹done
 func (this *Bullet) Done() {
-	this.State = 4
+	this.NextState = 4
 }
 func (this *Bullet) IsDone() bool {
 	if this.State == 4 {

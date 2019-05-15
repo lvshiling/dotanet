@@ -26,15 +26,18 @@ func CheckRandom(radio float32) bool {
 func GetFloat32FromString(str string, params ...(*float32)) {
 	str1 := strings.Split(str, ",")
 	count := 0
+	//log.Info("str1len:%d", len(str1))
 	for _, v := range params {
 
 		if len(str1) <= count {
 			return
 		}
+		//log.Info("str1:%s", str1[count])
 
 		value, err1 := strconv.ParseFloat(str1[count], 32)
-		if err1 != nil {
+		if err1 == nil {
 			*v = float32(value)
+			//log.Info("v:%f", v)
 		}
 		count++
 	}
