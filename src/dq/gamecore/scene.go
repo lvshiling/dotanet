@@ -244,7 +244,7 @@ func (this *Scene) DoSleep() {
 	sleeptime := nexttime - t1
 
 	//log.Info("main time:%d    %d", (t1-this.LastUpdateTime)/1e6, onetime/1e6)
-	//log.Info("sleep :%d   %d    %d", (t1)/1e6, this.LastUpdateTime/1e6, onetime/1e6)
+	//log.Info("sleep :%d   ", sleeptime/1e6)
 	if sleeptime > 0 {
 		time.Sleep(time.Duration(sleeptime))
 	} else {

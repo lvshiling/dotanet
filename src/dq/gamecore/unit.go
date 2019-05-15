@@ -290,7 +290,7 @@ func (this *Unit) GetProjectileStartPos() vec2d.Vector3 {
 	}
 	pos := vec2d.Add(this.Body.Position, vec2d.Mul(this.Body.Direction.GetNormalized(), float64(this.ProjectileStartPosDis)))
 
-	log.Info("GetProjectileStartPos---:%f---:%f", this.ProjectileStartPosDis, this.ProjectileStartPosHeight)
+	//log.Info("GetProjectileStartPos---:%f---:%f", this.ProjectileStartPosDis, this.ProjectileStartPosHeight)
 
 	//后期可能需要单位的z坐标参与计算
 	return vec2d.NewVector3(pos.X, pos.Y, float64(this.ProjectileStartPosHeight))
@@ -506,7 +506,7 @@ func (this *Unit) ChangeHP(hp int32) {
 	if this.HP >= this.MAX_HP {
 		this.HP = this.MAX_HP
 	}
-	log.Info("---ChangeHP---:%d   :%d", hp, this.HP)
+	//log.Info("---ChangeHP---:%d   :%d", hp, this.HP)
 }
 
 //改变MP
@@ -766,7 +766,7 @@ func (this *Unit) BeAttacked(bullet *Bullet) {
 
 	//-----扣血--
 	hurtvalue := -(physicAttack + magicAttack + pureAttack)
-	log.Info("---hurtvalue---%d   %f", hurtvalue, this.PhysicalResist)
+	//log.Info("---hurtvalue---%d   %f", hurtvalue, this.PhysicalResist)
 	this.ChangeHP(hurtvalue)
 }
 
@@ -808,6 +808,7 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.AttackAcpabilities = this.AttackAcpabilities
 	this.ClientData.AttackMode = this.AttackMode
 	this.ClientData.IsMain = this.IsMain
+	this.ClientData.IsDeath = this.IsDeath
 
 }
 
@@ -872,6 +873,7 @@ func (this *Unit) FreshClientDataSub() {
 	this.ClientDataSub.AttackMode = this.AttackMode - this.ClientData.AttackMode
 
 	this.ClientDataSub.IsMain = this.IsMain - this.ClientData.IsMain
+	this.ClientDataSub.IsDeath = this.IsDeath - this.ClientData.IsDeath
 
 }
 

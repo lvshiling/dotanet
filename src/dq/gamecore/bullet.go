@@ -1,7 +1,7 @@
 package gamecore
 
 import (
-	"dq/log"
+	//"dq/log"
 	"dq/protobuf"
 	"dq/vec2d"
 	"strings"
@@ -113,7 +113,7 @@ func (this *Bullet) SetNormalHurtRatio(ratio float32) {
 	this.NormalHurt.HurtType = 1
 	this.NormalHurt.HurtValue = int32(float32(this.SrcUnit.Attack) * ratio)
 
-	log.Info("---SetNormalHurtRatio---%d", this.NormalHurt.HurtValue)
+	//log.Info("---SetNormalHurtRatio---%d", this.NormalHurt.HurtValue)
 
 }
 
@@ -229,7 +229,7 @@ func (this *Bullet) Update(dt float32) {
 	} else if this.State == 3 {
 		this.CalResult()
 	} else if this.State == 4 {
-		log.Info("---Bullet update---%d", this.State)
+		//log.Info("---Bullet update---%d", this.State)
 	}
 	//log.Info("---Bullet update---%d", this.State)
 }
