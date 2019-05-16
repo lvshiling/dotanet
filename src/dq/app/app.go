@@ -144,7 +144,8 @@ func (app *DefaultApp) Run() error {
 	conf.LoadConfig(f.Name()) //加载配置文件
 	conf.LoadScene("/bin/conf/SceneCollides.sc")
 
-	conf.LoadUnitFileData() //加载单位数据配置
+	conf.LoadUnitFileData()  //加载单位数据配置
+	conf.LoadSkillFileData() //加载技能数据配置
 
 	log.InitBeego(true, "dq", Logdir, make(map[string]interface{}))
 

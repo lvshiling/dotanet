@@ -43,6 +43,55 @@ func GetFloat32FromString(str string, params ...(*float32)) {
 	}
 }
 
+//从字符串中获取数据 逗号分隔
+func GetFloat32FromString2(str string) []float32 {
+	re := make([]float32, 0)
+	str1 := strings.Split(str, ",")
+	//log.Info("str1len:%d", len(str1))
+	for _, v := range str1 {
+
+		value, err1 := strconv.ParseFloat(v, 32)
+		if err1 == nil {
+			re = append(re, float32(value))
+		}
+	}
+	return re
+}
+
+//从字符串中获取数据 逗号分隔
+func GetInt32FromString2(str string) []int32 {
+	re := make([]int32, 0)
+	str1 := strings.Split(str, ",")
+	//log.Info("str1len:%d", len(str1))
+	for _, v := range str1 {
+
+		value, err1 := strconv.Atoi(v)
+		if err1 == nil {
+			re = append(re, int32(value))
+		}
+	}
+	return re
+}
+func GetInt32FromString(str string, params ...(*int32)) {
+	str1 := strings.Split(str, ",")
+	count := 0
+	//log.Info("str1len:%d", len(str1))
+	for _, v := range params {
+
+		if len(str1) <= count {
+			return
+		}
+		//log.Info("str1:%s", str1[count])
+
+		value, err1 := strconv.Atoi(str1[count])
+		if err1 == nil {
+			*v = int32(value)
+			//log.Info("v:%f", v)
+		}
+		count++
+	}
+}
+
 func GetCurTimeOfSecond() float64 {
 	return float64(time.Now().UnixNano()) / 1000000000.0
 }
