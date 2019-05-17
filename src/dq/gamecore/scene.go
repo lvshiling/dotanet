@@ -83,8 +83,8 @@ func (this *Scene) Init() {
 			unit.SetAI(NewNormalAI(unit))
 			//设置移动核心body
 			pos := vec2d.Vec2{float64(-63 + j*6), float64(-63 + i*6)}
-			r := vec2d.Vec2{0.3, 0.3}
-			unit.Body = this.MoveCore.CreateBody(pos, r, 10)
+			r := vec2d.Vec2{unit.CollisionR, unit.CollisionR}
+			unit.Body = this.MoveCore.CreateBody(pos, r, 0)
 			this.Units[unit.ID] = unit
 		}
 
@@ -286,9 +286,8 @@ func (this *Scene) DoAddAndRemoveUnit() {
 		}
 
 		//设置移动核心body
-		pos := vec2d.Vec2{0, 0}
-		r := vec2d.Vec2{0.3, 0.3}
-
+		pos := v.(*Unit).InitPosition
+		r := vec2d.Vec2{v.(*Unit).CollisionR, v.(*Unit).CollisionR}
 		v.(*Unit).Body = this.MoveCore.CreateBody(pos, r, 0)
 
 		this.Units[k.(int32)] = v.(*Unit)
@@ -340,7 +339,7 @@ func (this *Scene) Close() {
 func (this *Scene) PlayerGoin(player *Player, datas []byte) {
 	if player.MainUnit == nil {
 		player.MainUnit = CreateUnitByPlayer(this, player, datas)
-
+		//player.Characterid =
 	}
 
 	this.NextAddUnit.Set(player.MainUnit.ID, player.MainUnit)

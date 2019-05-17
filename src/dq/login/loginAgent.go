@@ -214,6 +214,11 @@ func (a *LoginAgent) DoSelectCharacter(data *protomsg.MsgBase) {
 	jd.Characterid = characterid
 	a.WriteMsgBytes(datamsg.NewMsg1Bytes(data, jd))
 
+	//初始场景名字
+	if len(players[0].SceneName) <= 0 {
+		players[0].SceneName = "Map/set_5v5"
+	}
+
 	//通知进入场景
 	//d1 := players[0]
 	t2 := protomsg.MsgUserEnterScene{
@@ -221,7 +226,7 @@ func (a *LoginAgent) DoSelectCharacter(data *protomsg.MsgBase) {
 		ConnectId:      data.ConnectId,
 		SrcServerName:  "",
 		DestServerName: datamsg.GameScene1, //
-		SceneName:      "Map/set_5v5",
+		SceneName:      players[0].SceneName,
 		Datas:          utils.Struct2Bytes(players[0]), //数据库中的角色信息
 	}
 	t1 := protomsg.MsgBase{

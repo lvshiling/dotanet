@@ -14,6 +14,21 @@ import (
 	"github.com/360EntSecGroup-Skylar/excelize"
 )
 
+//func FormatFloat(f float64, m int) string {
+//	n := strconv.FormatFloat(f, 'f', -1, 32)
+//	if n == "" {
+//		return ""
+//	}
+//	if m >= len(n) {
+//		return n
+//	}
+//	newn := strings.Split(n, ".")
+//	if len(newn) < 2 || m >= len(newn[1]) {
+//		return n
+//	}
+//	return newn[0] + "." + newn[1][:m]
+//}
+
 //检查随机概率是否命中
 func CheckRandom(radio float32) bool {
 	if rand.Intn(10000) < int(10000.0*radio) {

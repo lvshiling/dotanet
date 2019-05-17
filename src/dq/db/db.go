@@ -194,7 +194,6 @@ func (a *DB) QueryAnything(sqlstr string, rowStruct interface{}) error {
 		log.Info(err.Error())
 		return err
 	}
-
 	//h2 := datamsg.MailInfo{}
 	err = json.Unmarshal([]byte(str), rowStruct)
 	if err != nil {
@@ -234,13 +233,9 @@ func (a *DB) CreateCharacter(uid int32, name string, typeid int32) (error, int32
 		return errors.New("name repeat"), -1
 	}
 
-	//检查是否有重名的角色了
-	//	sqlstr := "SELECT * FROM characterinfo where name=" + name
-	//	if repeatnameerr := a.QueryAnything(sqlstr, playersInfo); repeatnameerr != nil {
-	//		return repeatnameerr
-	//	}
-
 	tx, _ := a.Mydb.Begin()
+
+	//sqlstr :=
 
 	res, err1 := tx.Exec("INSERT characterinfo (uid,name,typeid) values (?,?,?)",
 		uid, name, typeid)
@@ -254,6 +249,74 @@ func (a *DB) CreateCharacter(uid int32, name string, typeid int32) (error, int32
 	err1 = tx.Commit()
 
 	return err1, int32(characterid)
+}
+
+//保存角色信息
+func (a *DB) SaveCharacter(playerInfo DB_CharacterInfo) error {
+	tx, _ := a.Mydb.Begin()
+
+	//要存的数据
+	datastring := make(map[string]interface{})
+	datastring["name"] = playerInfo.Name
+	datastring["level"] = playerInfo.Level
+	datastring["experience"] = playerInfo.Experience
+	datastring["gold"] = 0
+	datastring["hp"] = playerInfo.HP
+	datastring["mp"] = playerInfo.MP
+	datastring["scenename"] = playerInfo.SceneName
+	datastring["x"] = playerInfo.X
+	datastring["y"] = playerInfo.Y
+
+	sqlstr := "UPDATE characterinfo SET "
+	count := 0
+	for k, v := range datastring {
+
+		switch v.(type) {
+
+		case string:
+			sqlstr += k + "=" + "'" + v.(string) + "'"
+			break
+		case int:
+			sqlstr += k + "=" + strconv.Itoa(v.(int))
+			break
+		case int32:
+			sqlstr += k + "=" + strconv.Itoa(int(v.(int32)))
+			break
+		case int64:
+			sqlstr += k + "=" + strconv.Itoa(int(v.(int64)))
+			break
+		case float64:
+			sqlstr += k + "=" + strconv.FormatFloat(float64(v.(float64)), 'f', 4, 32)
+			break
+		case float32:
+			sqlstr += k + "=" + strconv.FormatFloat(float64(v.(float32)), 'f', 4, 32)
+			break
+		}
+		if count == len(datastring)-1 {
+
+		} else {
+			sqlstr += ","
+		}
+		count++
+
+	}
+	sqlstr += " where characterid=?"
+
+	log.Info("SaveCharacter:%s ---%d", sqlstr, playerInfo.Characterid)
+
+	res, err1 := tx.Exec(sqlstr, playerInfo.Characterid)
+	if err1 != nil {
+		log.Info("err1 %s", err1.Error())
+		return tx.Rollback()
+	}
+	n, e := res.RowsAffected()
+	if n == 0 || e != nil {
+		log.Info("SaveCharacter err ")
+		return tx.Rollback()
+	}
+
+	err1 = tx.Commit()
+	return err1
 }
 
 func (a *DB) test() {

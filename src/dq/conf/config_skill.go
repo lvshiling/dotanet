@@ -38,8 +38,8 @@ func LoadSkillFileData() {
 func InitSkillDatas() {
 
 	for _, v := range SkillFileDatas {
-		ssd := make([]SkillStatsData, 0)
-		v.(*SkillFileData).Trans2SkillStatsData(&ssd)
+		ssd := make([]SkillData, 0)
+		v.(*SkillFileData).Trans2SkillData(&ssd)
 
 		for k, v1 := range ssd {
 			test := v1
@@ -51,14 +51,15 @@ func InitSkillDatas() {
 
 	//log.Info("-:%v", SkillDatas)
 	for i := 1; i < 6; i++ {
-		t := GetSkillFileData(1, int32(i))
+		t := GetSkillData(1, int32(i))
 		log.Info("%d:%v", i, *t)
 	}
 
 	//log.Info("----------2---------")
 }
 
-func GetSkillFileData(typeid int32, level int32) *SkillStatsData {
+//获取技能数据 通过技能ID和等级
+func GetSkillData(typeid int32, level int32) *SkillData {
 	//log.Info("find unitfile:%d", typeid)
 	if level <= 0 {
 		level = 1
@@ -70,7 +71,7 @@ func GetSkillFileData(typeid int32, level int32) *SkillStatsData {
 		log.Info("not find unitfile:%d", typeid)
 		return nil
 	}
-	return (re).(*SkillStatsData)
+	return (re).(*SkillData)
 }
 
 //技能基本数据
@@ -88,13 +89,13 @@ type SkillBaseData struct {
 	TriggerAttackEffect   int32   //能否触发普通攻击特效 (1:触发 2:不触发)
 	CastPoint             float32 //施法前摇(以施法时间为比列 0.5表示 施法的中间时间点触发)
 	CastTime              float32 //施法时间(以秒为单位的时间 比如1秒)
-	RequiredLevel         int32   //初始等级需求 1级
+	RequiredLevel         int32   //初始等级需求 1级 需要玩家多少级才能学习
 	LevelsBetweenUpgrades int32   //等级需求步长 2
 	MaxLevel              int32   //最高升级到的等级 5 表示能升级到5级
 }
 
 //技能数据 (会根据等级变化的数据)
-type SkillStatsData struct {
+type SkillData struct {
 	SkillBaseData
 	CastRange  float32 //施法距离
 	Cooldown   float32 //技能冷却时间
@@ -118,7 +119,8 @@ type SkillFileData struct {
 	ManaCost   string //技能魔法消耗
 }
 
-func (this *SkillFileData) Trans2SkillStatsData(re *[]SkillStatsData) {
+//把等级相关的字符串 转成具体类型数据
+func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 	if this.MaxLevel <= 0 {
 		this.MaxLevel = 1
 	}
@@ -131,7 +133,7 @@ func (this *SkillFileData) Trans2SkillStatsData(re *[]SkillStatsData) {
 	ManaCost := utils.GetInt32FromString2(this.ManaCost)
 
 	for i := int32(0); i < this.MaxLevel; i++ {
-		ssd := SkillStatsData{}
+		ssd := SkillData{}
 		ssd.SkillBaseData = this.SkillBaseData
 		if int32(len(CastRange)) <= i {
 			ssd.CastRange = CastRange[len(CastRange)-1]

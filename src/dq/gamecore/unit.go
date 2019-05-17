@@ -307,6 +307,16 @@ func (this *Unit) GetProjectileEndPos() vec2d.Vector3 {
 	return vec2d.NewVector3(pos.X, pos.Y, float64(this.ProjectileEndPosHeight))
 }
 
+//初始化hp和mp
+func (this *Unit) InitHPandMP(hp float32, mp float32) {
+	//满血 满蓝
+	this.MAX_HP = this.BaseHP
+	this.HP = int32(float32(this.MAX_HP) * hp)
+	this.MAX_MP = this.BaseMP
+	this.MP = int32(float32(this.MAX_MP) * mp)
+	//log.Info("---hp:%d---mp:%d", this.HP, this.MP)
+}
+
 //------------------单位本体------------------
 type UnitProperty struct {
 	conf.UnitFileData //单位配置文件数据
@@ -357,6 +367,7 @@ type UnitProperty struct {
 	//	IsForceMove int8 //是否强制移动(1:强制移动 2:不强制移动) (推推棒等等)
 
 }
+
 type Unit struct {
 	UnitProperty
 	UnitCmd
@@ -368,6 +379,8 @@ type Unit struct {
 	AI       UnitAI
 
 	IsDelete bool //是否被删除
+
+	InitPosition vec2d.Vec2 //初始位置
 
 	//发送数据部分
 	ClientData    *protomsg.UnitDatas //客户端显示数据
@@ -390,6 +403,7 @@ func CreateUnit(scene *Scene, typeid int32) *Unit {
 	unitre.Level = 1
 
 	unitre.Init()
+	unitre.InitHPandMP(0.5, 1.0)
 	unitre.IsMain = 2
 	//unitre.UnitType = 2 //单位类型(1:英雄 2:普通单位 3:远古 4:boss)
 	unitre.ControlID = -1
@@ -407,15 +421,18 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 	//---------db.DB_CharacterInfo
 	characterinfo := db.DB_CharacterInfo{}
 	utils.Bytes2Struct(datas, &characterinfo)
+	player.Characterid = characterinfo.Characterid
 
 	log.Info("---DB_CharacterInfo---%v", characterinfo)
+	//	文件数据
+	unitre.UnitFileData = *(conf.GetUnitFileData(characterinfo.Typeid))
+	unitre.InitHPandMP(characterinfo.HP, characterinfo.MP)
 
 	//名字 等级 经验
 	unitre.Name = characterinfo.Name
 	unitre.Level = characterinfo.Level
 	unitre.Experience = characterinfo.Experience
-	//	文件数据
-	unitre.UnitFileData = *(conf.GetUnitFileData(characterinfo.Typeid))
+	unitre.InitPosition = vec2d.Vec2{float64(characterinfo.X), float64(characterinfo.Y)}
 
 	unitre.Init()
 	unitre.IsMain = 1
@@ -436,12 +453,6 @@ func (this *Unit) Init() {
 	this.AttackMode = 1 //和平攻击模式
 
 	this.IsDeath = 2
-
-	//满血 满蓝
-	this.MAX_HP = this.BaseHP
-	this.HP = this.MAX_HP
-	this.MAX_MP = this.BaseMP
-	this.MP = this.MAX_MP
 
 	//弹道位置计算
 

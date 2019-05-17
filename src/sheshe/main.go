@@ -5,9 +5,14 @@ package main
 import (
 	"dq/app"
 	"dq/log"
+	"strconv"
 )
 
 func main() {
+	t := 123.456798932145
+	log.Info(strconv.FormatFloat(t, 'f', 0, 32))
+
+	log.Info(strconv.Itoa(23))
 
 	app := new(app.DefaultApp)
 	app.Run()

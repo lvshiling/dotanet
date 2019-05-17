@@ -83,9 +83,13 @@ func (a *GameScene1Agent) DoDisconnect(data *protomsg.MsgBase) {
 		if player.(*gamecore.Player).ConnectId == data.ConnectId {
 
 			log.Info("---------DoDisconnect--delete")
+
+			player.(*gamecore.Player).SaveDB()
+
 			player.(*gamecore.Player).OutScene()
 			a.Players.Delete(data.Uid)
 			//存档 数据库
+
 		} else {
 			log.Info("---------DoDisconnect--ConnectId fail")
 		}

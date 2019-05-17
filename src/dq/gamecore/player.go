@@ -2,6 +2,7 @@ package gamecore
 
 import (
 	"dq/datamsg"
+	"dq/db"
 	"dq/protobuf"
 
 	"github.com/golang/protobuf/proto"
@@ -42,6 +43,52 @@ func CreatePlayer(uid int32, connectid int32, characterid int32) *Player {
 	return re
 }
 
+//type DB_CharacterInfo struct {
+//	Characterid int32   `json:"characterid"`
+//	Uid         int32   `json:"uid"`
+//	Name        string  `json:"name"`
+//	Typeid      int32   `json:"typeid"`
+//	Level       int32   `json:"level"`
+//	Experience  int32   `json:"experience"`
+//	Gold        int32   `json:"gold"`
+//	HP          float32 `json:"hp"`
+//	MP          float32 `json:"mp"`
+//	SceneName   string  `json:"scenename"`
+//	X           float32 `json:"x"`
+//	Y           float32 `json:"y"`
+//}
+//存档数据
+func (this *Player) SaveDB() {
+	if this.MainUnit == nil {
+		return
+	}
+	dbdata := db.DB_CharacterInfo{}
+	dbdata.Characterid = this.Characterid
+	dbdata.Uid = this.Uid
+	dbdata.Name = this.MainUnit.Name
+	dbdata.Level = this.MainUnit.Level
+	dbdata.Experience = this.MainUnit.Experience
+	//dbdata.Gold = this.MainUnit.Gold
+	dbdata.HP = float32(this.MainUnit.HP) / float32(this.MainUnit.MAX_HP)
+	dbdata.MP = float32(this.MainUnit.MP) / float32(this.MainUnit.MAX_MP)
+	if this.CurScene != nil {
+		dbdata.SceneName = this.CurScene.SceneName
+	} else {
+		dbdata.SceneName = ""
+	}
+	if this.MainUnit.Body == nil {
+		dbdata.X = 0
+		dbdata.Y = 0
+	} else {
+		dbdata.X = float32(this.MainUnit.Body.Position.X)
+		dbdata.Y = float32(this.MainUnit.Body.Position.Y)
+	}
+
+	db.DbOne.SaveCharacter(dbdata)
+
+}
+
+//清除显示状态  切换场景的时候需要调用
 func (this *Player) ClearShowData() {
 	this.LastShowUnit = make(map[int32]*Unit)
 	this.CurShowUnit = make(map[int32]*Unit)
