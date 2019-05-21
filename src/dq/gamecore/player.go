@@ -83,6 +83,10 @@ func (this *Player) SaveDB() {
 		dbdata.X = float32(this.MainUnit.Body.Position.X)
 		dbdata.Y = float32(this.MainUnit.Body.Position.Y)
 	}
+	//技能
+	for _, v := range this.MainUnit.Skills {
+		dbdata.Skill += v.ToDBString() + ";"
+	}
 
 	db.DbOne.SaveCharacter(dbdata)
 

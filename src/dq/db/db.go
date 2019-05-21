@@ -266,6 +266,7 @@ func (a *DB) SaveCharacter(playerInfo DB_CharacterInfo) error {
 	datastring["scenename"] = playerInfo.SceneName
 	datastring["x"] = playerInfo.X
 	datastring["y"] = playerInfo.Y
+	datastring["skill"] = playerInfo.Skill
 
 	sqlstr := "UPDATE characterinfo SET "
 	count := 0

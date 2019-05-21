@@ -13,4 +13,5 @@ type DB_CharacterInfo struct {
 	SceneName   string  `json:"scenename"`
 	X           float32 `json:"x"`
 	Y           float32 `json:"y"`
+	Skill       string  `json:"skill"`
 }

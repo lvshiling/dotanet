@@ -382,6 +382,8 @@ type Unit struct {
 
 	InitPosition vec2d.Vec2 //初始位置
 
+	Skills map[int32]*Skill //所有技能
+
 	//发送数据部分
 	ClientData    *protomsg.UnitDatas //客户端显示数据
 	ClientDataSub *protomsg.UnitDatas //客户端显示差异数据
@@ -428,15 +430,22 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 	unitre.UnitFileData = *(conf.GetUnitFileData(characterinfo.Typeid))
 	unitre.InitHPandMP(characterinfo.HP, characterinfo.MP)
 
-	//名字 等级 经验
+	//名字 等级 经验 创建时的位置
 	unitre.Name = characterinfo.Name
 	unitre.Level = characterinfo.Level
 	unitre.Experience = characterinfo.Experience
 	unitre.InitPosition = vec2d.Vec2{float64(characterinfo.X), float64(characterinfo.Y)}
 
+	//创建技能
+	skilldbdata := strings.Split(characterinfo.Skill, ";")
+	unitre.Skills = NewUnitSkills(skilldbdata, unitre.InitSkillsInfo) //所有技能
+	for _, v := range unitre.Skills {
+		log.Info("-------new skill:%v", v)
+	}
+
+	//初始化
 	unitre.Init()
 	unitre.IsMain = 1
-	//unitre.UnitType = 1 //单位类型(1:英雄 2:普通单位 3:远古 4:boss)
 	unitre.ControlID = player.Uid
 
 	return unitre
@@ -475,11 +484,33 @@ func (this *Unit) Update(dt float64) {
 	//
 
 	this.CalProperty()
+
+	//移动核心
+	//移动行为逻辑速度设置
+	this.Body.SpeedSize = this.MoveSpeed
+	//设置碰撞等级
+	if this.IsDeath == 1 {
+		this.Body.IsCollisoin = false
+		//this.Body.CollisoinLevel = 1
+	} else {
+		this.Body.IsCollisoin = true
+		//		if this.UnitType == 1 {
+		//			this.Body.IsCollisoin = false
+		//			this.Body.CollisoinLevel = 2
+		//		}
+
+	}
+
 	//AI
 	if this.AI != nil {
 		this.AI.Update(dt)
 	}
 	this.CheckAttackCmd()
+
+	//技能更新
+	for _, v := range this.Skills {
+		v.Update(dt)
+	}
 
 	//逻辑状态更新
 	this.State.OnTransform()
@@ -618,8 +649,6 @@ func (this *Unit) CalMoveSpeed() {
 	//技能
 	//buff
 
-	//移动行为逻辑速度设置
-	this.Body.SpeedSize = this.MoveSpeed
 }
 
 //计算技能增强IntelligenceAddMagicScale
@@ -821,6 +850,29 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.IsMain = this.IsMain
 	this.ClientData.IsDeath = this.IsDeath
 
+	//技能
+	this.ClientData.SD = make([]*protomsg.SkillDatas, 0)
+	for _, v := range this.Skills {
+		skdata := &protomsg.SkillDatas{}
+		skdata.TypeID = v.TypeID
+		skdata.Level = v.Level
+		skdata.RemainCDTime = v.RemainCDTime
+		skdata.CanUpgrade = int32(2) //v.CanUpgrade
+		skdata.Index = v.Index
+		skdata.CastType = v.CastType
+		skdata.CastTargetType = v.CastTargetType
+		skdata.UnitTargetTeam = v.UnitTargetTeam
+		skdata.UnitTargetCamp = v.UnitTargetCamp
+		skdata.NoCareMagicImmune = v.NoCareMagicImmune
+		skdata.CastRange = v.CastRange
+		skdata.Cooldown = v.Cooldown
+		skdata.HurtRange = v.HurtRange
+		skdata.ManaCost = v.ManaCost
+		this.ClientData.SD = append(this.ClientData.SD, skdata)
+	}
+
+	//Skills map[int32]*Skill //所有技能
+
 }
 
 //func (this *Unit) OnePropSub(prop interface{}){
@@ -885,6 +937,36 @@ func (this *Unit) FreshClientDataSub() {
 
 	this.ClientDataSub.IsMain = this.IsMain - this.ClientData.IsMain
 	this.ClientDataSub.IsDeath = this.IsDeath - this.ClientData.IsDeath
+
+	//技能
+	this.ClientDataSub.SD = make([]*protomsg.SkillDatas, 0)
+	for _, v := range this.Skills {
+		skdata := &protomsg.SkillDatas{}
+		skdata.TypeID = v.TypeID
+		//上次发送的数据
+		lastdata := &protomsg.SkillDatas{}
+		for _, v1 := range this.ClientData.SD {
+			if v1.TypeID == v.TypeID {
+				lastdata = v1
+				break
+			}
+		}
+
+		skdata.Level = v.Level - lastdata.Level
+		skdata.RemainCDTime = v.RemainCDTime - lastdata.RemainCDTime
+		skdata.CanUpgrade = int32(2) - lastdata.CanUpgrade //v.CanUpgrade
+		skdata.Index = v.Index - lastdata.Index
+		skdata.CastType = v.CastType - lastdata.CastType
+		skdata.CastTargetType = v.CastTargetType - lastdata.CastTargetType
+		skdata.UnitTargetTeam = v.UnitTargetTeam - lastdata.UnitTargetTeam
+		skdata.UnitTargetCamp = v.UnitTargetCamp - lastdata.UnitTargetCamp
+		skdata.NoCareMagicImmune = v.NoCareMagicImmune - lastdata.NoCareMagicImmune
+		skdata.CastRange = v.CastRange - lastdata.CastRange
+		skdata.Cooldown = v.Cooldown - lastdata.Cooldown
+		skdata.HurtRange = v.HurtRange - lastdata.HurtRange
+		skdata.ManaCost = v.ManaCost - lastdata.ManaCost
+		this.ClientDataSub.SD = append(this.ClientDataSub.SD, skdata)
+	}
 
 }
 

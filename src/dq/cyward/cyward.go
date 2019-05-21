@@ -86,10 +86,12 @@ func (this *MyPolygon) GetBigMyPolygonOnePoint(pointindex int, r vec2d.Vec2) vec
 }
 
 type Body struct {
-	Core      *WardCore
-	Position  vec2d.Vec2 //当前位置
-	R         vec2d.Vec2 //矩形半径
-	SpeedSize float64    //移动速度大小
+	Core           *WardCore
+	Position       vec2d.Vec2 //当前位置
+	R              vec2d.Vec2 //矩形半径
+	SpeedSize      float64    //移动速度大小
+	CollisoinLevel int32      // 碰撞等级 障碍物石头为2 普通单位为1 只计算大于等于自己碰撞等级的body的碰撞
+	IsCollisoin    bool       //是否计算碰撞
 
 	MoveDir        vec2d.Vec2   //移动目标方向
 	TargetPosition []vec2d.Vec2 //移动目标位置
@@ -231,7 +233,7 @@ func (this *Body) SetTarget(pos vec2d.Vec2) {
 	dpNode.path1 = append(dpNode.path1, pos)
 
 	bodys := make([]*Body, 0)
-	this.Core.GetStaticBodysNoTarget(&bodys, this.Position, pos)
+	this.Core.GetStaticBodysNoTarget(&bodys, this.Position, pos, this)
 	if this.Core.CheckDetourPathNodeT(dpNode, &bodys, &this.DetourPath) {
 		//log.Info("SetTarget %d", this.Tag)
 		//		for i := 0; i < len(this.DetourPath); i++ {
@@ -1038,7 +1040,7 @@ func (this *WardCore) CalcDetourPath(my *Body, collion *Body, targetPos vec2d.Ve
 	dpNode.path2 = append(dpNode.path2, targetPos)
 
 	var bodys []*Body
-	this.GetStaticBodysNoTarget(&bodys, my.Position, targetPos)
+	this.GetStaticBodysNoTarget(&bodys, my.Position, targetPos, my)
 	if this.CheckDetourPathNodeT(&dpNode, &bodys, path) {
 		//log.Info("1111111111111")
 	} else {
@@ -1049,6 +1051,21 @@ func (this *WardCore) CalcDetourPath(my *Body, collion *Body, targetPos vec2d.Ve
 var gWardCore_ZoneWidth float64 = 4.0
 var gWardCore_ZoneHeight float64 = 4.0
 
+func CheckCalcCollisoin(v *Body, my *Body) bool {
+	if v == my {
+		return false
+	}
+	if v.IsCollisoin == false {
+		return false
+	}
+	if v.CollisoinLevel <= my.CollisoinLevel && my.IsCollisoin == false {
+
+		return false
+
+	}
+	return true
+}
+
 //避障核心
 type WardCore struct {
 	Bodys map[*Body]*Body
@@ -1057,7 +1074,7 @@ type WardCore struct {
 }
 
 //获取静止且不包含目的点 的body
-func (this *WardCore) GetStaticBodysNoTarget(bodys *[]*Body, mypos vec2d.Vec2, target vec2d.Vec2) {
+func (this *WardCore) GetStaticBodysNoTarget(bodys *[]*Body, mypos vec2d.Vec2, target vec2d.Vec2, mybody *Body) {
 
 	zones := utils.GetVisibleZonesFromWH_Two((mypos.X), (mypos.Y), target.X, target.Y, gWardCore_ZoneWidth, gWardCore_ZoneHeight)
 	//遍历可视区域
@@ -1065,7 +1082,7 @@ func (this *WardCore) GetStaticBodysNoTarget(bodys *[]*Body, mypos vec2d.Vec2, t
 		if _, ok := this.ZoneBodys[vzone]; ok {
 			//遍历区域中的单位
 			for _, v := range this.ZoneBodys[vzone] {
-				if v.CurSpeedSize <= 0 {
+				if v.CurSpeedSize <= 0 && CheckCalcCollisoin(v, mybody) {
 					mypolygon1 := v.GetMyPolygon(nil)
 					if mypolygon1.IsInMyPolygon(target) {
 						continue
@@ -1088,18 +1105,19 @@ func (this *WardCore) GetStaticBodysNoTarget(bodys *[]*Body, mypos vec2d.Vec2, t
 }
 
 //获取静止的body
-func (this *WardCore) GetStaticBodys(bodys *[]*Body) {
+//func (this *WardCore) GetStaticBodys(bodys *[]*Body) {
 
-	for _, v := range this.Bodys {
-		if v.CurSpeedSize <= 0 {
-			(*bodys) = append((*bodys), v)
-		}
-	}
-}
+//	for _, v := range this.Bodys {
+//		if v.CurSpeedSize <= 0 {
+//			(*bodys) = append((*bodys), v)
+//		}
+//	}
+//}
+
 func (this *WardCore) GetCurPositionCollision(one *Body) *Body {
 
 	for _, v := range this.Bodys {
-		if v != one {
+		if CheckCalcCollisoin(v, one) {
 
 			mypolygon1 := v.GetMyPolygon(one)
 			if mypolygon1.IsInMyPolygon(one.Position) {
@@ -1114,7 +1132,7 @@ func (this *WardCore) GetCurPositionCollision(one *Body) *Body {
 func (this *WardCore) GetNextPositionCollision(one *Body) *Body {
 
 	for _, v := range this.Bodys {
-		if v != one {
+		if CheckCalcCollisoin(v, one) {
 
 			mypolygon1 := v.GetMyPolygon(one)
 			if mypolygon1.IsInMyPolygon(one.NextPosition) {
@@ -1144,7 +1162,7 @@ func (this *WardCore) Update(dt float64) {
 		v.Update(dt)
 	}
 }
-func (this *WardCore) CreateBody(position vec2d.Vec2, r vec2d.Vec2, speedsize float64) *Body {
+func (this *WardCore) CreateBody(position vec2d.Vec2, r vec2d.Vec2, speedsize float64, level int32) *Body {
 	body := &Body{}
 	body.Position = position
 	body.R = r
@@ -1153,10 +1171,13 @@ func (this *WardCore) CreateBody(position vec2d.Vec2, r vec2d.Vec2, speedsize fl
 	body.IsRect = true
 	body.M_MyPolygon = &MyPolygon{}
 	body.MoveDir = vec2d.Vec2{X: 0, Y: 0}
+	//CollisoinLevel int32      // 碰撞等级 障碍物石头为2 普通单位为1
+	body.CollisoinLevel = level
+	body.IsCollisoin = true
 	this.Bodys[body] = body
 	return body
 }
-func (this *WardCore) CreateBodyPolygon(position vec2d.Vec2, points []vec2d.Vec2, speedsize float64) *Body {
+func (this *WardCore) CreateBodyPolygon(position vec2d.Vec2, points []vec2d.Vec2, speedsize float64, level int32) *Body {
 	body := &Body{}
 	body.Position = position
 	body.SpeedSize = speedsize
@@ -1165,6 +1186,8 @@ func (this *WardCore) CreateBodyPolygon(position vec2d.Vec2, points []vec2d.Vec2
 	body.M_MyPolygon = &MyPolygon{}
 	body.OffsetPoints = points
 	body.MoveDir = vec2d.Vec2{X: 0, Y: 0}
+	body.CollisoinLevel = level
+	body.IsCollisoin = true
 	this.Bodys[body] = body
 	return body
 }

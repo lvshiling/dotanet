@@ -70,10 +70,10 @@ func (this *Scene) Init() {
 		if v.IsRect == true {
 			pos := vec2d.Vec2{v.CenterX, v.CenterY}
 			r := vec2d.Vec2{v.Width, v.Height}
-			this.MoveCore.CreateBody(pos, r, 1)
+			this.MoveCore.CreateBody(pos, r, 1, 2)
 		} else {
 			pos := vec2d.Vec2{v.CenterX, v.CenterY}
-			this.MoveCore.CreateBodyPolygon(pos, v.Points, 1)
+			this.MoveCore.CreateBodyPolygon(pos, v.Points, 1, 2)
 		}
 	}
 	//场景分区数据 创建100个单位
@@ -84,7 +84,7 @@ func (this *Scene) Init() {
 			//设置移动核心body
 			pos := vec2d.Vec2{float64(-63 + j*6), float64(-63 + i*6)}
 			r := vec2d.Vec2{unit.CollisionR, unit.CollisionR}
-			unit.Body = this.MoveCore.CreateBody(pos, r, 0)
+			unit.Body = this.MoveCore.CreateBody(pos, r, 0, 1)
 			this.Units[unit.ID] = unit
 		}
 
@@ -288,7 +288,7 @@ func (this *Scene) DoAddAndRemoveUnit() {
 		//设置移动核心body
 		pos := v.(*Unit).InitPosition
 		r := vec2d.Vec2{v.(*Unit).CollisionR, v.(*Unit).CollisionR}
-		v.(*Unit).Body = this.MoveCore.CreateBody(pos, r, 0)
+		v.(*Unit).Body = this.MoveCore.CreateBody(pos, r, 0, 1)
 
 		this.Units[k.(int32)] = v.(*Unit)
 

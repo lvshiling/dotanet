@@ -92,6 +92,7 @@ type SkillBaseData struct {
 	RequiredLevel         int32   //初始等级需求 1级 需要玩家多少级才能学习
 	LevelsBetweenUpgrades int32   //等级需求步长 2
 	MaxLevel              int32   //最高升级到的等级 5 表示能升级到5级
+	Index                 int32   //技能索引 按升序排列  在屏幕右下角的显示位置
 }
 
 //技能数据 (会根据等级变化的数据)
