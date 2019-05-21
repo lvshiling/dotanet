@@ -55,15 +55,32 @@ message CS_PlayerAttack {
     int32 TargetUnitID = 2;//攻击对象id 或者技能对象ID
 }
 
-//玩家技能(包括道具)
+//玩家技能操作(包括道具)
 message CS_PlayerSkill {
-    int32 IDs = 1;//操作的单位对象
+    int32 ID = 1;//操作的单位对象
     int32 SkillID = 2;//技能id
     float X = 3;//移动的x方向 技能的目标点x或目标方向
     float Y = 4;//移动的Y方向 技能的目标点Y或目标方向
     int32 TargetUnitID = 5;//攻击对象id 或者技能对象ID
 }
 
+//技能数据
+message SkillDatas{
+    int32   TypeID = 1;
+    int32   Level = 2;//技能等级
+    float RemainCDTime = 3;//技能CD剩余时间
+    int32   CanUpgrade = 4;//是否可以升级 1 表示可以  2 表示不可以
+    int32   Index = 5;//位置索引
+    int32   CastType = 6;//施法类型:  1:主动技能  2:被动技能
+    int32   CastTargetType = 7;//施法目标类型 1:自身为目标 2:以单位为目标 3:以地面1点为目标
+    int32   UnitTargetTeam = 8;//目标单位关系 1:友方  2:敌方 3:友方敌方都行
+    int32   UnitTargetCamp = 9;//目标单位阵营 (1:玩家 2:NPC) 3:玩家NPC都行
+    int32   NoCareMagicImmune = 10;//无视技能免疫 (1:无视技能免疫 2:非)
+    float CastRange = 11;//施法距离
+    float Cooldown = 12;//技能冷却时间
+    float HurtRange = 13;//伤害范围 小于等于0表示单体
+    int32   ManaCost = 14;//技能魔法消耗
+}
 
 //单位数据
 message UnitDatas{
@@ -89,6 +106,7 @@ message UnitDatas{
     int32   AttackMode = 20;//攻击模式(1:和平模式 2:组队模式 3:全体模式 4:阵营模式(玩家,NPC) 5:行会模式)
     int32   IsMain = 21;//是否是主单位
     int32   IsDeath = 22;//是否死亡((1:死亡 2:没死)) 死亡后不显示血条
+    repeated SkillDatas SD = 23;//技能数据
 
     //单位状态(idle walk attack skill die)
     //各种buff状态(单位身上的buff 包括剩余时间)
