@@ -214,6 +214,14 @@ func (this *Body) SetMoveDir(dir vec2d.Vec2) {
 func (this *Body) SetTarget(pos vec2d.Vec2) {
 
 	//log.Info("SetTarget %f  %f", pos.X, pos.Y)
+	if len(this.TargetPosition) > 0 {
+		//
+		t1 := vec2d.Sub(this.TargetPosition[len(this.TargetPosition)-1], pos)
+		if t1.LengthSquared() <= 0.0001 {
+			log.Info("SetTarget repeat!!")
+			return
+		}
+	}
 
 	this.TargetPosition = this.TargetPosition[0:0]
 	this.DetourPath = this.DetourPath[0:0]

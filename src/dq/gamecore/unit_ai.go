@@ -140,7 +140,7 @@ func (this *NormalAI) GetNearestEnemies() *Unit {
 		var minUnit *Unit = nil
 		for _, v := range units {
 			//判断阵营 攻击模式 是否死亡  和 是否能被攻击
-			if my.AttackEnableForCampAndMode(v) && v.IsCanBeAttack() {
+			if my.CheckAttackEnable2Target(v) {
 				//获取目标离本单位自动攻击范围的距离
 				dis := my.GetDistanseOfAutoAttackRange(v)
 				//判断在自动攻击范围内

@@ -1,8 +1,9 @@
 package gamecore
 
 import (
-	//"dq/log"
+	"dq/log"
 	//"dq/protobuf"
+	"dq/protobuf"
 	"dq/utils"
 	"dq/vec2d"
 )
@@ -57,6 +58,21 @@ func (this *IdleState) OnTransform() {
 
 	//全局状态切换检查
 	if GTransform(this) {
+		return
+	}
+	//技能命令
+	if this.Parent.HaveSkillCmd() {
+		//在技能范围内
+		if this.Parent.IsInSkillRange(this.Parent.SkillCmdData) {
+
+			this.OnEnd()
+			this.Parent.SetState(NewChantState(this.Parent))
+
+		} else {
+			//有攻击指令 却不在攻击范围内
+			this.OnEnd()
+			this.Parent.SetState(NewMoveState(this.Parent))
+		}
 		return
 	}
 
@@ -128,6 +144,18 @@ func (this *MoveState) OnTransform() {
 	if GTransform(this) {
 		return
 	}
+	//技能命令
+	if this.Parent.HaveSkillCmd() {
+		//在技能范围内
+		if this.Parent.IsInSkillRange(this.Parent.SkillCmdData) {
+
+			this.OnEnd()
+			this.Parent.SetState(NewChantState(this.Parent))
+			return
+
+		}
+		return
+	}
 
 	//攻击命令
 	if this.Parent.HaveAttackCmd() {
@@ -163,6 +191,31 @@ func (this *MoveState) Update(dt float64) {
 		this.Parent.SetAnimotorState(1)
 	} else {
 		this.Parent.SetAnimotorState(2)
+	}
+	//先检查技能对象
+	if this.Parent.HaveSkillCmd() {
+		//上次寻路的目标单位和本次相同则在1S内 不再寻路
+		if this.LastFindPathTarget != nil {
+			if this.LastFindPathTarget.ID == this.Parent.SkillCmdData.TargetUnitID {
+				if utils.GetCurTimeOfSecond()-this.LastFindPathTargetTime < 1 {
+					return
+				}
+			}
+		}
+
+		//有目标单位
+		if this.Parent.SkillCmdData.TargetUnitID > 0 {
+			targetunit := this.Parent.InScene.FindUnitByID(this.Parent.SkillCmdData.TargetUnitID)
+			if targetunit != nil {
+				this.Parent.Body.SetTarget(targetunit.Body.Position)
+				this.LastFindPathTarget = targetunit
+				this.LastFindPathTargetTime = utils.GetCurTimeOfSecond()
+			}
+		} else {
+			targetpos := vec2d.Vec2{X: float64(this.Parent.SkillCmdData.X), Y: float64(this.Parent.SkillCmdData.Y)}
+			this.Parent.Body.SetTarget(targetpos)
+		}
+		return
 	}
 
 	//先检查攻击对象
@@ -233,6 +286,23 @@ func (this *AttackState) OnTransform() {
 		return
 	}
 
+	//技能命令
+	if this.Parent.HaveSkillCmd() {
+		//在技能范围内
+		if this.Parent.IsInSkillRange(this.Parent.SkillCmdData) {
+
+			this.OnEnd()
+			this.Parent.SetState(NewChantState(this.Parent))
+			return
+
+		} else {
+			//有攻击指令 却不在攻击范围内
+			this.OnEnd()
+			this.Parent.SetState(NewMoveState(this.Parent))
+			return
+		}
+	}
+
 	//攻击完成
 	if this.IsDone == true {
 		this.OnEnd()
@@ -256,6 +326,11 @@ func (this *AttackState) OnTransform() {
 			this.OnEnd()
 			this.Parent.SetState(NewIdleState(this.Parent))
 			return
+		}
+		//切换目标
+		if this.AttackTarget != this.Parent.AttackCmdDataTarget {
+			this.OnEnd()
+			this.Parent.SetState(NewIdleState(this.Parent))
 		}
 	} else {
 		//没有攻击命令 可以移动
@@ -282,7 +357,7 @@ func (this *AttackState) Update(dt float64) {
 			b := NewBullet1(this.Parent, this.AttackTarget)
 			b.SetNormalHurtRatio(1)
 			b.SetProjectileMode(this.Parent.ProjectileMode, this.Parent.ProjectileSpeed)
-			this.Parent.CreateBullet(b)
+			this.Parent.AddBullet(b)
 
 			this.IsDoBullet = true
 		}
@@ -363,48 +438,123 @@ func (this *DeathState) OnStart() {
 	this.StartTime = utils.GetCurTimeOfSecond()
 }
 
-////------------------------------吟唱状态--------------(玩家使用有吟唱时间的道具或者技能  或者攻击)-----------
-//type ChantState struct {
-//	Parent *Unit
-//}
+//---------------------------吟唱状态--------------玩家使用有吟唱时间的道具或者技能---------------
+type ChantState struct {
+	Parent *Unit
 
-//func NewChantState(p *Unit) *IdleState {
-//	log.Info(" NewChantState")
-//	re := &ChantState{}
-//	re.Parent = p
-//	re.OnStart()
-//	return re
-//}
+	IsDoBullet   bool    //是否创建子弹
+	StartTime    float64 //开始的时间
+	OneChantTime float64 //一次吟唱所需的时间
+	IsDone       bool    //是否完成
+	AttackTarget *Unit   //攻击目标
 
-////检查状态变换
-//func (this *ChantState) OnTransform() {
+	ChantData *protomsg.CS_PlayerSkill //技能数据
+	CastPoint float32
+}
 
-//	//攻击命令
-//	if this.Parent.HaveAttackCmd() {
-//		//在攻击范围内
-//		if this.Parent.IsInAttackRange(this.Parent.AttackCmdDataTarget) {
+func NewChantState(p *Unit) *ChantState {
+	//log.Info(" NewAttackState")
+	re := &ChantState{}
+	re.Parent = p
+	re.OnStart()
+	return re
+}
 
-//		} else {
-//			//有攻击指令 却不在攻击范围内
-//			this.OnEnd()
-//			this.Parent.SetState(NewMoveState(this.Parent))
-//			return
-//		}
-//	}
+func (this *ChantState) GetParent() *Unit {
+	return this.Parent
+}
+func (this *ChantState) GetStateID() int32 {
+	return 5
+}
 
-//	if this.Parent.HaveMoveCmd() && this.Parent.GetCanMove() {
-//		this.OnEnd()
-//		this.Parent.SetState(NewMoveState(this.Parent))
-//		return
-//	}
+//检查状态变换
+func (this *ChantState) OnTransform() {
 
-//}
-//func (this *ChantState) Update(dt float64) {
-//	this.Parent.SetAnimotorState(1)
-//}
-//func (this *ChantState) OnEnd() {
+	//全局状态切换检查
+	if GTransform(this) {
+		return
+	}
 
-//}
-//func (this *ChantState) OnStart() {
+	//吟唱完成
+	if this.IsDone == true {
+		this.OnEnd()
+		this.Parent.SetState(NewIdleState(this.Parent))
 
-//}
+		//log.Info(" AttackState done%f", utils.GetCurTimeOfSecond())
+		return
+	}
+
+	//技能命令
+	if this.Parent.HaveSkillCmd() {
+
+		//切换目标
+		if this.ChantData != this.Parent.SkillCmdData {
+			this.OnEnd()
+			this.Parent.SetState(NewIdleState(this.Parent))
+		}
+	} else {
+		//没有攻击命令 不能移动
+		this.OnEnd()
+		this.Parent.SetState(NewIdleState(this.Parent))
+		return
+	}
+
+}
+func (this *ChantState) Update(dt float64) {
+	dotime := utils.GetCurTimeOfSecond() - this.StartTime
+	if this.IsDoBullet == false {
+		//判断攻击前摇是否完成
+		if dotime/this.OneChantTime >= float64(this.CastPoint) {
+			//创建子弹
+
+			//			b := NewBullet1(this.Parent, this.AttackTarget)
+			//			b.SetNormalHurtRatio(1)
+			//			b.SetProjectileMode(this.Parent.ProjectileMode, this.Parent.ProjectileSpeed)
+			//			this.Parent.CreateBullet(b)
+			this.Parent.DoSkill(this.ChantData)
+
+			this.IsDoBullet = true
+
+		}
+	}
+
+	if dotime/this.OneChantTime >= 1 {
+		this.IsDone = true
+	}
+
+}
+func (this *ChantState) OnEnd() {
+	log.Info(" ChantState end%f", utils.GetCurTimeOfSecond())
+}
+func (this *ChantState) OnStart() {
+	this.Parent.SetAnimotorState(10)
+
+	this.ChantData = this.Parent.SkillCmdData
+
+	skilldata, ok := this.Parent.Skills[this.Parent.SkillCmdData.SkillID]
+	if ok == false {
+		this.IsDone = true
+		return
+	}
+	//--转向处理--
+	if skilldata.CastTargetType == 2 {
+		target := this.Parent.InScene.FindUnitByID(this.Parent.SkillCmdData.TargetUnitID)
+		if target == nil {
+			this.IsDone = true
+			return
+		}
+
+		this.Parent.SetDirection(vec2d.Sub(target.Body.Position, this.Parent.Body.Position))
+	} else if skilldata.CastTargetType == 2 {
+		targetpos := vec2d.Vec2{X: float64(this.Parent.SkillCmdData.X), Y: float64(this.Parent.SkillCmdData.Y)}
+		this.Parent.SetDirection(vec2d.Sub(targetpos, this.Parent.Body.Position))
+	}
+
+	log.Info(" ChantState start%f", utils.GetCurTimeOfSecond())
+
+	this.StartTime = utils.GetCurTimeOfSecond()
+	this.IsDoBullet = false
+	this.IsDone = false
+	this.OneChantTime = float64(skilldata.CastTime)
+	this.CastPoint = skilldata.CastPoint
+}

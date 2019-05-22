@@ -105,7 +105,7 @@ type UnitFileData struct {
 	AutoAttackTraceRange    float32 //自动攻击的追击范围
 	AutoAttackTraceOutRange float32 //自动攻击的取消追击范围
 	//-----
-	Camp int32 //阵营(1:玩家 2:NPC)
+	Camp int32 //阵营(1:玩家 2:NPC)  玩家的召唤物和幻象camp也是 玩家
 
 	InitSkillsInfo string  //初始技能信息 逗号分隔
 	CollisionR     float64 //碰撞半径

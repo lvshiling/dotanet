@@ -189,6 +189,10 @@ func (this *Bullet) DoHurt() {
 	}
 
 }
+func (this *Bullet) AddOtherHurt(hurtinfo HurtInfo) {
+
+	this.OtherHurt = append(this.OtherHurt, hurtinfo)
+}
 
 //伤害类型 (1:物理伤害 2:魔法伤害 3:纯粹伤害)
 //计算攻击力  根据攻击类型

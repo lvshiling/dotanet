@@ -3,6 +3,7 @@ package gamecore
 import (
 	"dq/conf"
 	"dq/log"
+	"dq/protobuf"
 	"dq/utils"
 	"strconv"
 )
@@ -14,12 +15,43 @@ type Skill struct {
 	RemainCDTime float32 //技能cd 剩余时间
 }
 
+//创建子弹
+func (this *Skill) CreateBullet(unit *Unit, data *protomsg.CS_PlayerSkill) *Bullet {
+	if unit == nil || data == nil {
+		return nil
+	}
+	//
+	//自身
+
+	if this.CastTargetType == 1 {
+
+	} else if this.CastTargetType == 2 { //目标单位
+
+		targetunit := unit.InScene.FindUnitByID(data.TargetUnitID)
+
+		b := NewBullet1(unit, targetunit)
+		b.SetProjectileMode(this.BulletModeType, this.BulletSpeed)
+		b.AddOtherHurt(HurtInfo{HurtType: this.HurtType, HurtValue: this.HurtValue})
+		return b
+	} else if this.CastTargetType == 3 { //目的点
+
+	}
+
+	return nil
+}
+
+//更新
 func (this *Skill) Update(dt float64) {
 	//CD时间减少
 	this.RemainCDTime -= float32(dt)
 	if this.RemainCDTime <= 0 {
 		this.RemainCDTime = 0
 	}
+}
+
+//刷新CD
+func (this *Skill) FreshCDTime(time float32) {
+	this.RemainCDTime = time
 }
 
 //返回数据库字符串
@@ -67,7 +99,7 @@ func NewUnitSkills(dbdata []string, unitskilldata string) map[int32]*Skill {
 		sk.SkillData = *skdata
 		sk.Level = skilllevel
 		sk.RemainCDTime = skillcd
-		sk.RemainCDTime = 10.0
+		//sk.RemainCDTime = 10.0
 		if _, ok := re[sk.TypeID]; ok {
 			re[sk.TypeID] = sk
 		}

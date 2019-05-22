@@ -56,6 +56,7 @@ func (a *GameScene1Agent) Init() {
 	a.handles["CS_PlayerMove"] = a.DoPlayerMove
 
 	a.handles["CS_PlayerAttack"] = a.DoPlayerAttack
+	a.handles["CS_PlayerSkill"] = a.DoPlayerSkill
 
 	//创建场景
 	for k := 0; k < 1; k++ {
@@ -158,6 +159,27 @@ func (a *GameScene1Agent) DoMsgUserEnterScene(data *protomsg.MsgBase) {
 		log.Info("SendMsgToClient SC_NewScene")
 
 	}
+
+}
+
+//DoPlayerSkill
+func (a *GameScene1Agent) DoPlayerSkill(data *protomsg.MsgBase) {
+
+	log.Info("---------DoPlayerSkill")
+	h2 := &protomsg.CS_PlayerSkill{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	log.Info("---------%v", h2)
+
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+
+	player.(*gamecore.Player).SkillCmd(h2)
 
 }
 

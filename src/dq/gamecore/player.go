@@ -205,6 +205,14 @@ func (this *Player) MoveCmd(data *protomsg.CS_PlayerMove) {
 	}
 }
 
+//SkillCmd
+func (this *Player) SkillCmd(data *protomsg.CS_PlayerSkill) {
+
+	if this.MainUnit.ID == data.ID {
+		this.MainUnit.SkillCmd(data)
+	}
+}
+
 //玩家攻击操作
 func (this *Player) AttackCmd(data *protomsg.CS_PlayerAttack) {
 	for _, v := range data.IDs {

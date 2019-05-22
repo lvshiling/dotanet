@@ -85,13 +85,17 @@ func (this *Unit) IsOutAttackRangeBuffer(target *Unit) bool {
 
 //单位是否能被攻击 (各种BUF状态 无敌状态 免疫状态)
 func (this *Unit) IsCanBeAttack() bool {
+	//死亡后不能攻击
+	if this.IsDeath == 1 {
+		return false
+	}
 	return true
 }
 
 //单位是否消失 (单位离线 单位死亡 单位在另一个空间:黑鸟的关..  开雾的状态下)
 func (this *Unit) IsDisappear() bool {
 
-	if this.IsDelete == true || this.IsDeath == 1 {
+	if this.IsDelete == true || this.IsDeath == 1 || this.InScene == nil {
 		return true
 	}
 
@@ -135,8 +139,201 @@ type UnitCmd struct {
 	AttackCmdData *protomsg.CS_PlayerAttack
 	//攻击目标
 	AttackCmdDataTarget *Unit
+	//技能命令
+	SkillCmdData *protomsg.CS_PlayerSkill
 }
 
+//-----------------------技能命令--------------------
+//是否有技能命令
+func (this *Unit) HaveSkillCmd() bool {
+
+	if this.SkillCmdData != nil {
+		return true
+	}
+	return false
+}
+
+//检查目标释放在技能施法范围内
+func (this *Unit) IsInSkillRange(data *protomsg.CS_PlayerSkill) bool {
+	//检查本单位是否有这个技能
+	skilldata, ok := this.Skills[data.SkillID]
+	if ok == false {
+		return false
+	}
+	//技能施法目标类型 为 单位
+	if skilldata.CastTargetType == 2 {
+		target := this.InScene.FindUnitByID(data.TargetUnitID)
+
+		dir := vec2d.Sub(this.Body.Position, target.Body.Position)
+
+		targetdis := dir.Length()
+		if targetdis > float64(skilldata.CastRange)+float64(this.AddedMagicRange) {
+			return false
+		}
+	} else if skilldata.CastTargetType == 3 { //以目的点为施法目标
+		targetpos := vec2d.Vec2{X: float64(data.X), Y: float64(data.Y)}
+
+		dir := vec2d.Sub(this.Body.Position, targetpos)
+
+		targetdis := dir.Length()
+		if targetdis > float64(skilldata.CastRange)+float64(this.AddedMagicRange) {
+			return false
+		}
+	}
+
+	return true
+
+}
+
+//检查技能是否可以对目标释放
+func (this *Unit) CheckCastSkillTarget(target *Unit, skilldata *Skill) bool {
+	//int32 UnitTargetTeam = 8;//目标单位关系 1:友方  2:敌方 3:友方敌方都行
+	//int32 UnitTargetCamp = 9;//目标单位阵营 (1:玩家 2:NPC) 3:玩家NPC都行
+	if target == nil {
+		return false
+	}
+	//目标消失
+	if target.IsDisappear() == true {
+		return false
+	}
+
+	isEnemy := this.CheckIsEnemy(target)
+	//目标技能免疫 且目标是敌人
+	if isEnemy == true {
+		if target.MagicImmune == 1 {
+			if skilldata.NoCareMagicImmune == 2 {
+				return false
+			}
+		}
+	}
+
+	//与目标单位的关系
+	if skilldata.UnitTargetTeam == 1 {
+		if isEnemy == true {
+			return false
+		}
+	} else if skilldata.UnitTargetTeam == 2 {
+		if isEnemy == false {
+			return false
+		}
+	}
+
+	return true
+	//if skilldata.UnitTargetCamp
+}
+
+//使用技能 创建子弹
+func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill) {
+
+	//检查本单位是否有这个技能
+	skilldata, ok := this.Skills[data.SkillID]
+	if ok == false {
+		return
+	}
+	//创建子弹
+	b := skilldata.CreateBullet(this, data)
+	if b != nil {
+		this.AddBullet(b)
+	}
+
+	//消耗 CD
+	namacost := skilldata.ManaCost - int32(this.ManaCostReduce*float32(skilldata.ManaCost))
+	this.ChangeMP(-namacost)
+
+	cdtime := skilldata.Cooldown - this.MagicCDReduce*skilldata.Cooldown
+	skilldata.FreshCDTime(cdtime)
+
+	//删除技能命令
+	this.StopSkillCmd()
+
+	//如果目标是敌人 则自动攻击
+	targetunit := this.InScene.FindUnitByID(data.TargetUnitID)
+	if targetunit != nil {
+		if this.CheckIsEnemy(targetunit) == true {
+			acd := &protomsg.CS_PlayerAttack{}
+			acd.TargetUnitID = data.TargetUnitID
+			this.AttackCmd(acd)
+		}
+	}
+
+}
+
+//检查是否能使用技能
+func (this *Unit) UseSkillEnable(data *protomsg.CS_PlayerSkill) bool {
+	if this.SkillEnable == 2 {
+		return false
+	}
+
+	if this.IsDisappear() == true {
+		return false
+	}
+
+	//检查本单位是否有这个技能
+	skilldata, ok := this.Skills[data.SkillID]
+	if ok == false {
+		return false
+	}
+	//技能等级
+	if skilldata.Level <= 0 {
+		return false
+	}
+
+	//被动技能
+	if skilldata.CastType == 2 {
+		return false
+	}
+	//cd中
+	if skilldata.RemainCDTime > 0 {
+		return false
+	}
+	//魔法不足
+	if skilldata.ManaCost > this.MP {
+		return false
+	}
+
+	//技能施法目标类型 为 单位
+	if skilldata.CastTargetType == 2 {
+		target := this.InScene.FindUnitByID(data.TargetUnitID)
+		if this.CheckCastSkillTarget(target, skilldata) == false {
+			return false
+		}
+	}
+	//施法距离就不判断了 如果距离不够单位自己移动过去
+
+	return true
+}
+
+//技能行为命令
+func (this *Unit) SkillCmd(data *protomsg.CS_PlayerSkill) {
+
+	//判断阵营 攻击模式 是否允许本次攻击
+	if this.UseSkillEnable(data) == true {
+		this.SkillCmdData = data
+		//this.AttackCmdDataTarget = at
+		log.Info("---------SkillCmd")
+	}
+
+}
+
+//检查技能指令的有效性
+func (this *Unit) CheckSkillCmd() {
+
+	if this.HaveSkillCmd() == false {
+		return
+	}
+
+	///at := this.InScene.FindUnitByID(this.AttackCmdDataTarget.ID)
+	if this.UseSkillEnable(this.SkillCmdData) == false {
+		this.StopSkillCmd()
+	}
+}
+
+//中断技能命令
+func (this *Unit) StopSkillCmd() {
+	this.SkillCmdData = nil
+}
+
+//-----------------------攻击命令--------------------
 //是否有攻击命令
 func (this *Unit) HaveAttackCmd() bool {
 
@@ -145,17 +342,16 @@ func (this *Unit) HaveAttackCmd() bool {
 	}
 	return false
 }
-
-//能否攻击(根据阵营,攻击模式判断与是否死亡)
-func (this *Unit) AttackEnableForCampAndMode(target *Unit) bool {
-	if this.Camp != target.Camp {
-		return true
-	}
-	if this.IsDeath == 1 || target.IsDeath == 1 {
+func (this *Unit) CheckIsEnemy(target *Unit) bool {
+	if target == nil {
 		return false
 	}
 	//攻击模式(1:和平模式 2:组队模式 3:全体模式 4:阵营模式(玩家,NPC) 5:行会模式)
 	if this.AttackMode == 1 {
+		//阵营不同 //阵营(1:玩家 2:NPC)
+		if this.Camp != target.Camp {
+			return true
+		}
 		return false
 	} else if this.AttackMode == 3 {
 		//全体模式下 不是同一个玩家控制的单位可以攻击
@@ -167,6 +363,25 @@ func (this *Unit) AttackEnableForCampAndMode(target *Unit) bool {
 
 	}
 
+	return false
+
+}
+
+//能否攻击(根据阵营,攻击模式判断与是否死亡)
+func (this *Unit) CheckAttackEnable2Target(target *Unit) bool {
+
+	if this.IsDisappear() || target.IsDisappear() {
+		return false
+	}
+	//不能攻击
+	if this.AttackEnable == 2 {
+		return false
+	}
+	//检查是否是敌人
+	if this.CheckIsEnemy(target) == false {
+		return false
+	}
+
 	return true
 
 }
@@ -174,15 +389,12 @@ func (this *Unit) AttackEnableForCampAndMode(target *Unit) bool {
 //攻击行为命令
 func (this *Unit) AttackCmd(data *protomsg.CS_PlayerAttack) {
 
-	if this.InScene == nil {
-		return
-	}
 	at := this.InScene.FindUnitByID(data.TargetUnitID)
-	if at == nil || at.IsDisappear() {
+	if at == nil {
 		return
 	}
 	//判断阵营 攻击模式 是否允许本次攻击
-	if this.AttackEnableForCampAndMode(at) == true {
+	if this.CheckAttackEnable2Target(at) == true {
 		this.AttackCmdData = data
 		this.AttackCmdDataTarget = at
 		//log.Info("---------AttackCmd")
@@ -192,9 +404,7 @@ func (this *Unit) AttackCmd(data *protomsg.CS_PlayerAttack) {
 
 //检查攻击指令的有效性 如果目标单位被场景删除 则无效
 func (this *Unit) CheckAttackCmd() {
-	if this.InScene == nil {
-		return
-	}
+
 	if this.HaveAttackCmd() == false {
 		return
 	}
@@ -202,7 +412,7 @@ func (this *Unit) CheckAttackCmd() {
 		return
 	}
 	///at := this.InScene.FindUnitByID(this.AttackCmdDataTarget.ID)
-	if this.AttackCmdDataTarget.IsDisappear() {
+	if this.CheckAttackEnable2Target(this.AttackCmdDataTarget) == false {
 		this.StopAttackCmd()
 	}
 }
@@ -211,8 +421,13 @@ func (this *Unit) CheckAttackCmd() {
 func (this *Unit) StopAttackCmd() {
 	this.AttackCmdData = nil
 	this.AttackCmdDataTarget = nil
+	if this.UnitType == 1 {
+		log.Info("---------StopAttackCmd")
+	}
+
 }
 
+//-----------------------移动命令--------------------
 //是否有移动命令
 func (this *Unit) HaveMoveCmd() bool {
 
@@ -229,6 +444,9 @@ func (this *Unit) GetCanMove() bool {
 	//	if this.IsDizzy == 1 || this.IsTwine == 1 || this.IsForceMove == 1 {
 	//		return false
 	//	}
+	if this.MoveEnable == 2 {
+		return false
+	}
 
 	return true
 }
@@ -240,6 +458,14 @@ func (this *Unit) SetDirection(dir vec2d.Vec2) {
 
 //移动行为命令
 func (this *Unit) MoveCmd(data *protomsg.CS_PlayerMove) {
+	if this.MoveEnable == 2 {
+		//当不能移动的时候 检查是否可以转向
+		if this.TurnEnable == 1 {
+			v1 := vec2d.Vec2{X: float64(this.MoveCmdData.X), Y: float64(this.MoveCmdData.Y)}
+			this.SetDirection(v1)
+		}
+		return
+	}
 
 	if this.AttackCmdData == nil {
 		this.MoveCmdData = data
@@ -362,9 +588,16 @@ type UnitProperty struct {
 
 	NoCareDodge float32 //无视闪避几率
 
-	//	IsDizzy     int8 //是否眩晕(1:眩晕 2:不眩晕)
-	//	IsTwine     int8 //是否缠绕(1:缠绕 2:不缠绕)
-	//	IsForceMove int8 //是否强制移动(1:强制移动 2:不强制移动) (推推棒等等)
+	MoveEnable   int32 //能否移动 (比如 被缠绕不能移动) 1:可以 2:不可以
+	TurnEnable   int32 //能否转向 (比如 被眩晕不能转向) 1:可以 2:不可以
+	AttackEnable int32 //能否攻击 (比如 被眩晕和缴械不能攻击) 1:可以 2:不可以
+	SkillEnable  int32 //能否使用主动技能 (比如 被眩晕和沉默不能使用主动技能) 1:可以 2:不可以
+	ItemEnable   int32 //能否使用主动道具 (比如 被眩晕和禁用道具不能使用主动道具) 1:可以 2:不可以
+	MagicImmune  int32 //是否技能免疫 1：是 2:不是
+
+	AddedMagicRange float32 //额外施法距离
+	ManaCostReduce  float32 //魔法消耗降低 (0.1)表示降低 10%
+	MagicCDReduce   float32 //技能CD降低 (0.1)表示降低 10%
 
 }
 
@@ -505,6 +738,7 @@ func (this *Unit) Update(dt float64) {
 	if this.AI != nil {
 		this.AI.Update(dt)
 	}
+	this.CheckSkillCmd()
 	this.CheckAttackCmd()
 
 	//技能更新
@@ -742,6 +976,20 @@ func (this *Unit) CalHPRegain() {
 	//buff
 }
 
+//计算异常状态
+func (this *Unit) CalControlState() {
+	this.MoveEnable = 1   //能否移动 (比如 被缠绕不能移动) 1:可以 2:不可以
+	this.TurnEnable = 1   //能否转向 (比如 被眩晕不能转向) 1:可以 2:不可以
+	this.AttackEnable = 1 //能否攻击 (比如 被眩晕和缴械不能攻击) 1:可以 2:不可以
+	this.SkillEnable = 1  //能否使用主动技能 (比如 被眩晕和沉默不能使用主动技能) 1:可以 2:不可以
+	this.ItemEnable = 1   //能否使用主动道具 (比如 被眩晕和禁用道具不能使用主动道具) 1:可以 2:不可以
+	this.MagicImmune = 2
+
+	this.AddedMagicRange = 0 //额外施法距离
+	this.ManaCostReduce = 0  //魔法消耗降低
+	this.MagicCDReduce = 0   //技能CD降低
+}
+
 //计算属性 (每一帧 都可能会变)
 func (this *Unit) CalProperty() {
 	//计算属性
@@ -770,6 +1018,8 @@ func (this *Unit) CalProperty() {
 	this.CalDodge()
 	//计算生命回复
 	this.CalHPRegain()
+	//计算异常状态
+	this.CalControlState()
 
 }
 
@@ -811,7 +1061,7 @@ func (this *Unit) BeAttacked(bullet *Bullet) {
 }
 
 //创建子弹
-func (this *Unit) CreateBullet(bullet *Bullet) {
+func (this *Unit) AddBullet(bullet *Bullet) {
 	if this.InScene != nil {
 		this.InScene.AddBullet(bullet)
 	}
