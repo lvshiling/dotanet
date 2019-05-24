@@ -141,6 +141,13 @@ message MsgUserEnterScene {
     bytes Datas = 6;    //玩家信息数据
 }
 
+//玩家自己造成的伤害数据
+message MsgPlayerHurt{
+    int32 HurtUnitID = 1;   //伤害单位ID
+    int32 HurtAllValue = 2; //总伤害值
+    int32 HurtMagicValue = 3;//魔法伤害值
+    int32 IsCrit = 4;   //是否暴击
+}
 
 //每帧更新单位数据
 message SC_Update  {
@@ -152,6 +159,8 @@ message SC_Update  {
     repeated BulletDatas NewBullets = 5;//新的子弹
     repeated BulletDatas OldBullets = 6;//旧子弹(只更新变化值)
     repeated int32 RemoveBullets = 7;//删除子弹(子弹ID)
+
+    repeated MsgPlayerHurt PlayerHurt = 8;//玩家造成的伤害
 }
 
 //玩家进入新场景时的场景信息
