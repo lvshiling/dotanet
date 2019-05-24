@@ -30,8 +30,18 @@ func (this *Skill) CreateBullet(unit *Unit, data *protomsg.CS_PlayerSkill) *Bull
 		targetunit := unit.InScene.FindUnitByID(data.TargetUnitID)
 
 		b := NewBullet1(unit, targetunit)
+		b.SetNormalHurtRatio(this.NormalHurt)
 		b.SetProjectileMode(this.BulletModeType, this.BulletSpeed)
-		b.AddOtherHurt(HurtInfo{HurtType: this.HurtType, HurtValue: this.HurtValue})
+		//技能增强
+		if this.HurtType == 2 {
+			hurtvalue := (this.HurtValue + int32(float32(this.HurtValue)*unit.MagicScale))
+			b.AddOtherHurt(HurtInfo{HurtType: this.HurtType, HurtValue: hurtvalue})
+		} else {
+			b.AddOtherHurt(HurtInfo{HurtType: this.HurtType, HurtValue: this.HurtValue})
+		}
+		b.SkillID = this.TypeID
+		b.SkillLevel = this.Level
+
 		return b
 	} else if this.CastTargetType == 3 { //目的点
 
@@ -74,6 +84,8 @@ func NewUnitSkills(dbdata []string, unitskilldata string) map[int32]*Skill {
 		}
 		sk.SkillData = *skdata
 		sk.SkillData.Index = int32(k)
+
+		log.Info("skill index:%d", sk.SkillData.Index)
 		sk.Level = 0
 		sk.RemainCDTime = 0
 		re[sk.TypeID] = sk
@@ -100,7 +112,8 @@ func NewUnitSkills(dbdata []string, unitskilldata string) map[int32]*Skill {
 		sk.Level = skilllevel
 		sk.RemainCDTime = skillcd
 		//sk.RemainCDTime = 10.0
-		if _, ok := re[sk.TypeID]; ok {
+		if initskill, ok := re[sk.TypeID]; ok {
+			sk.Index = initskill.Index
 			re[sk.TypeID] = sk
 		}
 

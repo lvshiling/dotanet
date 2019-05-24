@@ -139,6 +139,13 @@ func (this *Player) AddBulletData(bullet *Bullet) {
 	}
 
 }
+func (this *Player) AddHurtValue(hv *protomsg.MsgPlayerHurt) {
+	if hv == nil || hv.HurtAllValue == 0 {
+		return
+	}
+
+	this.Msg.PlayerHurt = append(this.Msg.PlayerHurt, hv)
+}
 
 func (this *Player) SendUpdateMsg(curframe int32) {
 
@@ -166,6 +173,7 @@ func (this *Player) SendUpdateMsg(curframe int32) {
 	this.LastShowBullet = this.CurShowBullet
 	this.CurShowBullet = make(map[int32]*Bullet)
 	this.Msg = &protomsg.SC_Update{}
+
 }
 
 func (this *Player) SendMsgToClient(msgtype string, msg proto.Message) {

@@ -14,6 +14,12 @@ import (
 	"github.com/360EntSecGroup-Skylar/excelize"
 )
 
+func NoLinerAdd(base float32, add float32) float32 {
+	t1 := (1 - base) * (1 - add)
+	t1 = 1 - t1
+	return t1
+}
+
 //func FormatFloat(f float64, m int) string {
 //	n := strconv.FormatFloat(f, 'f', -1, 32)
 //	if n == "" {

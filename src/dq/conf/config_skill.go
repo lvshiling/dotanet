@@ -50,9 +50,12 @@ func InitSkillDatas() {
 	//log.Info("----------1---------")
 
 	//log.Info("-:%v", SkillDatas)
-	for i := 1; i < 6; i++ {
+	for i := 1; i < 5; i++ {
 		t := GetSkillData(1, int32(i))
-		log.Info("%d:%v", i, *t)
+		if t != nil {
+			log.Info("%d:%v", i, *t)
+		}
+
 	}
 
 	//log.Info("----------2---------")
@@ -68,7 +71,7 @@ func GetSkillData(typeid int32, level int32) *SkillData {
 
 	re := (SkillDatas[key])
 	if re == nil {
-		log.Info("not find unitfile:%d", typeid)
+		log.Info("not find skill unitfile:%d", typeid)
 		return nil
 	}
 	return (re).(*SkillData)
@@ -93,6 +96,9 @@ type SkillBaseData struct {
 	LevelsBetweenUpgrades int32   //等级需求步长 2
 	MaxLevel              int32   //最高升级到的等级 5 表示能升级到5级
 	Index                 int32   //技能索引 按升序排列  在屏幕右下角的显示位置
+	TargetBuff            string  //对目标造成的buff 比如 1,2 表示对目标造成typeid为 1和2的buff
+	BlinkToTarget         int32   //是否瞬间移动到目的地 1:是 2:否
+	MyBuff                string  //对自己造成的buff 比如 1,2 表示对目标造成typeid为 1和2的buff
 }
 
 //技能数据 (会根据等级变化的数据)

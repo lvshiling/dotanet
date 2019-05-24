@@ -2,6 +2,7 @@ package gamecore
 
 import (
 	//"dq/log"
+	"dq/conf"
 	"dq/protobuf"
 	"dq/vec2d"
 	"strings"
@@ -49,8 +50,8 @@ type Bullet struct {
 
 	StartPosOffsetObj int32 //起始位置参照物   1创建者 2目标 一般情况都为1创建者  像从天而降的闪电就为2目标 的头顶
 
-	SkillID int32 //技能ID  如果技能ID为 -1表示普通攻击
-	//SkillLevel int32 //技能等级
+	SkillID    int32 //技能ID  如果技能ID为 -1表示普通攻击
+	SkillLevel int32 //技能等级
 
 	NormalHurt HurtInfo   //攻击伤害(以英雄攻击力计算伤害) 值为计算暴击后的值
 	OtherHurt  []HurtInfo //其他伤害也就是额外伤害
@@ -83,6 +84,7 @@ func (this *Bullet) Init() {
 	this.StartPosOffsetObj = 1
 
 	this.SkillID = -1 //普通攻击
+	this.SkillLevel = 1
 
 	this.NormalHurt.HurtType = 1 //物理伤害
 	this.NormalHurt.HurtValue = 0
@@ -184,7 +186,21 @@ func (this *Bullet) DoHurt() {
 			return
 		}
 		//伤害
-		this.DestUnit.BeAttacked(this)
+		hurtvalue := this.DestUnit.BeAttacked(this)
+
+		//buff
+		if this.SkillID > 0 {
+			skdata := conf.GetSkillData(this.SkillID, this.SkillLevel)
+			if skdata != nil {
+				this.DestUnit.AddBuffFromStr(skdata.TargetBuff, this.SkillLevel)
+			}
+		}
+
+		if this.SrcUnit == nil || this.SrcUnit.MyPlayer == nil {
+			return
+		}
+		//为了显示 玩家造成的伤害
+		this.SrcUnit.MyPlayer.AddHurtValue(&protomsg.MsgPlayerHurt{HurtUnitID: this.DestUnit.ID, HurtAllValue: hurtvalue})
 
 	}
 

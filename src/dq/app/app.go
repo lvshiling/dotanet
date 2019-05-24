@@ -146,6 +146,7 @@ func (app *DefaultApp) Run() error {
 
 	conf.LoadUnitFileData()  //加载单位数据配置
 	conf.LoadSkillFileData() //加载技能数据配置
+	conf.LoadBuffFileData()  //加载buff数据配置
 
 	log.InitBeego(true, "dq", Logdir, make(map[string]interface{}))
 

@@ -223,24 +223,31 @@ func (this *Unit) CheckCastSkillTarget(target *Unit, skilldata *Skill) bool {
 }
 
 //使用技能 创建子弹
-func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill) {
+func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 
 	//检查本单位是否有这个技能
 	skilldata, ok := this.Skills[data.SkillID]
 	if ok == false {
 		return
 	}
+	//MyBuff
+	this.AddBuffFromStr(skilldata.MyBuff, skilldata.Level)
+
 	//创建子弹
 	b := skilldata.CreateBullet(this, data)
 	if b != nil {
 		this.AddBullet(b)
 	}
+	//BlinkToTarget
+	if skilldata.BlinkToTarget == 1 {
+		this.Body.BlinkToPos(targetpos)
+	}
 
 	//消耗 CD
-	namacost := skilldata.ManaCost - int32(this.ManaCostReduce*float32(skilldata.ManaCost))
+	namacost := skilldata.ManaCost - int32(this.ManaCost*float32(skilldata.ManaCost))
 	this.ChangeMP(-namacost)
 
-	cdtime := skilldata.Cooldown - this.MagicCDReduce*skilldata.Cooldown
+	cdtime := skilldata.Cooldown - this.MagicCD*skilldata.Cooldown
 	skilldata.FreshCDTime(cdtime)
 
 	//删除技能命令
@@ -287,7 +294,8 @@ func (this *Unit) UseSkillEnable(data *protomsg.CS_PlayerSkill) bool {
 		return false
 	}
 	//魔法不足
-	if skilldata.ManaCost > this.MP {
+	shouldmp := skilldata.ManaCost - int32(this.ManaCost*float32(skilldata.ManaCost))
+	if shouldmp > this.MP {
 		return false
 	}
 
@@ -596,8 +604,8 @@ type UnitProperty struct {
 	MagicImmune  int32 //是否技能免疫 1：是 2:不是
 
 	AddedMagicRange float32 //额外施法距离
-	ManaCostReduce  float32 //魔法消耗降低 (0.1)表示降低 10%
-	MagicCDReduce   float32 //技能CD降低 (0.1)表示降低 10%
+	ManaCost        float32 //魔法消耗降低 (0.1)表示降低 10%
+	MagicCD         float32 //技能CD降低 (0.1)表示降低 10%
 
 }
 
@@ -615,7 +623,8 @@ type Unit struct {
 
 	InitPosition vec2d.Vec2 //初始位置
 
-	Skills map[int32]*Skill //所有技能
+	Skills map[int32]*Skill  //所有技能
+	Buffs  map[int32][]*Buff //所有buff 同typeID下可能有多个buff
 
 	//发送数据部分
 	ClientData    *protomsg.UnitDatas //客户端显示数据
@@ -688,13 +697,11 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 func (this *Unit) Init() {
 	this.State = NewIdleState(this)
 
-	//设置一些初始状态
-	//	this.IsDizzy = 2
-	//	this.IsTwine = 2
-	//	this.IsForceMove = 2
 	this.AttackMode = 1 //和平攻击模式
 
 	this.IsDeath = 2
+
+	this.ClearBuff()
 
 	//弹道位置计算
 
@@ -705,7 +712,7 @@ func (this *Unit) Init() {
 }
 
 //
-//更新 范围影响的buff
+//更新 范围影响的buff 被动技能
 func (this *Unit) PreUpdate(dt float64) {
 
 }
@@ -714,8 +721,28 @@ func (this *Unit) PreUpdate(dt float64) {
 func (this *Unit) Update(dt float64) {
 	//设置是否有碰撞  设置移动速度 和逻辑状态
 
-	//
+	//技能更新
+	for _, v := range this.Skills {
+		v.Update(dt)
+	}
+	//更新buff
+	for k, v := range this.Buffs {
+		for k1, v1 := range v {
+			if v1.IsEnd == true {
+				//删除k1的元素
+				v = append(v[:k1], v[k1+1:]...)
+				if len(v) <= 0 {
+					delete(this.Buffs, k)
+				}
+				continue
+			}
 
+			v1.Update(dt)
+		}
+
+	}
+
+	//计算属性值
 	this.CalProperty()
 
 	//移动核心
@@ -741,10 +768,7 @@ func (this *Unit) Update(dt float64) {
 	this.CheckSkillCmd()
 	this.CheckAttackCmd()
 
-	//技能更新
-	for _, v := range this.Skills {
-		v.Update(dt)
-	}
+	//
 
 	//逻辑状态更新
 	this.State.OnTransform()
@@ -765,11 +789,12 @@ func (this *Unit) CalAttribute() {
 
 	//装备
 	//技能
-	//buff
+
 }
 
 //改变血量
-func (this *Unit) ChangeHP(hp int32) {
+func (this *Unit) ChangeHP(hp int32) int32 {
+	lasthp := this.HP
 	this.HP += hp
 	if this.HP <= 0 {
 		//死亡处理
@@ -782,6 +807,7 @@ func (this *Unit) ChangeHP(hp int32) {
 	if this.HP >= this.MAX_HP {
 		this.HP = this.MAX_HP
 	}
+	return this.HP - lasthp
 	//log.Info("---ChangeHP---:%d   :%d", hp, this.HP)
 }
 
@@ -831,13 +857,6 @@ func (this *Unit) CalAttackSpeed() {
 	//装备
 	//技能
 	//buff
-
-	//攻击速度取值范围
-	if this.AttackSpeed <= 10 {
-		this.AttackSpeed = 10
-	} else if this.AttackSpeed >= float32(this.BaseMaxAttackSpeed) {
-		this.AttackSpeed = float32(this.BaseMaxAttackSpeed)
-	}
 
 }
 
@@ -921,6 +940,10 @@ func (this *Unit) CalPhysicalAmaor() {
 	//计算物理伤害抵挡
 	this.PhysicalResist = 0.052 * this.PhysicalAmaor / (0.9 + 0.048*this.PhysicalAmaor)
 
+	//	if this.UnitType == 1 {
+	//		log.Info("CalPhysicalAmaor %f   %f", this.PhysicalAmaor, this.PhysicalResist)
+	//	}
+
 }
 
 //计算魔抗
@@ -929,13 +952,12 @@ func (this *Unit) CalMagicAmaor() {
 	//基础魔抗叠加力量带来的魔抗
 
 	strenth := float32(this.AttributeStrength * conf.StrengthAddMagicAmaor)
-	magicamaor := (1 - this.BaseMagicAmaor) * (1 - strenth)
 
 	//装备
 	//技能
 	//buff
 
-	this.MagicAmaor = 1 - magicamaor
+	this.MagicAmaor = utils.NoLinerAdd(this.BaseMagicAmaor, strenth)
 }
 
 //计算状态抗性
@@ -986,8 +1008,68 @@ func (this *Unit) CalControlState() {
 	this.MagicImmune = 2
 
 	this.AddedMagicRange = 0 //额外施法距离
-	this.ManaCostReduce = 0  //魔法消耗降低
-	this.MagicCDReduce = 0   //技能CD降低
+	this.ManaCost = 0        //魔法消耗降低
+	this.MagicCD = 0         //技能CD降低
+}
+
+//计算buff对属性的影响
+func (this *Unit) CalPropertyByBuffs() {
+	//buff
+	for _, v := range this.Buffs {
+		for _, v1 := range v {
+			//log.Info("--11--speed:%f", this.AttackSpeed)
+			this.AttributeStrength += v1.AttributeStrengthCV
+			this.AttributeIntelligence += v1.AttributeIntelligenceCV
+			this.AttributeAgility += v1.AttributeAgilityCV
+			this.AttackSpeed += v1.AttackSpeedCV
+			this.Attack += int32(float32(this.Attack) * v1.AttackCR)
+			this.Attack += int32(v1.AttackCV)
+			this.MoveSpeed += this.MoveSpeed * float64(v1.MoveSpeedCR)
+			this.MoveSpeed += float64(v1.MoveSpeedCV)
+			this.MagicScale = utils.NoLinerAdd(this.MagicScale, v1.MagicScaleCV)
+			this.MPRegain += this.MPRegain * v1.MPRegainCR
+			this.MPRegain += v1.MPRegainCV
+			this.PhysicalAmaor += this.PhysicalAmaor * v1.PhysicalAmaorCR
+			this.PhysicalAmaor += v1.PhysicalAmaorCV
+			this.MagicAmaor = utils.NoLinerAdd(this.MagicAmaor, v1.MagicAmaorCV)
+			this.Dodge = utils.NoLinerAdd(this.Dodge, v1.DodgeCV)
+			this.HPRegain += this.HPRegain * v1.HPRegainCR
+			this.HPRegain += v1.HPRegainCV
+			this.NoCareDodge = utils.NoLinerAdd(this.NoCareDodge, v1.NoCareDodgeCV)
+			this.AddedMagicRange += v1.AddedMagicRangeCV
+			this.ManaCost = utils.NoLinerAdd(this.ManaCost, v1.ManaCostCV)
+			this.MagicCD = utils.NoLinerAdd(this.MagicCD, v1.MagicCDCV)
+
+			if v1.NoMove == 1 {
+				this.MoveEnable = 2
+			}
+			if v1.NoTurn == 1 {
+				this.TurnEnable = 2
+			}
+			if v1.NoAttack == 1 {
+				this.AttackEnable = 2
+			}
+			if v1.NoSkill == 1 {
+				this.SkillEnable = 2
+			}
+			if v1.NoItem == 1 {
+				this.ItemEnable = 2
+			}
+			if v1.MagicImmune == 1 {
+				this.MagicImmune = 1
+			}
+			//log.Info("--22--speed:%f", this.AttackSpeed)
+
+		}
+
+	}
+
+	//攻击速度取值范围
+	if this.AttackSpeed <= 10 {
+		this.AttackSpeed = 10
+	} else if this.AttackSpeed >= float32(this.BaseMaxAttackSpeed) {
+		this.AttackSpeed = float32(this.BaseMaxAttackSpeed)
+	}
 }
 
 //计算属性 (每一帧 都可能会变)
@@ -1021,10 +1103,51 @@ func (this *Unit) CalProperty() {
 	//计算异常状态
 	this.CalControlState()
 
+	//计算buff对属性的影响
+	this.CalPropertyByBuffs()
+}
+
+//清空buff
+func (this *Unit) ClearBuff() {
+	this.Buffs = make(map[int32][]*Buff)
+}
+
+//通过 buff 添加buff
+func (this *Unit) AddBuffFromBuff(buff *Buff) {
+	bf, ok := this.Buffs[buff.TypeID]
+	//叠加机制
+	//		OverlyingType          int32 //叠加类型 1:只更新最大时间 2:完美叠加(小鱼的偷属性)
+	//	OverlyingAddTag        int32 //叠加时是否增加标记数字 1:表示增加 2:表示不增加
+	if ok == true && len(bf) > 0 {
+		if buff.OverlyingType == 1 {
+
+			if bf[0].RemainTime < buff.Time {
+				bf[0].RemainTime = buff.Time
+			}
+
+		} else if buff.OverlyingType == 2 {
+			bf = append(bf, buff)
+		}
+	} else {
+		bfs := make([]*Buff, 0)
+		bfs = append(bfs, buff)
+		this.Buffs[buff.TypeID] = bfs
+	}
+}
+
+//通过bufftypeid string 添加buff
+func (this *Unit) AddBuffFromStr(buffsstr string, level int32) {
+	buffs := utils.GetInt32FromString2(buffsstr)
+	for _, v := range buffs {
+		buff := NewBuff(v, level)
+		if buff != nil {
+			this.AddBuffFromBuff(buff)
+		}
+	}
 }
 
 //受到来自子弹的伤害
-func (this *Unit) BeAttacked(bullet *Bullet) {
+func (this *Unit) BeAttacked(bullet *Bullet) int32 {
 	//计算闪避
 	if bullet.SkillID == -1 {
 		//普通攻击
@@ -1042,7 +1165,7 @@ func (this *Unit) BeAttacked(bullet *Bullet) {
 
 		//闪避了
 		if isDodge {
-			return
+			return 0
 		}
 	}
 	//计算伤害
@@ -1057,7 +1180,7 @@ func (this *Unit) BeAttacked(bullet *Bullet) {
 	//-----扣血--
 	hurtvalue := -(physicAttack + magicAttack + pureAttack)
 	//log.Info("---hurtvalue---%d   %f", hurtvalue, this.PhysicalResist)
-	this.ChangeHP(hurtvalue)
+	return this.ChangeHP(hurtvalue)
 }
 
 //创建子弹
@@ -1154,17 +1277,17 @@ func (this *Unit) FreshClientDataSub() {
 		this.ClientDataSub.ModeType = ""
 	}
 	//
-	if this.AnimotorState != this.ClientData.AnimotorState {
-		this.ClientDataSub.AnimotorState = this.AnimotorState
-	} else {
-		this.ClientDataSub.AnimotorState = 0
-	}
-	//攻击
-	if this.AnimotorState == 3 {
-		this.ClientData.AttackTime = this.GetOneAttackTime()
-	} else {
-		this.ClientData.AttackTime = 0
-	}
+	//	if this.AnimotorState != this.ClientData.AnimotorState {
+	//		this.ClientDataSub.AnimotorState = this.AnimotorState
+	//	} else {
+	//		this.ClientDataSub.AnimotorState = 0
+	//	}
+	//	//攻击
+	//	if this.AnimotorState == 3 {
+	//		this.ClientData.AttackTime = this.GetOneAttackTime()
+	//	} else {
+	//		this.ClientData.AttackTime = 0
+	//	}
 
 	//当前数据与上一次数据对比 相减 数值部分
 	this.ClientDataSub.HP = this.HP - this.ClientData.HP
@@ -1175,6 +1298,10 @@ func (this *Unit) FreshClientDataSub() {
 	this.ClientDataSub.Experience = this.Experience - this.ClientData.Experience
 	this.ClientDataSub.MaxExperience = this.MaxExperience - this.ClientData.MaxExperience
 	this.ClientDataSub.ControlID = this.ControlID - this.ClientData.ControlID
+
+	this.ClientDataSub.AnimotorState = this.AnimotorState - this.ClientData.AnimotorState
+	this.ClientDataSub.AttackTime = this.GetOneAttackTime() - this.ClientData.AttackTime
+
 	this.ClientDataSub.X = float32(this.Body.Position.X) - this.ClientData.X
 	this.ClientDataSub.Y = float32(this.Body.Position.Y) - this.ClientData.Y
 

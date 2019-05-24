@@ -348,10 +348,20 @@ func (this *Scene) PlayerGoin(player *Player, datas []byte) {
 
 }
 
+func (this *Scene) RemoveUnit(unit *Unit) {
+	if unit == nil {
+		return
+
+	}
+	//删除主单位
+	this.NextRemoveUnit.Set(unit.ID, unit)
+}
+
 //玩家退出
 func (this *Scene) PlayerGoout(player *Player) {
 	//删除主单位
-	this.NextRemoveUnit.Set(player.MainUnit.ID, player.MainUnit)
+	//this.NextRemoveUnit.Set(player.MainUnit.ID, player.MainUnit)
+	this.RemoveUnit(player.MainUnit)
 
 	this.NextRemovePlayer.Set(player.Uid, player)
 }

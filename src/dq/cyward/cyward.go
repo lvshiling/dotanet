@@ -210,6 +210,53 @@ func (this *Body) SetMoveDir(dir vec2d.Vec2) {
 	this.MoveDir = dir
 }
 
+//瞬间移动到目的地
+func (this *Body) BlinkToPos(pos vec2d.Vec2) {
+	//清空以前的目的地
+	this.ClearMoveDirAndMoveTarget()
+	collisoin := this.Core.GetTargetPosCollision(this, pos)
+	intersectPoint := pos
+	if collisoin != nil {
+		mypolygon2 := collisoin.GetMyPolygonBig(this, vec2d.Vec2{0.01, 0.01})
+		if this.Core.GetSegmentInsterset(this.Position, pos, mypolygon2, &intersectPoint) {
+			collisoin1 := this.Core.GetTargetPosCollision(this, intersectPoint)
+			if collisoin1 != nil {
+				count := 20.0
+				for i := 1.0; i <= count; i++ {
+					//Rotate
+					dir := vec2d.Sub(this.Position, pos)
+					dir.Rotate(float64(i * (180.0 / count)))
+					dir.Normalize()
+					dir.MulToFloat64(10000.0)
+					dir.Collect(&pos)
+					if this.Core.GetSegmentInsterset(dir, pos, mypolygon2, &intersectPoint) {
+						collisoin1 = this.Core.GetTargetPosCollision(this, intersectPoint)
+						if collisoin1 == nil {
+							break
+						}
+					}
+
+					dir2 := vec2d.Sub(this.Position, pos)
+					dir2.Rotate(float64(0.0 - i*(180.0/count)))
+					dir2.Normalize()
+					dir2.MulToFloat64(10000.0)
+					dir2.Collect(&pos)
+					if this.Core.GetSegmentInsterset(dir2, pos, mypolygon2, &intersectPoint) {
+						collisoin1 = this.Core.GetTargetPosCollision(this, intersectPoint)
+						if collisoin1 == nil {
+							break
+						}
+					}
+				}
+			}
+
+		}
+	}
+	//设置真实值
+	this.Position = intersectPoint
+
+}
+
 //设置目的地
 func (this *Body) SetTarget(pos vec2d.Vec2) {
 
@@ -218,16 +265,16 @@ func (this *Body) SetTarget(pos vec2d.Vec2) {
 		//
 		t1 := vec2d.Sub(this.TargetPosition[len(this.TargetPosition)-1], pos)
 		if t1.LengthSquared() <= 0.0001 {
-			log.Info("SetTarget repeat!!")
+			//log.Info("SetTarget repeat!!")
 			return
 		}
 	}
-
-	this.TargetPosition = this.TargetPosition[0:0]
-	this.DetourPath = this.DetourPath[0:0]
+	this.ClearMoveDirAndMoveTarget()
+	//this.TargetPosition = this.TargetPosition[0:0]
+	//this.DetourPath = this.DetourPath[0:0]
 	this.TargetPosition = append(this.TargetPosition, pos)
-	this.MoveDir = vec2d.Vec2{}
-	this.CollisoinStopTime = 0
+	//this.MoveDir = vec2d.Vec2{}
+	//this.CollisoinStopTime = 0
 
 	t1 := time.Now().UnixNano()
 
@@ -252,7 +299,10 @@ func (this *Body) SetTarget(pos vec2d.Vec2) {
 	}
 
 	t2 := time.Now().UnixNano()
-	log.Info("time:%d", (t2-t1)/1e6)
+	if (t2-t1)/1e6 > 10 {
+		log.Info("time:%d", (t2-t1)/1e6)
+	}
+
 }
 
 //如果已经在碰撞区域内  就可以直接走出来，不需要再检查碰撞
@@ -1144,6 +1194,22 @@ func (this *WardCore) GetNextPositionCollision(one *Body) *Body {
 
 			mypolygon1 := v.GetMyPolygon(one)
 			if mypolygon1.IsInMyPolygon(one.NextPosition) {
+				return v
+			}
+		}
+	}
+
+	return nil
+}
+
+//获取目标位置的碰撞体
+func (this *WardCore) GetTargetPosCollision(one *Body, targetpos vec2d.Vec2) *Body {
+
+	for _, v := range this.Bodys {
+		if CheckCalcCollisoin(v, one) {
+
+			mypolygon1 := v.GetMyPolygon(one)
+			if mypolygon1.IsInMyPolygon(targetpos) {
 				return v
 			}
 		}

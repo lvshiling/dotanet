@@ -379,12 +379,14 @@ func (this *AttackState) OnStart() {
 		this.Parent.SetDirection(vec2d.Sub(this.AttackTarget.Body.Position, this.Parent.Body.Position))
 	}
 
-	//log.Info(" AttackState start%f", utils.GetCurTimeOfSecond())
-
 	this.StartTime = utils.GetCurTimeOfSecond()
 	this.IsDoBullet = false
 	this.IsDone = false
 	this.OneAttackTime = float64(this.Parent.GetOneAttackTime())
+
+	if this.Parent.UnitType == 1 {
+		log.Info(" Attacktime%f   speed:%f", this.OneAttackTime, this.Parent.AttackSpeed)
+	}
 }
 
 //------------------------------死亡状态-------------------------
@@ -428,6 +430,9 @@ func (this *DeathState) Update(dt float64) {
 	if dotime >= 2 {
 		this.Parent.SetAnimotorState(5)
 	}
+	if dotime >= 4 {
+		this.Parent.InScene.RemoveUnit(this.Parent)
+	}
 }
 func (this *DeathState) OnEnd() {
 
@@ -450,6 +455,8 @@ type ChantState struct {
 
 	ChantData *protomsg.CS_PlayerSkill //技能数据
 	CastPoint float32
+
+	StartTargetPos vec2d.Vec2 //开始时的 目标位置
 }
 
 func NewChantState(p *Unit) *ChantState {
@@ -511,7 +518,9 @@ func (this *ChantState) Update(dt float64) {
 			//			b.SetNormalHurtRatio(1)
 			//			b.SetProjectileMode(this.Parent.ProjectileMode, this.Parent.ProjectileSpeed)
 			//			this.Parent.CreateBullet(b)
-			this.Parent.DoSkill(this.ChantData)
+			this.Parent.DoSkill(this.ChantData, this.StartTargetPos)
+
+			//this.Parent.Body.BlinkToPos(this.StartTargetPos)
 
 			this.IsDoBullet = true
 
@@ -543,10 +552,11 @@ func (this *ChantState) OnStart() {
 			this.IsDone = true
 			return
 		}
-
+		this.StartTargetPos = target.Body.Position
 		this.Parent.SetDirection(vec2d.Sub(target.Body.Position, this.Parent.Body.Position))
 	} else if skilldata.CastTargetType == 2 {
 		targetpos := vec2d.Vec2{X: float64(this.Parent.SkillCmdData.X), Y: float64(this.Parent.SkillCmdData.Y)}
+		this.StartTargetPos = targetpos
 		this.Parent.SetDirection(vec2d.Sub(targetpos, this.Parent.Body.Position))
 	}
 
