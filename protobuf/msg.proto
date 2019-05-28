@@ -81,6 +81,14 @@ message SkillDatas{
     float HurtRange = 13;//伤害范围 小于等于0表示单体
     int32   ManaCost = 14;//技能魔法消耗
 }
+//buff数据
+message BuffDatas{
+    int32    TypeID = 1; //buffid 对应人物身上的特效 buff图标
+    float    RemainTime = 2;//剩余时间
+    float    Time = 3;//总时间
+    int32    TagNum = 4;//标记数字  
+
+}
 
 //单位数据
 message UnitDatas{
@@ -106,7 +114,11 @@ message UnitDatas{
     int32   AttackMode = 20;//攻击模式(1:和平模式 2:组队模式 3:全体模式 4:阵营模式(玩家,NPC) 5:行会模式)
     int32   IsMain = 21;//是否是主单位
     int32   IsDeath = 22;//是否死亡((1:死亡 2:没死)) 死亡后不显示血条
-    repeated SkillDatas SD = 23;//技能数据
+    int32   Invisible = 23;//是否隐身 1:是 2:否
+    int32   Camp = 24;//阵营 (1:玩家 2:NPC)
+    bool    IsMiss = 25; //显示相关的 本次是否有miss效果
+    repeated SkillDatas SD = 26;//技能数据
+    repeated BuffDatas BD = 27;//buff数据
 
     //单位状态(idle walk attack skill die)
     //各种buff状态(单位身上的buff 包括剩余时间)
