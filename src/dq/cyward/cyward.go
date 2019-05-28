@@ -125,6 +125,7 @@ func (this *Body) GetMyPolygonBig(p1 *Body, big vec2d.Vec2) *MyPolygon {
 	if this.IsRect {
 
 		r := vec2d.Add(vec2d.Add(p1r, this.R), big)
+		//log.Info("GetMyPolygonBig:r :%v  %v  %v  %v", r, p1r, this.R, big)
 
 		//变成正方形
 		this.M_MyPolygon.Points = append(this.M_MyPolygon.Points, vec2d.Add(this.M_MyPolygon.Center, vec2d.Vec2{-r.X, r.Y}))
@@ -212,45 +213,98 @@ func (this *Body) SetMoveDir(dir vec2d.Vec2) {
 
 //瞬间移动到目的地
 func (this *Body) BlinkToPos(pos vec2d.Vec2) {
+	//log.Info("BlinkToPos")
 	//清空以前的目的地
 	this.ClearMoveDirAndMoveTarget()
 	collisoin := this.Core.GetTargetPosCollision(this, pos)
+	//mypolygon2 := nil
 	intersectPoint := pos
+	count1 := 0
 	if collisoin != nil {
-		mypolygon2 := collisoin.GetMyPolygonBig(this, vec2d.Vec2{0.01, 0.01})
-		if this.Core.GetSegmentInsterset(this.Position, pos, mypolygon2, &intersectPoint) {
-			collisoin1 := this.Core.GetTargetPosCollision(this, intersectPoint)
-			if collisoin1 != nil {
-				count := 20.0
-				for i := 1.0; i <= count; i++ {
-					//Rotate
-					dir := vec2d.Sub(this.Position, pos)
-					dir.Rotate(float64(i * (180.0 / count)))
-					dir.Normalize()
-					dir.MulToFloat64(10000.0)
-					dir.Collect(&pos)
-					if this.Core.GetSegmentInsterset(dir, pos, mypolygon2, &intersectPoint) {
-						collisoin1 = this.Core.GetTargetPosCollision(this, intersectPoint)
-						if collisoin1 == nil {
-							break
-						}
+
+		calcing := make([]interface{}, 0)
+		calced := make([]interface{}, 0)
+		calcing = append(calcing, collisoin)
+		for {
+			if len(calcing) <= 0 {
+				break
+			}
+			if count1 >= 1000 {
+				log.Info("BlinkToPos >= 1000 count %f  %f", pos.X, pos.Y)
+				break
+			}
+			collisoin = calcing[0].(*Body)
+			//log.Info("tag000=====%d ", collisoin.Tag)
+
+			mypolygon2 := collisoin.GetMyPolygonBig(this, vec2d.Vec2{X: 0.01, Y: 0.01})
+			//mypolygon3 := collisoin.GetMyPolygon(this)
+			//log.Info("111:%v %v %v ", mypolygon2, this.Position, pos)
+			if this.Core.GetSegmentInsterset(this.Position, collisoin.Position, mypolygon2, &intersectPoint) {
+				//log.Info("222:%v ", mypolygon2)
+				collisoin1 := this.Core.GetTargetPosCollision(this, intersectPoint)
+				//log.Info("333:%v ", mypolygon2)
+				if collisoin1 != nil {
+
+					if utils.FindFromSlice(calcing, collisoin1) == nil && utils.FindFromSlice(calced, collisoin1) == nil {
+						calcing = append(calcing, collisoin1)
 					}
 
-					dir2 := vec2d.Sub(this.Position, pos)
-					dir2.Rotate(float64(0.0 - i*(180.0/count)))
-					dir2.Normalize()
-					dir2.MulToFloat64(10000.0)
-					dir2.Collect(&pos)
-					if this.Core.GetSegmentInsterset(dir2, pos, mypolygon2, &intersectPoint) {
-						collisoin1 = this.Core.GetTargetPosCollision(this, intersectPoint)
-						if collisoin1 == nil {
-							break
+					count := 20.0
+					for i := 1.0; i <= count; i++ {
+						//Rotate
+						dir := vec2d.Sub(this.Position, collisoin.Position)
+						dir.Rotate(float64(i * (180.0 / count)))
+						dir.Normalize()
+						dir.MulToFloat64(10000.0)
+						dir.Collect(&collisoin.Position)
+						//log.Info("111=====%f %f", dir.X, dir.Y)
+						mypolygon2 = collisoin.GetMyPolygonBig(this, vec2d.Vec2{X: 0.01, Y: 0.01})
+						if this.Core.GetSegmentInsterset(dir, collisoin.Position, mypolygon2, &intersectPoint) {
+							collisoin1 = this.Core.GetTargetPosCollision(this, intersectPoint)
+							if collisoin1 == nil {
+								//设置真实值
+								this.Position = intersectPoint
+								return
+							} else {
+								//log.Info("tag111=====%d  %f  %v  %v", collisoin1.Tag, i, mypolygon2, intersectPoint)
+								if utils.FindFromSlice(calcing, collisoin1) == nil && utils.FindFromSlice(calced, collisoin1) == nil {
+									calcing = append(calcing, collisoin1)
+								}
+							}
+						}
+
+						dir2 := vec2d.Sub(this.Position, collisoin.Position)
+						dir2.Rotate(float64(0.0 - i*(180.0/count)))
+						dir2.Normalize()
+						dir2.MulToFloat64(10000.0)
+						dir2.Collect(&collisoin.Position)
+						//log.Info("222=====%f %f", dir2.X, dir2.Y)
+						mypolygon2 = collisoin.GetMyPolygonBig(this, vec2d.Vec2{X: 0.01, Y: 0.01})
+						if this.Core.GetSegmentInsterset(dir2, collisoin.Position, mypolygon2, &intersectPoint) {
+							collisoin1 = this.Core.GetTargetPosCollision(this, intersectPoint)
+							if collisoin1 == nil {
+								//设置真实值
+								this.Position = intersectPoint
+								return
+							} else {
+								//log.Info("tag222=====%d  %f  %v  %v", collisoin1.Tag, i, mypolygon2, intersectPoint)
+								if utils.FindFromSlice(calcing, collisoin1) == nil && utils.FindFromSlice(calced, collisoin1) == nil {
+									calcing = append(calcing, collisoin1)
+								}
+							}
 						}
 					}
 				}
-			}
 
+				//从搜索表中删除本body  加入已经搜索表
+				calced = append(calced, collisoin)
+				calcing = append(calcing[:0], calcing[1:]...)
+				//log.Info("len====%d  %d", len(calcing), len(calced))
+			}
+			//
+			count1++
 		}
+
 	}
 	//设置真实值
 	this.Position = intersectPoint
@@ -501,6 +555,7 @@ func (this *WardCore) GetSegmentInsterset(p1 vec2d.Vec2, p2 vec2d.Vec2, mypolygo
 	} else if this.GetIntersectPoint(p1, p2, circlep4, circlep1, Re) {
 		return true
 	} else {
+		log.Info("GetSegmentInsterset:%v %v %v %v    %v  %v", circlep1, circlep2, circlep3, circlep4, p1, p2)
 		return false
 	}
 }

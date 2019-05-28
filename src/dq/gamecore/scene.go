@@ -5,6 +5,7 @@ import (
 	"dq/cyward"
 	"dq/log"
 	//"dq/protobuf"
+	"dq/timer"
 	"dq/utils"
 	"dq/vec2d"
 	"time"
@@ -85,11 +86,39 @@ func (this *Scene) Init() {
 			pos := vec2d.Vec2{float64(-63 + j*6), float64(-63 + i*6)}
 			r := vec2d.Vec2{unit.CollisionR, unit.CollisionR}
 			unit.Body = this.MoveCore.CreateBody(pos, r, 0, 1)
+			//unit.Body.Tag = i*20 + j
 			this.Units[unit.ID] = unit
+
+			timer.AddCallback(time.Second*15+time.Second*time.Duration(((i*20)+j)*2), this.UnitBlink, unit)
 		}
 
 	}
 
+	//创建英雄
+	hero1 := CreateUnit(this, 1)
+	hero1.AttackMode = 3 //全体攻击模式
+	//设置移动核心body
+	pos1 := vec2d.Vec2{float64(5), float64(5)}
+	r1 := vec2d.Vec2{hero1.CollisionR, hero1.CollisionR}
+	hero1.Body = this.MoveCore.CreateBody(pos1, r1, 0, 1)
+	this.Units[hero1.ID] = hero1
+
+	//创建英雄2
+	hero2 := CreateUnit(this, 1)
+	hero2.AttackMode = 1 //和平攻击模式
+	//设置移动核心body
+	pos2 := vec2d.Vec2{float64(7), float64(5)}
+	r2 := vec2d.Vec2{hero2.CollisionR, hero2.CollisionR}
+	hero2.Body = this.MoveCore.CreateBody(pos2, r2, 0, 1)
+	this.Units[hero2.ID] = hero2
+
+}
+
+func (this *Scene) UnitBlink(unit interface{}) {
+	//	if unit != nil {
+	//		targetpos := vec2d.Vec2{X: 5, Y: 5}
+	//		unit.(*Unit).Body.BlinkToPos(targetpos)
+	//	}
 }
 
 //通过ID查找单位

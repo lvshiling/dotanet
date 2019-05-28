@@ -13,16 +13,29 @@ type Buff struct {
 	TagNum     int32   //标记数字 拍拍熊被动 大圣被动
 
 	IsEnd bool //是否已经结束
+
+	IsActive bool //是否生效
 }
 
 //更新
 func (this *Buff) Update(dt float64) {
 	//CD时间减少
-	this.RemainTime -= float32(dt)
-	if this.RemainTime <= 0 {
-		this.RemainTime = 0
-		this.IsEnd = true
+	if this.IsActive {
+		this.RemainTime -= float32(dt)
+		if this.RemainTime <= 0 {
+			this.RemainTime = 0
+			this.IsEnd = true
+		}
+	} else {
+		this.ActiveTime -= float32(dt)
+		if this.ActiveTime <= 0 {
+			this.ActiveTime = 0
+			this.IsActive = true
+		} else {
+			this.IsActive = false
+		}
 	}
+
 }
 
 //创建buf
@@ -39,6 +52,12 @@ func NewBuff(typeid int32, level int32) *Buff {
 	buff.RemainTime = buffdata.Time
 	buff.TagNum = 0
 	buff.IsEnd = false
+
+	if buffdata.ActiveTime <= 0 {
+		buff.IsActive = true
+	} else {
+		buff.IsActive = false
+	}
 
 	return buff
 

@@ -92,6 +92,23 @@ func (this *Unit) IsCanBeAttack() bool {
 	return true
 }
 
+//是否能看见目标 目标可能隐身 本单位可能能看见隐身单位
+func (this *Unit) CanSeeTarget(target *Unit) bool {
+	if target == nil {
+		return false
+	}
+	//目标隐身
+	if target.Invisible == 1 {
+		//目标是敌人
+		if this.CheckIsEnemy(target) == true {
+			//log.Info("----no see")
+			return false
+		}
+		//log.Info("----Invisible")
+	}
+	return true
+}
+
 //单位是否消失 (单位离线 单位死亡 单位在另一个空间:黑鸟的关..  开雾的状态下)
 func (this *Unit) IsDisappear() bool {
 
@@ -193,7 +210,7 @@ func (this *Unit) CheckCastSkillTarget(target *Unit, skilldata *Skill) bool {
 		return false
 	}
 	//目标消失
-	if target.IsDisappear() == true {
+	if target.IsDisappear() == true || this.CanSeeTarget(target) == false {
 		return false
 	}
 
@@ -222,6 +239,29 @@ func (this *Unit) CheckCastSkillTarget(target *Unit, skilldata *Skill) bool {
 	//if skilldata.UnitTargetCamp
 }
 
+//检查攻击 触发攻击特效
+func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
+	for _, v := range this.Skills {
+		//CastType              int32   // 施法类型:  1:主动技能  2:被动技能
+		//TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
+		if v.CastType == 2 && v.TriggerTime == 1 {
+			//检查cd 魔法消耗
+			if v.RemainCDTime <= 0 {
+				//检查 触发概率
+				if utils.CheckRandom(v.TriggerProbability) {
+					//触发
+					//添加自己的buff
+					this.AddBuffFromStr(v.MyBuff, v.Level)
+					//暴击
+					b.SetCrit(v.TriggerCrit)
+
+					//目标buff
+				}
+			}
+		}
+	}
+}
+
 //使用技能 创建子弹
 func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 
@@ -236,6 +276,9 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 	//创建子弹
 	b := skilldata.CreateBullet(this, data)
 	if b != nil {
+		if skilldata.TriggerAttackEffect == 1 {
+			this.CheckTriggerAttackSkill(b)
+		}
 		this.AddBullet(b)
 	}
 	//BlinkToTarget
@@ -359,6 +402,11 @@ func (this *Unit) CheckIsEnemy(target *Unit) bool {
 		//阵营不同 //阵营(1:玩家 2:NPC)
 		if this.Camp != target.Camp {
 			return true
+		} else {
+			//如果目标是全体模式 也是敌人
+			if target.AttackMode == 3 {
+				return true
+			}
 		}
 		return false
 	} else if this.AttackMode == 3 {
@@ -378,9 +426,10 @@ func (this *Unit) CheckIsEnemy(target *Unit) bool {
 //能否攻击(根据阵营,攻击模式判断与是否死亡)
 func (this *Unit) CheckAttackEnable2Target(target *Unit) bool {
 
-	if this.IsDisappear() || target.IsDisappear() {
+	if this.IsDisappear() || target.IsDisappear() || this.CanSeeTarget(target) == false {
 		return false
 	}
+
 	//不能攻击
 	if this.AttackEnable == 2 {
 		return false
@@ -607,6 +656,8 @@ type UnitProperty struct {
 	ManaCost        float32 //魔法消耗降低 (0.1)表示降低 10%
 	MagicCD         float32 //技能CD降低 (0.1)表示降低 10%
 
+	Invisible int32 //隐身 1:是 2:否
+
 }
 
 type Unit struct {
@@ -711,10 +762,24 @@ func (this *Unit) Init() {
 	//this.TestData()
 }
 
+func (this *Unit) ShowMiss(isshow bool) {
+	if this.ClientData != nil {
+		this.ClientData.IsMiss = isshow
+
+	}
+	if this.ClientDataSub != nil {
+		this.ClientDataSub.IsMiss = isshow
+		//		if isshow {
+		//			log.Info("ShowMiss")
+		//		}
+
+	}
+}
+
 //
 //更新 范围影响的buff 被动技能
 func (this *Unit) PreUpdate(dt float64) {
-
+	this.ShowMiss(false)
 }
 
 //更新
@@ -1010,55 +1075,80 @@ func (this *Unit) CalControlState() {
 	this.AddedMagicRange = 0 //额外施法距离
 	this.ManaCost = 0        //魔法消耗降低
 	this.MagicCD = 0         //技能CD降低
+	this.Invisible = 2       //隐身   否
 }
 
-//计算buff对属性的影响
+//计算单个buff对属性的影响
+func (this *Unit) CalPropertyByBuff(v1 *Buff) {
+	if v1 == nil || v1.IsActive == false {
+		return
+	}
+	//log.Info("--11--speed:%f", this.AttackSpeed)
+	this.AttributeStrength += v1.AttributeStrengthCV
+	this.AttributeIntelligence += v1.AttributeIntelligenceCV
+	this.AttributeAgility += v1.AttributeAgilityCV
+	this.AttackSpeed += v1.AttackSpeedCV
+	this.Attack += int32(float32(this.Attack) * v1.AttackCR)
+	this.Attack += int32(v1.AttackCV)
+	this.MoveSpeed += this.MoveSpeed * float64(v1.MoveSpeedCR)
+	this.MoveSpeed += float64(v1.MoveSpeedCV)
+	this.MagicScale = utils.NoLinerAdd(this.MagicScale, v1.MagicScaleCV)
+	this.MPRegain += this.MPRegain * v1.MPRegainCR
+	this.MPRegain += v1.MPRegainCV
+	this.PhysicalAmaor += this.PhysicalAmaor * v1.PhysicalAmaorCR
+	this.PhysicalAmaor += v1.PhysicalAmaorCV
+	this.MagicAmaor = utils.NoLinerAdd(this.MagicAmaor, v1.MagicAmaorCV)
+	this.Dodge = utils.NoLinerAdd(this.Dodge, v1.DodgeCV)
+	this.HPRegain += this.HPRegain * v1.HPRegainCR
+	this.HPRegain += v1.HPRegainCV
+	this.NoCareDodge = utils.NoLinerAdd(this.NoCareDodge, v1.NoCareDodgeCV)
+	this.AddedMagicRange += v1.AddedMagicRangeCV
+	this.ManaCost = utils.NoLinerAdd(this.ManaCost, v1.ManaCostCV)
+	this.MagicCD = utils.NoLinerAdd(this.MagicCD, v1.MagicCDCV)
+
+	if v1.NoMove == 1 {
+		this.MoveEnable = 2
+	}
+	if v1.NoTurn == 1 {
+		this.TurnEnable = 2
+	}
+	if v1.NoAttack == 1 {
+		this.AttackEnable = 2
+	}
+	if v1.NoSkill == 1 {
+		this.SkillEnable = 2
+	}
+	if v1.NoItem == 1 {
+		this.ItemEnable = 2
+	}
+	if v1.MagicImmune == 1 {
+		this.MagicImmune = 1
+	}
+	if v1.Invisible == 1 {
+		this.Invisible = 1
+	}
+
+	//log.Info("--22--speed:%f", this.AttackSpeed)
+}
+
+//计算所有buff对属性的影响
 func (this *Unit) CalPropertyByBuffs() {
+	//技能携带的buf
+	for _, v := range this.Skills {
+
+		buffs := utils.GetInt32FromString2(v.InitBuff)
+		for _, v1 := range buffs {
+			buff := NewBuff(v1, v.Level)
+			if buff != nil {
+				this.CalPropertyByBuff(buff)
+			}
+		}
+	}
+
 	//buff
 	for _, v := range this.Buffs {
 		for _, v1 := range v {
-			//log.Info("--11--speed:%f", this.AttackSpeed)
-			this.AttributeStrength += v1.AttributeStrengthCV
-			this.AttributeIntelligence += v1.AttributeIntelligenceCV
-			this.AttributeAgility += v1.AttributeAgilityCV
-			this.AttackSpeed += v1.AttackSpeedCV
-			this.Attack += int32(float32(this.Attack) * v1.AttackCR)
-			this.Attack += int32(v1.AttackCV)
-			this.MoveSpeed += this.MoveSpeed * float64(v1.MoveSpeedCR)
-			this.MoveSpeed += float64(v1.MoveSpeedCV)
-			this.MagicScale = utils.NoLinerAdd(this.MagicScale, v1.MagicScaleCV)
-			this.MPRegain += this.MPRegain * v1.MPRegainCR
-			this.MPRegain += v1.MPRegainCV
-			this.PhysicalAmaor += this.PhysicalAmaor * v1.PhysicalAmaorCR
-			this.PhysicalAmaor += v1.PhysicalAmaorCV
-			this.MagicAmaor = utils.NoLinerAdd(this.MagicAmaor, v1.MagicAmaorCV)
-			this.Dodge = utils.NoLinerAdd(this.Dodge, v1.DodgeCV)
-			this.HPRegain += this.HPRegain * v1.HPRegainCR
-			this.HPRegain += v1.HPRegainCV
-			this.NoCareDodge = utils.NoLinerAdd(this.NoCareDodge, v1.NoCareDodgeCV)
-			this.AddedMagicRange += v1.AddedMagicRangeCV
-			this.ManaCost = utils.NoLinerAdd(this.ManaCost, v1.ManaCostCV)
-			this.MagicCD = utils.NoLinerAdd(this.MagicCD, v1.MagicCDCV)
-
-			if v1.NoMove == 1 {
-				this.MoveEnable = 2
-			}
-			if v1.NoTurn == 1 {
-				this.TurnEnable = 2
-			}
-			if v1.NoAttack == 1 {
-				this.AttackEnable = 2
-			}
-			if v1.NoSkill == 1 {
-				this.SkillEnable = 2
-			}
-			if v1.NoItem == 1 {
-				this.ItemEnable = 2
-			}
-			if v1.MagicImmune == 1 {
-				this.MagicImmune = 1
-			}
-			//log.Info("--22--speed:%f", this.AttackSpeed)
+			this.CalPropertyByBuff(v1)
 
 		}
 
@@ -1110,6 +1200,32 @@ func (this *Unit) CalProperty() {
 //清空buff
 func (this *Unit) ClearBuff() {
 	this.Buffs = make(map[int32][]*Buff)
+}
+
+//删除buff 删除使用技能后失效的buff
+func (this *Unit) RemoveBuffForDoSkilled() {
+	//buff
+	for k, v := range this.Buffs {
+		for k1, v1 := range v {
+			if v1.DoSkilledInvalid == 1 {
+				this.Buffs[k] = append(this.Buffs[k][:k1], this.Buffs[k][k1+1:]...)
+			}
+		}
+	}
+}
+
+//删除buff 删除攻击后失效的buff
+func (this *Unit) RemoveBuffForAttacked() {
+	//buff
+	for k, v := range this.Buffs {
+		for k1, v1 := range v {
+			if v1.AttackedInvalid == 1 {
+				this.Buffs[k] = append(this.Buffs[k][:k1], this.Buffs[k][k1+1:]...)
+			}
+
+		}
+
+	}
 }
 
 //通过 buff 添加buff
@@ -1165,6 +1281,8 @@ func (this *Unit) BeAttacked(bullet *Bullet) int32 {
 
 		//闪避了
 		if isDodge {
+			//本单位显示miss
+			this.ShowMiss(true)
 			return 0
 		}
 	}
@@ -1179,8 +1297,9 @@ func (this *Unit) BeAttacked(bullet *Bullet) int32 {
 
 	//-----扣血--
 	hurtvalue := -(physicAttack + magicAttack + pureAttack)
+	this.ChangeHP(hurtvalue)
 	//log.Info("---hurtvalue---%d   %f", hurtvalue, this.PhysicalResist)
-	return this.ChangeHP(hurtvalue)
+	return hurtvalue
 }
 
 //创建子弹
@@ -1222,6 +1341,8 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.AttackMode = this.AttackMode
 	this.ClientData.IsMain = this.IsMain
 	this.ClientData.IsDeath = this.IsDeath
+	this.ClientData.Invisible = this.Invisible
+	this.ClientData.Camp = this.Camp
 
 	//技能
 	this.ClientData.SD = make([]*protomsg.SkillDatas, 0)
@@ -1237,11 +1358,28 @@ func (this *Unit) FreshClientData() {
 		skdata.UnitTargetTeam = v.UnitTargetTeam
 		skdata.UnitTargetCamp = v.UnitTargetCamp
 		skdata.NoCareMagicImmune = v.NoCareMagicImmune
-		skdata.CastRange = v.CastRange
+		skdata.CastRange = v.CastRange + this.AddedMagicRange
 		skdata.Cooldown = v.Cooldown
 		skdata.HurtRange = v.HurtRange
 		skdata.ManaCost = v.ManaCost
 		this.ClientData.SD = append(this.ClientData.SD, skdata)
+	}
+	//Buffs  map[int32][]*Buff //所有buff 同typeID下可能有多个buff
+	this.ClientData.BD = make([]*protomsg.BuffDatas, 0)
+	for _, v := range this.Buffs {
+		if len(v) <= 0 {
+			continue
+		}
+		buffdata := &protomsg.BuffDatas{}
+		buffdata.TypeID = v[0].TypeID
+		buffdata.RemainTime = v[0].RemainTime
+		buffdata.Time = v[0].Time
+		if len(v) > 1 {
+			buffdata.TagNum = int32(len(v))
+		} else {
+			buffdata.TagNum = v[0].TagNum
+		}
+		this.ClientData.BD = append(this.ClientData.BD, buffdata)
 	}
 
 	//Skills map[int32]*Skill //所有技能
@@ -1276,18 +1414,6 @@ func (this *Unit) FreshClientDataSub() {
 	} else {
 		this.ClientDataSub.ModeType = ""
 	}
-	//
-	//	if this.AnimotorState != this.ClientData.AnimotorState {
-	//		this.ClientDataSub.AnimotorState = this.AnimotorState
-	//	} else {
-	//		this.ClientDataSub.AnimotorState = 0
-	//	}
-	//	//攻击
-	//	if this.AnimotorState == 3 {
-	//		this.ClientData.AttackTime = this.GetOneAttackTime()
-	//	} else {
-	//		this.ClientData.AttackTime = 0
-	//	}
 
 	//当前数据与上一次数据对比 相减 数值部分
 	this.ClientDataSub.HP = this.HP - this.ClientData.HP
@@ -1314,6 +1440,8 @@ func (this *Unit) FreshClientDataSub() {
 
 	this.ClientDataSub.IsMain = this.IsMain - this.ClientData.IsMain
 	this.ClientDataSub.IsDeath = this.IsDeath - this.ClientData.IsDeath
+	this.ClientDataSub.Invisible = this.Invisible - this.ClientData.Invisible
+	this.ClientDataSub.Camp = this.Camp - this.ClientData.Camp
 
 	//技能
 	this.ClientDataSub.SD = make([]*protomsg.SkillDatas, 0)
@@ -1338,11 +1466,38 @@ func (this *Unit) FreshClientDataSub() {
 		skdata.UnitTargetTeam = v.UnitTargetTeam - lastdata.UnitTargetTeam
 		skdata.UnitTargetCamp = v.UnitTargetCamp - lastdata.UnitTargetCamp
 		skdata.NoCareMagicImmune = v.NoCareMagicImmune - lastdata.NoCareMagicImmune
-		skdata.CastRange = v.CastRange - lastdata.CastRange
+		skdata.CastRange = v.CastRange + this.AddedMagicRange - lastdata.CastRange
 		skdata.Cooldown = v.Cooldown - lastdata.Cooldown
 		skdata.HurtRange = v.HurtRange - lastdata.HurtRange
 		skdata.ManaCost = v.ManaCost - lastdata.ManaCost
 		this.ClientDataSub.SD = append(this.ClientDataSub.SD, skdata)
+	}
+
+	this.ClientDataSub.BD = make([]*protomsg.BuffDatas, 0)
+	for _, v := range this.Buffs {
+		if len(v) <= 0 {
+			continue
+		}
+		buffdata := &protomsg.BuffDatas{}
+		buffdata.TypeID = v[0].TypeID
+		//上次发送的数据
+		lastdata := &protomsg.BuffDatas{}
+		for _, v1 := range this.ClientData.BD {
+			if v1.TypeID == v[0].TypeID {
+				lastdata = v1
+				break
+			}
+		}
+
+		buffdata.RemainTime = v[0].RemainTime - lastdata.RemainTime
+		buffdata.Time = v[0].Time - lastdata.Time
+		if len(v) > 1 {
+			buffdata.TagNum = int32(len(v)) - lastdata.TagNum
+		} else {
+			buffdata.TagNum = v[0].TagNum - lastdata.TagNum
+		}
+
+		this.ClientDataSub.BD = append(this.ClientDataSub.BD, buffdata)
 	}
 
 }

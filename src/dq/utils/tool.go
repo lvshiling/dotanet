@@ -14,6 +14,16 @@ import (
 	"github.com/360EntSecGroup-Skylar/excelize"
 )
 
+func FindFromSlice(slice []interface{}, k interface{}) interface{} {
+	for _, v := range slice {
+		if reflect.DeepEqual(v, k) {
+			//log.Info("=====:")
+			return v
+		}
+	}
+	return nil
+}
+
 func NoLinerAdd(base float32, add float32) float32 {
 	t1 := (1 - base) * (1 - add)
 	t1 = 1 - t1

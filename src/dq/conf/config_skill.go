@@ -99,6 +99,11 @@ type SkillBaseData struct {
 	TargetBuff            string  //对目标造成的buff 比如 1,2 表示对目标造成typeid为 1和2的buff
 	BlinkToTarget         int32   //是否瞬间移动到目的地 1:是 2:否
 	MyBuff                string  //对自己造成的buff 比如 1,2 表示对目标造成typeid为 1和2的buff
+	InitBuff              string  //拥有技能技能时的buff (技能携带的buff)
+
+	//被动技能相关参数
+	TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
+
 }
 
 //技能数据 (会根据等级变化的数据)
@@ -110,6 +115,10 @@ type SkillData struct {
 	HurtRange  float32 //伤害范围 小于等于0表示单体
 	NormalHurt float32 //附带普通攻击百分比 (0.5 为 50%的普通攻击伤害) 一般为0
 	ManaCost   int32   //技能魔法消耗
+
+	//被动技能相关参数
+	TriggerProbability float32 //触发几率 0.5表示50%
+	TriggerCrit        float32 //触发的暴击 倍数 2.5表示2.5倍攻击 1表示正常攻击
 
 }
 
@@ -124,6 +133,10 @@ type SkillFileData struct {
 	HurtRange  string //伤害范围 小于等于0表示单体
 	NormalHurt string //附带普通攻击百分比 (0.5 为 50%的普通攻击伤害) 一般为0
 	ManaCost   string //技能魔法消耗
+
+	//被动技能相关参数
+	TriggerProbability string //触发几率 0.5表示50%
+	TriggerCrit        string //触发的暴击 倍数 2.5表示2.5倍攻击
 }
 
 //把等级相关的字符串 转成具体类型数据
@@ -138,6 +151,10 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 	HurtRange := utils.GetFloat32FromString2(this.HurtRange)
 	NormalHurt := utils.GetFloat32FromString2(this.NormalHurt)
 	ManaCost := utils.GetInt32FromString2(this.ManaCost)
+
+	//被动技能相关参数
+	TriggerProbability := utils.GetFloat32FromString2(this.TriggerProbability)
+	TriggerCrit := utils.GetFloat32FromString2(this.TriggerCrit)
 
 	for i := int32(0); i < this.MaxLevel; i++ {
 		ssd := SkillData{}
@@ -171,6 +188,17 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 			ssd.ManaCost = ManaCost[len(ManaCost)-1]
 		} else {
 			ssd.ManaCost = ManaCost[i]
+		}
+
+		if int32(len(TriggerProbability)) <= i {
+			ssd.TriggerProbability = TriggerProbability[len(TriggerProbability)-1]
+		} else {
+			ssd.TriggerProbability = TriggerProbability[i]
+		}
+		if int32(len(TriggerCrit)) <= i {
+			ssd.TriggerCrit = TriggerCrit[len(TriggerCrit)-1]
+		} else {
+			ssd.TriggerCrit = TriggerCrit[i]
 		}
 		//log.Info("111-:%v--%d", ssd)
 		*re = append(*re, ssd)

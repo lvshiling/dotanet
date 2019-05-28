@@ -93,6 +93,13 @@ type BuffBaseData struct {
 	NoSkill     int32 //禁止使用技能 1:是 2:非
 	NoItem      int32 //禁止使用道具 1:是 2:非
 	MagicImmune int32 //是否魔法免疫 1:是 2:非
+
+	Invisible int32 //隐身 1:是 2:否  可以躲避攻击弹道 并且从显示屏上消失
+
+	ActiveTime float32 //开始生效的时间 1.2表示 1.2秒后生效
+
+	AttackedInvalid  int32 //攻击后失效 1:是 2:否
+	DoSkilledInvalid int32 //使用技能后失效 1:是 2:否
 }
 
 //技能数据 (会根据等级变化的数据)

@@ -104,6 +104,14 @@ func (this *Player) ClearShowData() {
 //添加客户端显示单位数据包
 func (this *Player) AddUnitData(unit *Unit) {
 
+	if this.MainUnit == nil {
+		return
+	}
+	//检查玩家主单位是否能看见 目标单位
+	if this.MainUnit.CanSeeTarget(unit) == false {
+		return
+	}
+
 	this.CurShowUnit[unit.ID] = unit
 
 	if _, ok := this.LastShowUnit[unit.ID]; ok {

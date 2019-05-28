@@ -5,14 +5,20 @@ package main
 import (
 	"dq/app"
 	"dq/log"
-	"strconv"
+	//"dq/vec2d"
 )
 
 func main() {
-	t := 123.456798932145
-	log.Info(strconv.FormatFloat(t, 'f', 0, 32))
+	//	count := 20.0
+	//	for i := 1.0; i <= count; i++ {
+	//		dir := vec2d.Vec2{0, 1}
+	//		dir.Rotate(float64(i * (180.0 / count)))
+	//		log.Info("111=====%f %f", dir.X, dir.Y)
 
-	log.Info(strconv.Itoa(23))
+	//		dir2 := vec2d.Vec2{0, 1}
+	//		dir2.Rotate(0.0 - float64(i*(180.0/count)))
+	//		log.Info("222=====%f %f", dir2.X, dir2.Y)
+	//	}
 
 	app := new(app.DefaultApp)
 	app.Run()

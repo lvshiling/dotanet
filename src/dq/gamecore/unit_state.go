@@ -357,7 +357,10 @@ func (this *AttackState) Update(dt float64) {
 			b := NewBullet1(this.Parent, this.AttackTarget)
 			b.SetNormalHurtRatio(1)
 			b.SetProjectileMode(this.Parent.ProjectileMode, this.Parent.ProjectileSpeed)
+			this.Parent.CheckTriggerAttackSkill(b)
 			this.Parent.AddBullet(b)
+
+			this.Parent.RemoveBuffForAttacked()
 
 			this.IsDoBullet = true
 		}
@@ -518,6 +521,8 @@ func (this *ChantState) Update(dt float64) {
 			//			b.SetNormalHurtRatio(1)
 			//			b.SetProjectileMode(this.Parent.ProjectileMode, this.Parent.ProjectileSpeed)
 			//			this.Parent.CreateBullet(b)
+			this.Parent.RemoveBuffForDoSkilled()
+
 			this.Parent.DoSkill(this.ChantData, this.StartTargetPos)
 
 			//this.Parent.Body.BlinkToPos(this.StartTargetPos)
@@ -554,7 +559,7 @@ func (this *ChantState) OnStart() {
 		}
 		this.StartTargetPos = target.Body.Position
 		this.Parent.SetDirection(vec2d.Sub(target.Body.Position, this.Parent.Body.Position))
-	} else if skilldata.CastTargetType == 2 {
+	} else if skilldata.CastTargetType == 3 {
 		targetpos := vec2d.Vec2{X: float64(this.Parent.SkillCmdData.X), Y: float64(this.Parent.SkillCmdData.Y)}
 		this.StartTargetPos = targetpos
 		this.Parent.SetDirection(vec2d.Sub(targetpos, this.Parent.Body.Position))

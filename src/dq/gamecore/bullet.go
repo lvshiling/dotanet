@@ -58,6 +58,8 @@ type Bullet struct {
 
 	HurtRange BulletRange //范围
 
+	Crit float32 //暴击倍数
+
 	//--------附加攻击特效------
 
 	//发送数据部分
@@ -93,6 +95,15 @@ func (this *Bullet) Init() {
 
 	this.HurtRange.RangeType = 1 //单体攻击范围
 	this.MoveType = 1            //瞬间移动
+
+	this.Crit = 1
+}
+
+//设置暴击倍数
+func (this *Bullet) SetCrit(crit float32) {
+	if crit > this.Crit {
+		this.Crit = crit
+	}
 }
 
 //设置弹道
@@ -152,7 +163,7 @@ func (this *Bullet) OnCreate() {
 func (this *Bullet) DoMove(dt float32) {
 	//计算终点位置
 	if this.DestUnit != nil {
-		if this.DestUnit.IsDisappear() == false {
+		if this.DestUnit.IsDisappear() == false && this.SrcUnit.CanSeeTarget(this.DestUnit) {
 			this.DestPos = this.DestUnit.GetProjectileEndPos()
 		} else {
 			this.DestUnit = nil
@@ -200,7 +211,11 @@ func (this *Bullet) DoHurt() {
 			return
 		}
 		//为了显示 玩家造成的伤害
-		this.SrcUnit.MyPlayer.AddHurtValue(&protomsg.MsgPlayerHurt{HurtUnitID: this.DestUnit.ID, HurtAllValue: hurtvalue})
+		mph := &protomsg.MsgPlayerHurt{HurtUnitID: this.DestUnit.ID, HurtAllValue: hurtvalue}
+		if this.Crit > 1 {
+			mph.IsCrit = 1
+		}
+		this.SrcUnit.MyPlayer.AddHurtValue(mph)
 
 	}
 
@@ -222,6 +237,10 @@ func (this *Bullet) GetAttackOfType(hurttype int32) int32 {
 		if v.HurtType == hurttype {
 			val += v.HurtValue
 		}
+	}
+	//计算暴击
+	if hurttype == 1 && this.Crit > 1 {
+		val = int32(float32(val) * this.Crit)
 	}
 
 	return val
