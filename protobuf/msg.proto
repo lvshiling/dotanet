@@ -141,7 +141,13 @@ message BulletDatas{
     float EndZ = 12;
 
 }
-
+message HaloDatas{
+    int32 ID = 1;//光环唯一ID
+    string ModeType = 2;//光环特效
+    float X = 3;
+    float Y = 4;
+    float Z = 5;
+}
 
 
 message MsgUserEnterScene {
@@ -172,7 +178,12 @@ message SC_Update  {
     repeated BulletDatas OldBullets = 6;//旧子弹(只更新变化值)
     repeated int32 RemoveBullets = 7;//删除子弹(子弹ID)
 
-    repeated MsgPlayerHurt PlayerHurt = 8;//玩家造成的伤害
+    repeated HaloDatas NewHalos = 8;//新的光环
+    repeated HaloDatas OldHalos = 9;//旧光环(只更新变化值)
+    repeated int32 RemoveHalos = 10;//删除光环(子弹ID)
+
+
+    repeated MsgPlayerHurt PlayerHurt = 11;//玩家造成的伤害
 }
 
 //玩家进入新场景时的场景信息
