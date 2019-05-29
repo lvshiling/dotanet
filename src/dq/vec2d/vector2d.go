@@ -154,6 +154,10 @@ func Mul(v1 Vec2, mul float64) Vec2 {
 	re.Init(v1.X*mul, v1.Y*mul)
 	return re
 }
+func Distanse(v1 Vec2, v2 Vec2) float64 {
+	s := Sub(v1, v2)
+	return s.Length()
+}
 
 //float Vec2::angle(const Vec2& v1, const Vec2& v2)
 //{

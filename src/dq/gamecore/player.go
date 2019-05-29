@@ -27,6 +27,8 @@ type Player struct {
 	CurShowUnit    map[int32]*Unit
 	LastShowBullet map[int32]*Bullet
 	CurShowBullet  map[int32]*Bullet
+	LastShowHalo   map[int32]*Halo
+	CurShowHalo    map[int32]*Halo
 	Msg            *protomsg.SC_Update
 }
 
@@ -39,6 +41,8 @@ func CreatePlayer(uid int32, connectid int32, characterid int32) *Player {
 	re.CurShowUnit = make(map[int32]*Unit)
 	re.LastShowBullet = make(map[int32]*Bullet)
 	re.CurShowBullet = make(map[int32]*Bullet)
+	re.LastShowHalo = make(map[int32]*Halo)
+	re.CurShowHalo = make(map[int32]*Halo)
 	re.Msg = &protomsg.SC_Update{}
 	return re
 }
@@ -98,6 +102,9 @@ func (this *Player) ClearShowData() {
 	this.CurShowUnit = make(map[int32]*Unit)
 	this.LastShowBullet = make(map[int32]*Bullet)
 	this.CurShowBullet = make(map[int32]*Bullet)
+	this.LastShowHalo = make(map[int32]*Halo)
+	this.CurShowHalo = make(map[int32]*Halo)
+	//
 	this.Msg = &protomsg.SC_Update{}
 }
 
@@ -122,6 +129,29 @@ func (this *Player) AddUnitData(unit *Unit) {
 		//新的单位数据
 		d1 := *unit.ClientData
 		this.Msg.NewUnits = append(this.Msg.NewUnits, &d1)
+	}
+
+}
+
+//
+//添加客户端显示子弹数据包
+func (this *Player) AddHaloData(halo *Halo) {
+
+	//如果客户端不需要显示
+	if halo.ClientIsShow() == false {
+		return
+	}
+
+	this.CurShowHalo[halo.ID] = halo
+
+	if _, ok := this.LastShowHalo[halo.ID]; ok {
+		//旧单位(只更新变化的值)
+		d1 := *halo.ClientDataSub
+		this.Msg.OldHalos = append(this.Msg.OldHalos, &d1)
+	} else {
+		//新的单位数据
+		d1 := *halo.ClientData
+		this.Msg.NewHalos = append(this.Msg.NewHalos, &d1)
 	}
 
 }
@@ -169,6 +199,13 @@ func (this *Player) SendUpdateMsg(curframe int32) {
 			this.Msg.RemoveBullets = append(this.Msg.RemoveBullets, k)
 		}
 	}
+	//Halo
+	//删除的Halo id
+	for k, _ := range this.LastShowHalo {
+		if _, ok := this.CurShowHalo[k]; !ok {
+			this.Msg.RemoveHalos = append(this.Msg.RemoveHalos, k)
+		}
+	}
 
 	//回复客户端
 	this.Msg.CurFrame = curframe
@@ -180,6 +217,9 @@ func (this *Player) SendUpdateMsg(curframe int32) {
 
 	this.LastShowBullet = this.CurShowBullet
 	this.CurShowBullet = make(map[int32]*Bullet)
+
+	this.LastShowHalo = this.CurShowHalo
+	this.CurShowHalo = make(map[int32]*Halo)
 	this.Msg = &protomsg.SC_Update{}
 
 }

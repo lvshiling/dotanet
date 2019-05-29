@@ -251,11 +251,12 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 				if utils.CheckRandom(v.TriggerProbability) {
 					//触发
 					//添加自己的buff
-					this.AddBuffFromStr(v.MyBuff, v.Level)
+					this.AddBuffFromStr(v.MyBuff, v.Level, this)
 					//暴击
 					b.SetCrit(v.TriggerCrit)
 
 					//目标buff
+					b.AddTargetBuff(v.TargetBuff, v.Level)
 				}
 			}
 		}
@@ -270,12 +271,19 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 	if ok == false {
 		return
 	}
+
+	//驱散自己的buff
+	this.ClearBuffForTarget(this, skilldata.MyClearLevel)
+	//MyHalo
+	this.AddHaloFromStr(skilldata.MyHalo, skilldata.Level, nil)
+
 	//MyBuff
-	this.AddBuffFromStr(skilldata.MyBuff, skilldata.Level)
+	this.AddBuffFromStr(skilldata.MyBuff, skilldata.Level, this)
 
 	//创建子弹
 	b := skilldata.CreateBullet(this, data)
 	if b != nil {
+		b.ClearLevel = skilldata.TargetClearLevel //设置驱散等级
 		if skilldata.TriggerAttackEffect == 1 {
 			this.CheckTriggerAttackSkill(b)
 		}
@@ -1135,6 +1143,9 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff) {
 func (this *Unit) CalPropertyByBuffs() {
 	//技能携带的buf
 	for _, v := range this.Skills {
+		if v.Level <= 0 {
+			continue
+		}
 
 		buffs := utils.GetInt32FromString2(v.InitBuff)
 		for _, v1 := range buffs {
@@ -1228,8 +1239,53 @@ func (this *Unit) RemoveBuffForAttacked() {
 	}
 }
 
+//被目标 驱散自己的buff
+func (this *Unit) ClearBuffForTarget(target *Unit, clearlevel int32) {
+	if target == nil || clearlevel <= 0 || target.IsDisappear() {
+		return
+	}
+
+	//buff
+	isenemy := target.CheckIsEnemy(this)
+	for k, v := range this.Buffs {
+		for k1, v1 := range v {
+			//BuffType         int32 //buff类型 1:表示良性 2:表示恶性  队友只能驱散我的恶性buff 敌人只能驱散我的良性buff
+			//ClearLevel       int32 //驱散等级 1 表示需要驱散等级大于等于1的 驱散效果才能驱散此buff
+			if isenemy == true && v1.BuffType == 1 && clearlevel >= v1.ClearLevel {
+				this.Buffs[k] = append(this.Buffs[k][:k1], this.Buffs[k][k1+1:]...)
+			}
+			if isenemy == false && v1.BuffType == 2 && clearlevel >= v1.ClearLevel {
+				this.Buffs[k] = append(this.Buffs[k][:k1], this.Buffs[k][k1+1:]...)
+			}
+
+		}
+
+	}
+
+}
+
 //通过 buff 添加buff
-func (this *Unit) AddBuffFromBuff(buff *Buff) {
+func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) {
+
+	if castunit == nil || castunit.IsDisappear() {
+		return
+	}
+	//BuffType         int32 //buff类型 1:表示良性 2:表示恶性  队友只能驱散我的恶性buff 敌人只能驱散我的良性buff
+	isenemy := castunit.CheckIsEnemy(this)
+	//如果是敌人 且 是良性buff 就不添加
+	if isenemy == true && buff.BuffType == 1 {
+		return
+	}
+	//如果不是敌人 且 是恶性buff 就不添加
+	if isenemy == false && buff.BuffType == 2 {
+		return
+	}
+
+	//如果恶性buff 单位魔法免疫 buff没有无视技能免疫
+	if buff.BuffType == 2 && this.MagicImmune == 1 && buff.NoCareMagicImmune == 2 {
+		return
+	}
+
 	bf, ok := this.Buffs[buff.TypeID]
 	//叠加机制
 	//		OverlyingType          int32 //叠加类型 1:只更新最大时间 2:完美叠加(小鱼的偷属性)
@@ -1251,13 +1307,28 @@ func (this *Unit) AddBuffFromBuff(buff *Buff) {
 	}
 }
 
-//通过bufftypeid string 添加buff
-func (this *Unit) AddBuffFromStr(buffsstr string, level int32) {
+//通过bufftypeid string 添加buff  castunit给我添加
+func (this *Unit) AddBuffFromStr(buffsstr string, level int32, castunit *Unit) {
 	buffs := utils.GetInt32FromString2(buffsstr)
 	for _, v := range buffs {
 		buff := NewBuff(v, level)
 		if buff != nil {
-			this.AddBuffFromBuff(buff)
+			this.AddBuffFromBuff(buff, castunit)
+		}
+	}
+}
+
+//通过bufftypeid string 添加halo
+func (this *Unit) AddHaloFromStr(halosstr string, level int32, pos *vec2d.Vec2) {
+	halos := utils.GetInt32FromString2(halosstr)
+	for _, v := range halos {
+		halo := NewHalo(v, level)
+		halo.SetParent(this)
+		if pos != nil {
+			halo.Position = *pos
+		}
+		if halo != nil {
+			this.InScene.AddHalo(halo)
 		}
 	}
 }

@@ -96,10 +96,14 @@ type SkillBaseData struct {
 	LevelsBetweenUpgrades int32   //等级需求步长 2
 	MaxLevel              int32   //最高升级到的等级 5 表示能升级到5级
 	Index                 int32   //技能索引 按升序排列  在屏幕右下角的显示位置
-	TargetBuff            string  //对目标造成的buff 比如 1,2 表示对目标造成typeid为 1和2的buff
+	TargetBuff            string  //释放时 对目标造成的buff 比如 1,2 表示对目标造成typeid为 1和2的buff
 	BlinkToTarget         int32   //是否瞬间移动到目的地 1:是 2:否
-	MyBuff                string  //对自己造成的buff 比如 1,2 表示对目标造成typeid为 1和2的buff
+	MyBuff                string  //释放时 对自己造成的buff 比如 1,2 表示对目标造成typeid为 1和2的buff
 	InitBuff              string  //拥有技能技能时的buff (技能携带的buff)
+	MyHalo                string  //释放时 对自己造成的halo 比如 1,2 表示对目标造成typeid为 1和2的halo
+	InitHalo              string  //拥有技能技能时的halo (技能携带的halo)
+	MyClearLevel          int32   //释放时 对自己的驱散等级  能驱散 驱散等级 小于等于该值的buff
+	TargetClearLevel      int32   //释放时 对目标的驱散等级  能驱散 驱散等级 小于等于该值的buff
 
 	//被动技能相关参数
 	TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时

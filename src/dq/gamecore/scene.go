@@ -24,6 +24,9 @@ type Scene struct {
 	Bullets     map[int32]*Bullet             //游戏中所有的子弹
 	ZoneBullets map[utils.SceneZone][]*Bullet //区域中的的子弹
 
+	Halos     map[int32]*Halo             //游戏中所有的光环
+	ZoneHalos map[utils.SceneZone][]*Halo //区域中的的光环
+
 	NextAddUnit    *utils.BeeMap //下一帧需要增加的单位
 	NextRemoveUnit *utils.BeeMap //下一帧需要删除的单位
 
@@ -61,6 +64,9 @@ func (this *Scene) Init() {
 
 	this.Bullets = make(map[int32]*Bullet)
 	this.ZoneBullets = make(map[utils.SceneZone][]*Bullet)
+
+	this.Halos = make(map[int32]*Halo)
+	this.ZoneHalos = make(map[utils.SceneZone][]*Halo)
 
 	scenedata := conf.GetSceneData(this.SceneName)
 
@@ -156,11 +162,13 @@ func (this *Scene) Update() {
 		//t1 := time.Now().UnixNano()
 		//log.Info("main time:%d", (t1)/1e6)
 		this.DoRemoveBullet()
+		this.DoRemoveHalo()
 
 		this.DoAddAndRemoveUnit()
 
 		this.DoLogic()
 
+		this.UpdateHalo(1 / float32(this.SceneFrame))
 		this.UpdateBullet(1 / float32(this.SceneFrame))
 
 		this.DoMove()
@@ -200,6 +208,12 @@ func (this *Scene) DoSendData() {
 		v.FreshClientData()
 	}
 
+	//生成光环的 客户端 显示数据
+	for _, v := range this.Halos {
+		v.FreshClientDataSub()
+		v.FreshClientData()
+	}
+
 	//遍历所有玩家
 	for _, player := range this.Players {
 		v := player.MainUnit
@@ -219,6 +233,13 @@ func (this *Scene) DoSendData() {
 				//遍历区域中的单位
 				for _, bullet := range this.ZoneBullets[vzone] {
 					player.AddBulletData(bullet)
+				}
+			}
+			//
+			if _, ok := this.ZoneHalos[vzone]; ok {
+				//遍历区域中的单位
+				for _, halo := range this.ZoneHalos[vzone] {
+					player.AddHaloData(halo)
 				}
 			}
 		}
@@ -248,7 +269,13 @@ func (this *Scene) DoZone() {
 		zone := utils.GetSceneZone((v.Position.X), (v.Position.Y))
 		this.ZoneBullets[zone] = append(this.ZoneBullets[zone], v)
 	}
+	//光环分区
+	this.ZoneHalos = make(map[utils.SceneZone][]*Halo)
+	for _, v := range this.Halos {
 
+		zone := utils.GetSceneZone((v.Position.X), (v.Position.Y))
+		this.ZoneHalos[zone] = append(this.ZoneHalos[zone], v)
+	}
 }
 
 //处理单位逻辑
@@ -280,6 +307,30 @@ func (this *Scene) DoSleep() {
 
 	}
 
+}
+
+//增加光环
+func (this *Scene) AddHalo(halo *Halo) {
+	this.Halos[halo.ID] = halo
+	log.Info("------AddHalo----%d", halo.TypeID)
+}
+
+//删除光环
+func (this *Scene) DoRemoveHalo() {
+	//ZoneBullets
+	for k, v := range this.Halos {
+		if v.IsDone() {
+			log.Info("------DoRemoveHalo----%d", v.TypeID)
+			delete(this.Halos, k)
+		}
+	}
+}
+
+//更新光环
+func (this *Scene) UpdateHalo(dt float32) {
+	for _, v := range this.Halos {
+		v.Update(dt)
+	}
 }
 
 //增加子弹

@@ -2,7 +2,7 @@ package gamecore
 
 import (
 	//"dq/log"
-	"dq/conf"
+	//"dq/conf"
 	"dq/protobuf"
 	"dq/vec2d"
 	"strings"
@@ -31,6 +31,12 @@ type HurtInfo struct {
 	HurtValue int32 //伤害值
 }
 
+//buff信息
+type BuffInfo struct {
+	Buff      string //buff
+	BuffLevel int32  //buff等级
+}
+
 //技能无视闪避  普工攻击要计算闪避
 type Bullet struct {
 	ID       int32
@@ -50,15 +56,17 @@ type Bullet struct {
 
 	StartPosOffsetObj int32 //起始位置参照物   1创建者 2目标 一般情况都为1创建者  像从天而降的闪电就为2目标 的头顶
 
-	SkillID    int32 //技能ID  如果技能ID为 -1表示普通攻击
-	SkillLevel int32 //技能等级
+	SkillID    int32      //技能ID  如果技能ID为 -1表示普通攻击  技能不会miss
+	SkillLevel int32      //技能等级
+	TargetBuff []BuffInfo //目标buff
 
 	NormalHurt HurtInfo   //攻击伤害(以英雄攻击力计算伤害) 值为计算暴击后的值
 	OtherHurt  []HurtInfo //其他伤害也就是额外伤害
 
 	HurtRange BulletRange //范围
 
-	Crit float32 //暴击倍数
+	Crit       float32 //暴击倍数
+	ClearLevel int32   //驱散等级
 
 	//--------附加攻击特效------
 
@@ -92,11 +100,13 @@ func (this *Bullet) Init() {
 	this.NormalHurt.HurtValue = 0
 
 	this.OtherHurt = make([]HurtInfo, 0)
+	this.TargetBuff = make([]BuffInfo, 0)
 
 	this.HurtRange.RangeType = 1 //单体攻击范围
 	this.MoveType = 1            //瞬间移动
 
 	this.Crit = 1
+	this.ClearLevel = 0
 }
 
 //设置暴击倍数
@@ -187,6 +197,11 @@ func (this *Bullet) DoMove(dt float32) {
 	}
 }
 
+//增加目标buff
+func (this *Bullet) AddTargetBuff(buff string, level int32) {
+	this.TargetBuff = append(this.TargetBuff, BuffInfo{buff, level})
+}
+
 //计算伤害
 func (this *Bullet) DoHurt() {
 	//获取到受伤害的单位 (狂战斧攻击特效也会影响单位数量 )
@@ -198,13 +213,12 @@ func (this *Bullet) DoHurt() {
 		}
 		//伤害
 		hurtvalue := this.DestUnit.BeAttacked(this)
+		//驱散buff
+		this.DestUnit.ClearBuffForTarget(this.SrcUnit, this.ClearLevel)
 
 		//buff
-		if this.SkillID > 0 {
-			skdata := conf.GetSkillData(this.SkillID, this.SkillLevel)
-			if skdata != nil {
-				this.DestUnit.AddBuffFromStr(skdata.TargetBuff, this.SkillLevel)
-			}
+		for _, v := range this.TargetBuff {
+			this.DestUnit.AddBuffFromStr(v.Buff, v.BuffLevel, this.SrcUnit)
 		}
 
 		if this.SrcUnit == nil || this.SrcUnit.MyPlayer == nil {

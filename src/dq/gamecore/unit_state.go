@@ -360,6 +360,8 @@ func (this *AttackState) Update(dt float64) {
 			this.Parent.CheckTriggerAttackSkill(b)
 			this.Parent.AddBullet(b)
 
+			b.AddTargetBuff("1", 4)
+
 			this.Parent.RemoveBuffForAttacked()
 
 			this.IsDoBullet = true

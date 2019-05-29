@@ -39,6 +39,7 @@ func (this *Skill) CreateBullet(unit *Unit, data *protomsg.CS_PlayerSkill) *Bull
 		} else {
 			b.AddOtherHurt(HurtInfo{HurtType: this.HurtType, HurtValue: this.HurtValue})
 		}
+		b.AddTargetBuff(this.TargetBuff, this.Level)
 		b.SkillID = this.TypeID
 		b.SkillLevel = this.Level
 

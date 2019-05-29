@@ -86,6 +86,7 @@ type BuffBaseData struct {
 	OverlyingType          int32 //叠加类型 1:只更新最大时间 2:完美叠加(小鱼的偷属性)
 	OverlyingAddTag        int32 //叠加时是否增加标记数字 1:表示增加 2:表示不增加
 	ActiveUnitAcpabilities int32 //生效的单位共计类型(1:近程攻击 2:远程攻击 3:都生效)
+	NoCareMagicImmune      int32 //添加此buff时 是否无视单位魔法免疫 1:是 2:非
 
 	NoMove      int32 //禁止移动 1:是 2:非
 	NoTurn      int32 //禁止转向 1:是 2:非
@@ -100,6 +101,8 @@ type BuffBaseData struct {
 
 	AttackedInvalid  int32 //攻击后失效 1:是 2:否
 	DoSkilledInvalid int32 //使用技能后失效 1:是 2:否
+	BuffType         int32 //buff类型 1:表示良性 2:表示恶性  队友只能驱散我的恶性buff 敌人只能驱散我的良性buff
+	ClearLevel       int32 //驱散等级 1 表示需要驱散等级大于等于1的 驱散效果才能驱散此buff pa的标为1 眩晕为2 小鱼偷属性和光环buff为3
 }
 
 //技能数据 (会根据等级变化的数据)
