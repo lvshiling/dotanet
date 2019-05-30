@@ -61,7 +61,7 @@ func (this *Halo) Update(dt float32) {
 					for _, v := range allunit {
 
 						//创建子弹
-						if this.HurtType != 4 && count < this.UnitTargetMaxCount {
+						if count < this.UnitTargetMaxCount {
 							//UnitTargetTeam      int32   //目标单位关系 1:友方  2:敌方 3:友方敌方都行
 							if this.UnitTargetTeam == 1 && this.Parent.CheckIsEnemy(v) == true {
 								continue
@@ -69,17 +69,28 @@ func (this *Halo) Update(dt float32) {
 							if this.UnitTargetTeam == 2 && this.Parent.CheckIsEnemy(v) == false {
 								continue
 							}
-							//技能免疫检测
-							if this.NoCareMagicImmune == 2 && v.MagicImmune == 1 {
-								continue
-							}
 							//检测是否在范围内
 							if v.Body == nil || this.HaloRange <= 0 {
 								continue
 							}
 							dis := float32(vec2d.Distanse(this.Position, v.Body.Position))
-							log.Info("-----------------dis:%f", dis)
+							//log.Info("-----------------dis:%f", dis)
 							if dis <= this.HaloRange {
+
+								count++
+
+								//增加buff
+								v.AddBuffFromStr(this.InitBuff, this.Level, this.Parent)
+
+								//技能免疫检测
+								if this.HurtType == 2 && this.NoCareMagicImmune == 2 && v.MagicImmune == 1 {
+									continue
+								}
+								//不造成伤害
+								if this.HurtType == 4 {
+									continue
+								}
+
 								b := NewBullet1(this.Parent, v)
 								b.SetNormalHurtRatio(this.NormalHurt)
 								b.SetProjectileMode(this.BulletModeType, this.BulletSpeed)
@@ -95,14 +106,12 @@ func (this *Halo) Update(dt float32) {
 									if this.TriggerAttackEffect == 1 {
 										this.Parent.CheckTriggerAttackSkill(b)
 									}
-									log.Info("----------------add bullet")
+									//log.Info("----------------add bullet")
 									this.Parent.AddBullet(b)
-									count++
+
 								}
 							}
 						}
-						//增加buff
-						v.AddBuffFromStr(this.InitBuff, this.Level, this.Parent)
 
 					}
 				}

@@ -51,9 +51,9 @@ func InitSkillDatas() {
 
 	//log.Info("-:%v", SkillDatas)
 	for i := 1; i < 5; i++ {
-		t := GetSkillData(1, int32(i))
+		t := GetSkillData(6, int32(i))
 		if t != nil {
-			log.Info("%d:%v", i, *t)
+			log.Info("skill %d:%v", i, *t)
 		}
 
 	}
@@ -75,6 +75,16 @@ func GetSkillData(typeid int32, level int32) *SkillData {
 		return nil
 	}
 	return (re).(*SkillData)
+}
+
+type CallUnitInfo struct {
+	//召唤相关
+	CallUnitCount     int32   //召唤数量 0表示没有召唤
+	CallUnitTypeID    int32   //召唤出来的单位 类型ID 0表示当前召唤者 -1表示目标对象 其他类型id对应其他单位
+	CallUnitBuff      string  //召唤出来的单位携带额外buff
+	CallUnitHalo      string  //召唤出来的单位携带额外halo
+	CallUnitOffsetPos float32 //召唤出来的单位在目标位置的随机偏移位置
+	//CallUnitAliveTime float32 //召唤单位的生存时间
 }
 
 //技能基本数据
@@ -104,6 +114,8 @@ type SkillBaseData struct {
 	InitHalo              string  //拥有技能技能时的halo (技能携带的halo)
 	MyClearLevel          int32   //释放时 对自己的驱散等级  能驱散 驱散等级 小于等于该值的buff
 	TargetClearLevel      int32   //释放时 对目标的驱散等级  能驱散 驱散等级 小于等于该值的buff
+
+	CallUnitInfo //召唤信息
 
 	//被动技能相关参数
 	TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时

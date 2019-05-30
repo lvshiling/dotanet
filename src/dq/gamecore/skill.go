@@ -5,6 +5,7 @@ import (
 	"dq/log"
 	"dq/protobuf"
 	"dq/utils"
+	"dq/vec2d"
 	"strconv"
 )
 
@@ -22,33 +23,34 @@ func (this *Skill) CreateBullet(unit *Unit, data *protomsg.CS_PlayerSkill) *Bull
 	}
 	//
 	//自身
-
+	var b *Bullet = nil
 	if this.CastTargetType == 1 {
-
+		b = NewBullet1(unit, unit)
 	} else if this.CastTargetType == 2 { //目标单位
 
 		targetunit := unit.InScene.FindUnitByID(data.TargetUnitID)
+		b = NewBullet1(unit, targetunit)
 
-		b := NewBullet1(unit, targetunit)
-		b.SetNormalHurtRatio(this.NormalHurt)
-		b.SetProjectileMode(this.BulletModeType, this.BulletSpeed)
-		//技能增强
-		if this.HurtType == 2 {
-			hurtvalue := (this.HurtValue + int32(float32(this.HurtValue)*unit.MagicScale))
-			b.AddOtherHurt(HurtInfo{HurtType: this.HurtType, HurtValue: hurtvalue})
-		} else {
-			b.AddOtherHurt(HurtInfo{HurtType: this.HurtType, HurtValue: this.HurtValue})
-		}
-		b.AddTargetBuff(this.TargetBuff, this.Level)
-		b.SkillID = this.TypeID
-		b.SkillLevel = this.Level
-
-		return b
 	} else if this.CastTargetType == 3 { //目的点
-
+		b = NewBullet2(unit, vec2d.Vec2{float64(data.X), float64(data.Y)})
 	}
 
-	return nil
+	b.SetNormalHurtRatio(this.NormalHurt)
+	b.SetProjectileMode(this.BulletModeType, this.BulletSpeed)
+	//技能增强
+	if this.HurtType == 2 {
+		hurtvalue := (this.HurtValue + int32(float32(this.HurtValue)*unit.MagicScale))
+		b.AddOtherHurt(HurtInfo{HurtType: this.HurtType, HurtValue: hurtvalue})
+	} else {
+		b.AddOtherHurt(HurtInfo{HurtType: this.HurtType, HurtValue: this.HurtValue})
+	}
+	b.AddTargetBuff(this.TargetBuff, this.Level)
+	b.SkillID = this.TypeID
+	b.SkillLevel = this.Level
+	//召唤信息
+	b.BulletCallUnitInfo = BulletCallUnitInfo{this.CallUnitInfo, this.Level}
+
+	return b
 }
 
 //更新

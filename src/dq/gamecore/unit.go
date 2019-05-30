@@ -109,7 +109,7 @@ func (this *Unit) CanSeeTarget(target *Unit) bool {
 	return true
 }
 
-//单位是否消失 (单位离线 单位死亡 单位在另一个空间:黑鸟的关..  开雾的状态下)
+//单位是否消失 (单位离线 单位死亡 )
 func (this *Unit) IsDisappear() bool {
 
 	if this.IsDelete == true || this.IsDeath == 1 || this.InScene == nil {
@@ -254,7 +254,9 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 					this.AddBuffFromStr(v.MyBuff, v.Level, this)
 					//暴击
 					b.SetCrit(v.TriggerCrit)
-
+					//召唤信息
+					//召唤信息
+					b.BulletCallUnitInfo = BulletCallUnitInfo{v.CallUnitInfo, v.Level}
 					//目标buff
 					b.AddTargetBuff(v.TargetBuff, v.Level)
 				}
@@ -685,6 +687,9 @@ type Unit struct {
 	Skills map[int32]*Skill  //所有技能
 	Buffs  map[int32][]*Buff //所有buff 同typeID下可能有多个buff
 
+	//每秒钟干事 剩余时间
+	EveryTimeDoRemainTime float32 //每秒钟干事 的剩余时间
+
 	//发送数据部分
 	ClientData    *protomsg.UnitDatas //客户端显示数据
 	ClientDataSub *protomsg.UnitDatas //客户端显示差异数据
@@ -696,6 +701,11 @@ func (this *Unit) SetAI(ai UnitAI) {
 }
 
 func CreateUnit(scene *Scene, typeid int32) *Unit {
+
+	if scene == nil {
+		return nil
+	}
+
 	unitre := &Unit{}
 	unitre.ID = UnitID
 	UnitID++
@@ -706,7 +716,7 @@ func CreateUnit(scene *Scene, typeid int32) *Unit {
 	unitre.Level = 1
 
 	unitre.Init()
-	unitre.InitHPandMP(0.5, 1.0)
+	unitre.InitHPandMP(1.0, 1.0)
 	unitre.IsMain = 2
 	//unitre.UnitType = 2 //单位类型(1:英雄 2:普通单位 3:远古 4:boss)
 	unitre.ControlID = -1
@@ -715,6 +725,9 @@ func CreateUnit(scene *Scene, typeid int32) *Unit {
 }
 
 func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
+	if scene == nil || player == nil {
+		return nil
+	}
 	unitre := &Unit{}
 	unitre.ID = UnitID
 	UnitID++
@@ -757,6 +770,7 @@ func (this *Unit) Init() {
 	this.State = NewIdleState(this)
 
 	this.AttackMode = 1 //和平攻击模式
+	this.EveryTimeDoRemainTime = 1
 
 	this.IsDeath = 2
 
@@ -768,6 +782,24 @@ func (this *Unit) Init() {
 	utils.GetFloat32FromString(this.ProjectileEndPos, &this.ProjectileEndPosDis, &this.ProjectileEndPosHeight)
 
 	//this.TestData()
+}
+
+//
+func (this *Unit) EveryTimeDo(dt float64) {
+
+	if this.IsDisappear() {
+		return
+	}
+
+	this.EveryTimeDoRemainTime -= float32(dt)
+	if this.EveryTimeDoRemainTime <= 0 {
+		//do
+		this.EveryTimeDoRemainTime += 1
+
+		//每秒回血
+		this.ChangeHP(int32(this.HPRegain))
+		this.ChangeMP(int32(this.MPRegain))
+	}
 }
 
 func (this *Unit) ShowMiss(isshow bool) {
@@ -787,6 +819,9 @@ func (this *Unit) ShowMiss(isshow bool) {
 //
 //更新 范围影响的buff 被动技能
 func (this *Unit) PreUpdate(dt float64) {
+	if this.IsDisappear() {
+		return
+	}
 	this.ShowMiss(false)
 }
 
@@ -824,14 +859,8 @@ func (this *Unit) Update(dt float64) {
 	//设置碰撞等级
 	if this.IsDeath == 1 {
 		this.Body.IsCollisoin = false
-		//this.Body.CollisoinLevel = 1
 	} else {
 		this.Body.IsCollisoin = true
-		//		if this.UnitType == 1 {
-		//			this.Body.IsCollisoin = false
-		//			this.Body.CollisoinLevel = 2
-		//		}
-
 	}
 
 	//AI
@@ -842,6 +871,7 @@ func (this *Unit) Update(dt float64) {
 	this.CheckAttackCmd()
 
 	//
+	this.EveryTimeDo(dt)
 
 	//逻辑状态更新
 	this.State.OnTransform()
@@ -1091,6 +1121,7 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff) {
 	if v1 == nil || v1.IsActive == false {
 		return
 	}
+
 	//log.Info("--11--speed:%f", this.AttackSpeed)
 	this.AttributeStrength += v1.AttributeStrengthCV
 	this.AttributeIntelligence += v1.AttributeIntelligenceCV
@@ -1109,6 +1140,8 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff) {
 	this.Dodge = utils.NoLinerAdd(this.Dodge, v1.DodgeCV)
 	this.HPRegain += this.HPRegain * v1.HPRegainCR
 	this.HPRegain += v1.HPRegainCV
+	this.HPRegain += v1.HPRegainCVOfMaxHP * float32(this.MAX_HP)
+
 	this.NoCareDodge = utils.NoLinerAdd(this.NoCareDodge, v1.NoCareDodgeCV)
 	this.AddedMagicRange += v1.AddedMagicRangeCV
 	this.ManaCost = utils.NoLinerAdd(this.ManaCost, v1.ManaCostCV)
@@ -1149,7 +1182,7 @@ func (this *Unit) CalPropertyByBuffs() {
 
 		buffs := utils.GetInt32FromString2(v.InitBuff)
 		for _, v1 := range buffs {
-			buff := NewBuff(v1, v.Level)
+			buff := NewBuff(v1, v.Level, this)
 			if buff != nil {
 				this.CalPropertyByBuff(buff)
 			}
@@ -1267,7 +1300,7 @@ func (this *Unit) ClearBuffForTarget(target *Unit, clearlevel int32) {
 //通过 buff 添加buff
 func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) {
 
-	if castunit == nil || castunit.IsDisappear() {
+	if castunit == nil || castunit.IsDisappear() || this.IsDisappear() {
 		return
 	}
 	//BuffType         int32 //buff类型 1:表示良性 2:表示恶性  队友只能驱散我的恶性buff 敌人只能驱散我的良性buff
@@ -1311,7 +1344,7 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) {
 func (this *Unit) AddBuffFromStr(buffsstr string, level int32, castunit *Unit) {
 	buffs := utils.GetInt32FromString2(buffsstr)
 	for _, v := range buffs {
-		buff := NewBuff(v, level)
+		buff := NewBuff(v, level, this)
 		if buff != nil {
 			this.AddBuffFromBuff(buff, castunit)
 		}
@@ -1362,9 +1395,10 @@ func (this *Unit) BeAttacked(bullet *Bullet) int32 {
 	magicAttack := bullet.GetAttackOfType(2)  //魔法攻击
 	pureAttack := bullet.GetAttackOfType(3)   //纯粹攻击
 	//计算护甲抵消后伤害
-	physicAttack = int32(float32(physicAttack) * (1 - this.PhysicalResist))
+	physicAttack = int32(utils.SetValueGreaterE(float32(physicAttack)*(1-this.PhysicalResist), 0))
 	//计算魔抗抵消后伤害
-	magicAttack = int32(float32(magicAttack) * (1 - this.MagicAmaor))
+	magicAttack = int32(utils.SetValueGreaterE(float32(magicAttack)*(1-this.MagicAmaor), 0))
+	//magicAttack = utils.SetValueGreaterE(magicAttack,0)
 
 	//-----扣血--
 	hurtvalue := -(physicAttack + magicAttack + pureAttack)

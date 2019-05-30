@@ -47,7 +47,7 @@ func InitBuffDatas() {
 		}
 	}
 
-	//log.Info("----------1---------")
+	log.Info("----------buff---------")
 
 	//log.Info("-:%v", SkillDatas)
 	for i := 1; i < 5; i++ {
@@ -103,12 +103,14 @@ type BuffBaseData struct {
 	DoSkilledInvalid int32 //使用技能后失效 1:是 2:否
 	BuffType         int32 //buff类型 1:表示良性 2:表示恶性  队友只能驱散我的恶性buff 敌人只能驱散我的良性buff
 	ClearLevel       int32 //驱散等级 1 表示需要驱散等级大于等于1的 驱散效果才能驱散此buff pa的标为1 眩晕为2 小鱼偷属性和光环buff为3
+
+	//伤害相关  剧毒类buff
+	HurtType int32 //伤害类型(1:物理伤害 2:魔法伤害 3:纯粹伤害 4:不造成伤害)
 }
 
 //技能数据 (会根据等级变化的数据)
 type BuffData struct {
 	BuffBaseData
-	//HurtValue  int32   //技能伤害
 	BuffRange float32 //buff范围 小于等于0表示单体
 	Time      float32 //持续时间
 
@@ -132,11 +134,16 @@ type BuffData struct {
 	DodgeCV                   float32 //闪避变化量 0.2就是增加20%的闪避
 	HPRegainCR                float32 //生命恢复变化率 0.5表示增加50%的生命恢复
 	HPRegainCV                float32 //生命恢复变化量 1.2表示增加1.2hp每秒的生命恢复
+	HPRegainCVOfMaxHP         float32 //生命恢复变化量以最大生命值为基础 0.2表示增加20%最大生命值每秒的生命恢复
 	NoCareDodgeCV             float32 //无视闪避变化量 0.2就是增加20%的无视闪避
 	AddedMagicRangeCV         float32 //额外施法距离变化量 2.3表示增加施法距离2.3米
 	ManaCostCV                float32 //魔法消耗变化量 -0.1表示降低10%的魔法消耗
 	MagicCDCV                 float32 //技能CD变化量 -0.2表示降低20%的技能cd
 	AttackTargetAttackSpeedCV float32 //攻击指定目标攻击速度变化值 -10表示降低10点攻击速度
+
+	//
+	HurtTimeInterval float32 //伤害时间间隔
+	HurtValue        float32 //伤害值
 }
 
 //单位配置文件数据
@@ -167,11 +174,16 @@ type BuffFileData struct {
 	DodgeCV                   string //闪避变化量 0.2就是增加20%的闪避
 	HPRegainCR                string //生命恢复变化率 0.5表示增加50%的生命恢复
 	HPRegainCV                string //生命恢复变化量 1.2表示增加1.2hp每秒的生命恢复
+	HPRegainCVOfMaxHP         string //生命恢复变化量以最大生命值为基础 0.2表示增加20%最大生命值每秒的生命恢复
 	NoCareDodgeCV             string //无视闪避变化量 0.2就是增加20%的无视闪避
 	AddedMagicRangeCV         string //额外施法距离变化量 2.3表示增加施法距离2.3米
 	ManaCostCV                string //魔法消耗变化量 -0.1表示降低10%的魔法消耗
 	MagicCDCV                 string //技能CD变化量 -0.2表示降低20%的技能cd
 	AttackTargetAttackSpeedCV string //攻击指定目标攻击速度变化值 -10表示降低10点攻击速度
+
+	//
+	HurtTimeInterval string //伤害时间间隔
+	HurtValue        string //伤害值
 }
 
 //把等级相关的字符串 转成具体类型数据
@@ -201,11 +213,15 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 	DodgeCV := utils.GetFloat32FromString2(this.DodgeCV)
 	HPRegainCR := utils.GetFloat32FromString2(this.HPRegainCR)
 	HPRegainCV := utils.GetFloat32FromString2(this.HPRegainCV)
+	HPRegainCVOfMaxHP := utils.GetFloat32FromString2(this.HPRegainCVOfMaxHP)
 	NoCareDodgeCV := utils.GetFloat32FromString2(this.NoCareDodgeCV)
 	AddedMagicRangeCV := utils.GetFloat32FromString2(this.AddedMagicRangeCV)
 	ManaCostCV := utils.GetFloat32FromString2(this.ManaCostCV)
 	MagicCDCV := utils.GetFloat32FromString2(this.MagicCDCV)
 	AttackTargetAttackSpeedCV := utils.GetFloat32FromString2(this.AttackTargetAttackSpeedCV)
+
+	HurtTimeInterval := utils.GetFloat32FromString2(this.HurtTimeInterval)
+	HurtValue := utils.GetFloat32FromString2(this.HurtValue)
 
 	for i := int32(0); i < this.MaxLevel; i++ {
 		ssd := BuffData{}
@@ -316,6 +332,12 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 		} else {
 			ssd.HPRegainCV = HPRegainCV[i]
 		}
+		if int32(len(HPRegainCVOfMaxHP)) <= i {
+			ssd.HPRegainCVOfMaxHP = HPRegainCVOfMaxHP[len(HPRegainCVOfMaxHP)-1]
+		} else {
+			ssd.HPRegainCVOfMaxHP = HPRegainCVOfMaxHP[i]
+		}
+
 		if int32(len(NoCareDodgeCV)) <= i {
 			ssd.NoCareDodgeCV = NoCareDodgeCV[len(NoCareDodgeCV)-1]
 		} else {
@@ -340,6 +362,17 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 			ssd.AttackTargetAttackSpeedCV = AttackTargetAttackSpeedCV[len(AttackTargetAttackSpeedCV)-1]
 		} else {
 			ssd.AttackTargetAttackSpeedCV = AttackTargetAttackSpeedCV[i]
+		}
+
+		if int32(len(HurtTimeInterval)) <= i {
+			ssd.HurtTimeInterval = HurtTimeInterval[len(HurtTimeInterval)-1]
+		} else {
+			ssd.HurtTimeInterval = HurtTimeInterval[i]
+		}
+		if int32(len(HurtValue)) <= i {
+			ssd.HurtValue = HurtValue[len(HurtValue)-1]
+		} else {
+			ssd.HurtValue = HurtValue[i]
 		}
 
 		//log.Info("111-:%v--%d", ssd)

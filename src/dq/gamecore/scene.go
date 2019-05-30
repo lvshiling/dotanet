@@ -366,9 +366,10 @@ func (this *Scene) DoAddAndRemoveUnit() {
 		}
 
 		//设置移动核心body
-		pos := v.(*Unit).InitPosition
+		pos := vec2d.Vec2{0, 0}
 		r := vec2d.Vec2{v.(*Unit).CollisionR, v.(*Unit).CollisionR}
 		v.(*Unit).Body = this.MoveCore.CreateBody(pos, r, 0, 1)
+		v.(*Unit).Body.BlinkToPos(v.(*Unit).InitPosition)
 
 		this.Units[k.(int32)] = v.(*Unit)
 

@@ -360,7 +360,8 @@ func (this *AttackState) Update(dt float64) {
 			this.Parent.CheckTriggerAttackSkill(b)
 			this.Parent.AddBullet(b)
 
-			b.AddTargetBuff("1", 4)
+			//b.AddTargetBuff("1", 4)
+			//b.AddOtherHurt(HurtInfo{2, 100})
 
 			this.Parent.RemoveBuffForAttacked()
 
@@ -446,6 +447,9 @@ func (this *DeathState) OnStart() {
 	this.Parent.SetAnimotorState(4)
 
 	this.StartTime = utils.GetCurTimeOfSecond()
+
+	this.Parent.ClearBuff()
+
 }
 
 //---------------------------吟唱状态--------------玩家使用有吟唱时间的道具或者技能---------------

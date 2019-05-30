@@ -29,21 +29,12 @@ func NoLinerAdd(base float32, add float32) float32 {
 	t1 = 1 - t1
 	return t1
 }
-
-//func FormatFloat(f float64, m int) string {
-//	n := strconv.FormatFloat(f, 'f', -1, 32)
-//	if n == "" {
-//		return ""
-//	}
-//	if m >= len(n) {
-//		return n
-//	}
-//	newn := strings.Split(n, ".")
-//	if len(newn) < 2 || m >= len(newn[1]) {
-//		return n
-//	}
-//	return newn[0] + "." + newn[1][:m]
-//}
+func SetValueGreaterE(value float32, minvalue float32) float32 {
+	if value < minvalue {
+		return minvalue
+	}
+	return value
+}
 
 //检查随机概率是否命中
 func CheckRandom(radio float32) bool {
@@ -51,6 +42,15 @@ func CheckRandom(radio float32) bool {
 		return true
 	}
 	return false
+}
+
+//获取随机数
+func GetRandomFloat(fanwei float32) float32 {
+	if fanwei <= 0 {
+		fanwei = 0
+	}
+	re := rand.Float32()*(fanwei*2) - fanwei
+	return re
 }
 
 //从字符串中获取数据 逗号分隔

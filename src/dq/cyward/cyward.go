@@ -555,7 +555,7 @@ func (this *WardCore) GetSegmentInsterset(p1 vec2d.Vec2, p2 vec2d.Vec2, mypolygo
 	} else if this.GetIntersectPoint(p1, p2, circlep4, circlep1, Re) {
 		return true
 	} else {
-		log.Info("GetSegmentInsterset:%v %v %v %v    %v  %v", circlep1, circlep2, circlep3, circlep4, p1, p2)
+		//log.Info("GetSegmentInsterset:%v %v %v %v    %v  %v", circlep1, circlep2, circlep3, circlep4, p1, p2)
 		return false
 	}
 }
@@ -1304,6 +1304,8 @@ func (this *WardCore) CreateBody(position vec2d.Vec2, r vec2d.Vec2, speedsize fl
 	body.CollisoinLevel = level
 	body.IsCollisoin = true
 	this.Bodys[body] = body
+
+	//body.BlinkToPos(position)
 	return body
 }
 func (this *WardCore) CreateBodyPolygon(position vec2d.Vec2, points []vec2d.Vec2, speedsize float64, level int32) *Body {

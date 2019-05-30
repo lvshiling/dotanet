@@ -1,9 +1,10 @@
 package gamecore
 
 import (
-	//"dq/log"
-	//"dq/conf"
+	"dq/conf"
+	"dq/log"
 	"dq/protobuf"
+	"dq/utils"
 	"dq/vec2d"
 	"strings"
 )
@@ -37,6 +38,11 @@ type BuffInfo struct {
 	BuffLevel int32  //buff等级
 }
 
+type BulletCallUnitInfo struct {
+	conf.CallUnitInfo
+	CallUnitInfoSkillLevel int32 //技能等级 影响buff和halo等级
+}
+
 //技能无视闪避  普工攻击要计算闪避
 type Bullet struct {
 	ID       int32
@@ -68,6 +74,9 @@ type Bullet struct {
 	Crit       float32 //暴击倍数
 	ClearLevel int32   //驱散等级
 
+	//召唤信息
+	BulletCallUnitInfo
+
 	//--------附加攻击特效------
 
 	//发送数据部分
@@ -80,6 +89,18 @@ func NewBullet1(src *Unit, dest *Unit) *Bullet {
 	re.SrcUnit = src
 	re.DestUnit = dest
 
+	//唯一ID处理
+	re.ID = GetBulletID()
+
+	re.Init()
+
+	return re
+}
+func NewBullet2(src *Unit, pos vec2d.Vec2) *Bullet {
+	re := &Bullet{}
+	re.SrcUnit = src
+	re.DestUnit = nil
+	re.DestPos = vec2d.Vector3{pos.X, 0, pos.Y}
 	//唯一ID处理
 	re.ID = GetBulletID()
 
@@ -202,9 +223,57 @@ func (this *Bullet) AddTargetBuff(buff string, level int32) {
 	this.TargetBuff = append(this.TargetBuff, BuffInfo{buff, level})
 }
 
+//处理召唤
+func (this *Bullet) DoCallUnit() {
+	//	type CallUnitInfo struct {
+	//	//召唤相关
+	//	CallUnitCount     int32   //召唤数量 0表示没有召唤
+	//	CallUnitTypeID    int32   //召唤出来的单位 类型ID 0表示当前召唤者 -1表示目标对象 其他类型id对应其他单位
+	//	CallUnitBuff      string  //召唤出来的单位携带额外buff
+	//	CallUnitHalo      string  //召唤出来的单位携带额外halo
+	//	CallUnitOffsetPos float32 //召唤出来的单位在目标位置的随机偏移位置
+	//	CallUnitAliveTime float32 //召唤单位的生存时间
+	//}
+
+	if this.SrcUnit == nil || this.SrcUnit.IsDisappear() {
+		return
+	}
+	scene := this.SrcUnit.InScene
+	for i := int32(0); i < this.CallUnitCount; i++ {
+
+		if this.CallUnitTypeID > 0 {
+			unit := CreateUnit(this.SrcUnit.InScene, this.CallUnitTypeID)
+			if unit == nil {
+				continue
+			}
+			//设置移动核心body
+			//pos := vec2d.Vec2{float64(0), float64(0)}
+			//r := vec2d.Vec2{unit.CollisionR, unit.CollisionR}
+			//unit.Body = scene.MoveCore.CreateBody(pos, r, 0, 1)
+			p1 := vec2d.Vec2{this.DestPos.X + float64(utils.GetRandomFloat(this.CallUnitOffsetPos)),
+				this.DestPos.Z + float64(utils.GetRandomFloat(this.CallUnitOffsetPos))}
+
+			log.Info("------------pos:%v", p1)
+			unit.InitPosition = p1
+			//unit.Body.BlinkToPos(p1)
+			//
+			unit.Camp = this.SrcUnit.Camp
+
+			//buff
+			unit.AddBuffFromStr(this.CallUnitBuff, this.CallUnitInfoSkillLevel, unit)
+			unit.AddHaloFromStr(this.CallUnitHalo, this.CallUnitInfoSkillLevel, nil)
+
+			scene.NextAddUnit.Set(unit.ID, unit)
+		}
+	}
+}
+
 //计算伤害
 func (this *Bullet) DoHurt() {
 	//获取到受伤害的单位 (狂战斧攻击特效也会影响单位数量 )
+
+	//处理召唤
+	this.DoCallUnit()
 
 	if this.HurtRange.RangeType == 1 {
 		//单体范围
