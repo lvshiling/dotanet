@@ -92,6 +92,7 @@ type HaloBaseData struct {
 	InitBuff            string  //对范围内目标施加的buf 持续0.1s
 	FollowParent        int32   //跟随主角  1:是 2:否
 	HaloModeType        string  //光环模型
+	BlinkToTarget       int32   //是否瞬间移动到目的地 1:是 2:否
 }
 
 //技能数据 (会根据等级变化的数据)
@@ -113,7 +114,7 @@ type HaloFileData struct {
 	//跟等级相关的数值 逗号分隔
 	UnitTargetMaxCount string //最大选择目标数量
 	Time               string //持续时间
-	Cooldown           string //技能冷却时间 为施法间隔
+	Cooldown           string //技能冷却时间 为施法间隔 -1表示当前单位的攻击时间间隔
 	HurtValue          string //技能伤害
 	HaloRange          string //光环范围 小于等于0表示单体
 	NormalHurt         string //附带普通攻击百分比 (0.5 为 50%的普通攻击伤害) 一般为0

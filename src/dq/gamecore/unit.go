@@ -276,11 +276,11 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 
 	//驱散自己的buff
 	this.ClearBuffForTarget(this, skilldata.MyClearLevel)
-	//MyHalo
-	this.AddHaloFromStr(skilldata.MyHalo, skilldata.Level, nil)
 
 	//MyBuff
 	this.AddBuffFromStr(skilldata.MyBuff, skilldata.Level, this)
+	//MyHalo
+	this.AddHaloFromStr(skilldata.MyHalo, skilldata.Level, nil)
 
 	//创建子弹
 	b := skilldata.CreateBullet(this, data)
@@ -436,7 +436,7 @@ func (this *Unit) CheckIsEnemy(target *Unit) bool {
 //能否攻击(根据阵营,攻击模式判断与是否死亡)
 func (this *Unit) CheckAttackEnable2Target(target *Unit) bool {
 
-	if this.IsDisappear() || target.IsDisappear() || this.CanSeeTarget(target) == false {
+	if this.IsDisappear() || target.IsDisappear() || this.CanSeeTarget(target) == false || target.PhisicImmune == 1 {
 		return false
 	}
 
@@ -661,6 +661,7 @@ type UnitProperty struct {
 	SkillEnable  int32 //能否使用主动技能 (比如 被眩晕和沉默不能使用主动技能) 1:可以 2:不可以
 	ItemEnable   int32 //能否使用主动道具 (比如 被眩晕和禁用道具不能使用主动道具) 1:可以 2:不可以
 	MagicImmune  int32 //是否技能免疫 1：是 2:不是
+	PhisicImmune int32 //是否物理攻击免疫 1:是 2:否
 
 	AddedMagicRange float32 //额外施法距离
 	ManaCost        float32 //魔法消耗降低 (0.1)表示降低 10%
@@ -1109,6 +1110,7 @@ func (this *Unit) CalControlState() {
 	this.SkillEnable = 1  //能否使用主动技能 (比如 被眩晕和沉默不能使用主动技能) 1:可以 2:不可以
 	this.ItemEnable = 1   //能否使用主动道具 (比如 被眩晕和禁用道具不能使用主动道具) 1:可以 2:不可以
 	this.MagicImmune = 2
+	this.PhisicImmune = 2
 
 	this.AddedMagicRange = 0 //额外施法距离
 	this.ManaCost = 0        //魔法消耗降低
@@ -1117,7 +1119,19 @@ func (this *Unit) CalControlState() {
 }
 
 //计算单个buff对属性的影响
-func (this *Unit) CalPropertyByBuff(v1 *Buff) {
+func (this *Unit) CalPropertyByBuffCR(v1 *Buff) {
+	if v1 == nil || v1.IsActive == false {
+		return
+	}
+	this.Attack += int32(float32(this.Attack) * v1.AttackCR)
+	this.MoveSpeed += this.MoveSpeed * float64(v1.MoveSpeedCR)
+	this.MPRegain += this.MPRegain * v1.MPRegainCR
+	this.PhysicalAmaor += this.PhysicalAmaor * v1.PhysicalAmaorCR
+	this.HPRegain += this.HPRegain * v1.HPRegainCR
+}
+
+//计算单个buff对属性的影响
+func (this *Unit) CalPropertyByBuffCV(v1 *Buff) {
 	if v1 == nil || v1.IsActive == false {
 		return
 	}
@@ -1127,18 +1141,18 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff) {
 	this.AttributeIntelligence += v1.AttributeIntelligenceCV
 	this.AttributeAgility += v1.AttributeAgilityCV
 	this.AttackSpeed += v1.AttackSpeedCV
-	this.Attack += int32(float32(this.Attack) * v1.AttackCR)
+
 	this.Attack += int32(v1.AttackCV)
-	this.MoveSpeed += this.MoveSpeed * float64(v1.MoveSpeedCR)
+
 	this.MoveSpeed += float64(v1.MoveSpeedCV)
 	this.MagicScale = utils.NoLinerAdd(this.MagicScale, v1.MagicScaleCV)
-	this.MPRegain += this.MPRegain * v1.MPRegainCR
+
 	this.MPRegain += v1.MPRegainCV
-	this.PhysicalAmaor += this.PhysicalAmaor * v1.PhysicalAmaorCR
+
 	this.PhysicalAmaor += v1.PhysicalAmaorCV
 	this.MagicAmaor = utils.NoLinerAdd(this.MagicAmaor, v1.MagicAmaorCV)
 	this.Dodge = utils.NoLinerAdd(this.Dodge, v1.DodgeCV)
-	this.HPRegain += this.HPRegain * v1.HPRegainCR
+
 	this.HPRegain += v1.HPRegainCV
 	this.HPRegain += v1.HPRegainCVOfMaxHP * float32(this.MAX_HP)
 
@@ -1168,13 +1182,16 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff) {
 	if v1.Invisible == 1 {
 		this.Invisible = 1
 	}
+	if v1.PhisicImmune == 1 {
+		this.PhisicImmune = 1
+	}
 
 	//log.Info("--22--speed:%f", this.AttackSpeed)
 }
 
 //计算所有buff对属性的影响
 func (this *Unit) CalPropertyByBuffs() {
-	//技能携带的buf
+	//技能携带的buf cr
 	for _, v := range this.Skills {
 		if v.Level <= 0 {
 			continue
@@ -1184,16 +1201,37 @@ func (this *Unit) CalPropertyByBuffs() {
 		for _, v1 := range buffs {
 			buff := NewBuff(v1, v.Level, this)
 			if buff != nil {
-				this.CalPropertyByBuff(buff)
+				this.CalPropertyByBuffCR(buff)
 			}
 		}
 	}
-
-	//buff
+	//buff cr
 	for _, v := range this.Buffs {
 		for _, v1 := range v {
-			this.CalPropertyByBuff(v1)
+			this.CalPropertyByBuffCR(v1)
 
+		}
+
+	}
+
+	//技能携带的buf cv
+	for _, v := range this.Skills {
+		if v.Level <= 0 {
+			continue
+		}
+
+		buffs := utils.GetInt32FromString2(v.InitBuff)
+		for _, v1 := range buffs {
+			buff := NewBuff(v1, v.Level, this)
+			if buff != nil {
+				this.CalPropertyByBuffCV(buff)
+			}
+		}
+	}
+	//buff cv
+	for _, v := range this.Buffs {
+		for _, v1 := range v {
+			this.CalPropertyByBuffCV(v1)
 		}
 
 	}
@@ -1298,25 +1336,25 @@ func (this *Unit) ClearBuffForTarget(target *Unit, clearlevel int32) {
 }
 
 //通过 buff 添加buff
-func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) {
+func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 
 	if castunit == nil || castunit.IsDisappear() || this.IsDisappear() {
-		return
+		return nil
 	}
 	//BuffType         int32 //buff类型 1:表示良性 2:表示恶性  队友只能驱散我的恶性buff 敌人只能驱散我的良性buff
 	isenemy := castunit.CheckIsEnemy(this)
 	//如果是敌人 且 是良性buff 就不添加
 	if isenemy == true && buff.BuffType == 1 {
-		return
+		return nil
 	}
 	//如果不是敌人 且 是恶性buff 就不添加
 	if isenemy == false && buff.BuffType == 2 {
-		return
+		return nil
 	}
 
 	//如果恶性buff 单位魔法免疫 buff没有无视技能免疫
-	if buff.BuffType == 2 && this.MagicImmune == 1 && buff.NoCareMagicImmune == 2 {
-		return
+	if buff.BuffType == 2 && this.MagicImmune == 1 && buff.NoCareMagicImmuneAddBuff == 2 {
+		return nil
 	}
 
 	bf, ok := this.Buffs[buff.TypeID]
@@ -1329,31 +1367,42 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) {
 			if bf[0].RemainTime < buff.Time {
 				bf[0].RemainTime = buff.Time
 			}
+			return bf[0]
 
 		} else if buff.OverlyingType == 2 {
 			bf = append(bf, buff)
+			return buff
 		}
 	} else {
 		bfs := make([]*Buff, 0)
 		bfs = append(bfs, buff)
 		this.Buffs[buff.TypeID] = bfs
+		//给单位计算buff效果
+		this.CalPropertyByBuffCV(buff)
+
+		return buff
 	}
+	return nil
 }
 
 //通过bufftypeid string 添加buff  castunit给我添加
-func (this *Unit) AddBuffFromStr(buffsstr string, level int32, castunit *Unit) {
+func (this *Unit) AddBuffFromStr(buffsstr string, level int32, castunit *Unit) []*Buff {
 	buffs := utils.GetInt32FromString2(buffsstr)
+	re := make([]*Buff, 0)
 	for _, v := range buffs {
 		buff := NewBuff(v, level, this)
 		if buff != nil {
-			this.AddBuffFromBuff(buff, castunit)
+			buff = this.AddBuffFromBuff(buff, castunit)
+			re = append(re, buff)
 		}
 	}
+	return re
 }
 
 //通过bufftypeid string 添加halo
-func (this *Unit) AddHaloFromStr(halosstr string, level int32, pos *vec2d.Vec2) {
+func (this *Unit) AddHaloFromStr(halosstr string, level int32, pos *vec2d.Vec2) []*Halo {
 	halos := utils.GetInt32FromString2(halosstr)
+	re := make([]*Halo, 0)
 	for _, v := range halos {
 		halo := NewHalo(v, level)
 		halo.SetParent(this)
@@ -1363,7 +1412,9 @@ func (this *Unit) AddHaloFromStr(halosstr string, level int32, pos *vec2d.Vec2) 
 		if halo != nil {
 			this.InScene.AddHalo(halo)
 		}
+		re = append(re, halo)
 	}
+	return re
 }
 
 //受到来自子弹的伤害
@@ -1391,11 +1442,15 @@ func (this *Unit) BeAttacked(bullet *Bullet) int32 {
 		}
 	}
 	//计算伤害
-	physicAttack := bullet.GetAttackOfType(1) //物理攻击
-	magicAttack := bullet.GetAttackOfType(2)  //魔法攻击
-	pureAttack := bullet.GetAttackOfType(3)   //纯粹攻击
-	//计算护甲抵消后伤害
-	physicAttack = int32(utils.SetValueGreaterE(float32(physicAttack)*(1-this.PhysicalResist), 0))
+	physicAttack := int32(0)
+	if this.PhisicImmune != 1 {
+		physicAttack = bullet.GetAttackOfType(1) //物理攻击
+		//计算护甲抵消后伤害
+		physicAttack = int32(utils.SetValueGreaterE(float32(physicAttack)*(1-this.PhysicalResist), 0))
+	}
+	magicAttack := bullet.GetAttackOfType(2) //魔法攻击
+	pureAttack := bullet.GetAttackOfType(3)  //纯粹攻击
+
 	//计算魔抗抵消后伤害
 	magicAttack = int32(utils.SetValueGreaterE(float32(magicAttack)*(1-this.MagicAmaor), 0))
 	//magicAttack = utils.SetValueGreaterE(magicAttack,0)

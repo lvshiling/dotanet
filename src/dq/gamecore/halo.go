@@ -37,6 +37,7 @@ type Halo struct {
 
 //更新
 func (this *Halo) Update(dt float32) {
+
 	//CD时间减少
 	if this.IsActive {
 		this.RemainTime -= float32(dt)
@@ -62,6 +63,9 @@ func (this *Halo) Update(dt float32) {
 
 						//创建子弹
 						if count < this.UnitTargetMaxCount {
+							if v.IsDisappear() {
+								continue
+							}
 							//UnitTargetTeam      int32   //目标单位关系 1:友方  2:敌方 3:友方敌方都行
 							if this.UnitTargetTeam == 1 && this.Parent.CheckIsEnemy(v) == true {
 								continue
@@ -81,6 +85,10 @@ func (this *Halo) Update(dt float32) {
 
 								//增加buff
 								v.AddBuffFromStr(this.InitBuff, this.Level, this.Parent)
+								//BlinkToTarget
+								if this.BlinkToTarget == 1 {
+									this.Parent.Body.BlinkToPos(v.Body.Position)
+								}
 
 								//技能免疫检测
 								if this.HurtType == 2 && this.NoCareMagicImmune == 2 && v.MagicImmune == 1 {
@@ -144,12 +152,22 @@ func (this *Halo) Update(dt float32) {
 
 //设置载体
 func (this *Halo) SetParent(parent *Unit) {
+
+	if parent == nil {
+		return
+	}
+
 	if this.Parent != nil {
 		this.Parent = nil
 	}
 	this.Parent = parent
 	if parent.Body != nil {
 		this.Position = parent.Body.Position
+	}
+
+	if int32(this.Cooldown) == int32(-1) {
+		this.Cooldown = parent.GetOneAttackTime()
+		this.TriggerRemainTime = this.Cooldown
 	}
 
 }
@@ -166,7 +184,7 @@ func NewHalo(typeid int32, level int32) *Halo {
 	halo.HaloData = *halodata
 	halo.Level = level
 	halo.RemainTime = halodata.Time
-	halo.TriggerRemainTime = 0
+	halo.TriggerRemainTime = halodata.Cooldown
 	halo.IsEnd = false
 	halo.IsActive = true
 	//	if halodata.ActiveTime <= 0 {

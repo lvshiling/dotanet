@@ -82,18 +82,19 @@ type BuffBaseData struct {
 	TypeID int32 //类型ID
 
 	//HurtType              int32   //伤害类型(1:物理伤害 2:魔法伤害 3:纯粹伤害)
-	MaxLevel               int32 //最高升级到的等级 5 表示能升级到5级
-	OverlyingType          int32 //叠加类型 1:只更新最大时间 2:完美叠加(小鱼的偷属性)
-	OverlyingAddTag        int32 //叠加时是否增加标记数字 1:表示增加 2:表示不增加
-	ActiveUnitAcpabilities int32 //生效的单位共计类型(1:近程攻击 2:远程攻击 3:都生效)
-	NoCareMagicImmune      int32 //添加此buff时 是否无视单位魔法免疫 1:是 2:非
+	MaxLevel                 int32 //最高升级到的等级 5 表示能升级到5级
+	OverlyingType            int32 //叠加类型 1:只更新最大时间 2:完美叠加(小鱼的偷属性)
+	OverlyingAddTag          int32 //叠加时是否增加标记数字 1:表示增加 2:表示不增加
+	ActiveUnitAcpabilities   int32 //生效的单位共计类型(1:近程攻击 2:远程攻击 3:都生效)
+	NoCareMagicImmuneAddBuff int32 //添加此buff时 是否无视单位魔法免疫 1:是 2:非
 
-	NoMove      int32 //禁止移动 1:是 2:非
-	NoTurn      int32 //禁止转向 1:是 2:非
-	NoAttack    int32 //禁止攻击 1:是 2:非
-	NoSkill     int32 //禁止使用技能 1:是 2:非
-	NoItem      int32 //禁止使用道具 1:是 2:非
-	MagicImmune int32 //是否魔法免疫 1:是 2:非
+	NoMove       int32 //禁止移动 1:是 2:非
+	NoTurn       int32 //禁止转向 1:是 2:非
+	NoAttack     int32 //禁止攻击 1:是 2:非
+	NoSkill      int32 //禁止使用技能 1:是 2:非
+	NoItem       int32 //禁止使用道具 1:是 2:非
+	MagicImmune  int32 //是否魔法免疫 1:是 2:非
+	PhisicImmune int32 //物理攻击免疫 1:是 2:非
 
 	Invisible int32 //隐身 1:是 2:否  可以躲避攻击弹道 并且从显示屏上消失
 

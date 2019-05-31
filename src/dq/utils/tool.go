@@ -14,6 +14,10 @@ import (
 	"github.com/360EntSecGroup-Skylar/excelize"
 )
 
+//func Float32Equel(a float32,b float32)bool{
+
+//}
+
 func FindFromSlice(slice []interface{}, k interface{}) interface{} {
 	for _, v := range slice {
 		if reflect.DeepEqual(v, k) {
