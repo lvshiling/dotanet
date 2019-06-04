@@ -91,7 +91,7 @@ type CallUnitInfo struct {
 type SkillBaseData struct {
 	TypeID                int32   //类型ID
 	CastType              int32   // 施法类型:  1:主动技能  2:被动技能
-	CastTargetType        int32   //施法目标类型 1:自身为目标 2:以单位为目标 3:以地面1点为目标
+	CastTargetType        int32   //施法目标类型 1:自身为目标 2:以单位为目标 3:以地面1点为目标 4:攻击时自动释放(攻击特效)
 	CastTargetRange       float32 //施法目标范围 小于等于0表示单体 以施法目标点为中心的范围内的多个目标为 最终弹道目标
 	UnitTargetTeam        int32   //目标单位关系 1:友方  2:敌方 3:友方敌方都行
 	UnitTargetCamp        int32   //目标单位阵营 (1:玩家 2:NPC) 3:玩家NPC都行

@@ -244,6 +244,7 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 	for _, v := range this.Skills {
 		//CastType              int32   // 施法类型:  1:主动技能  2:被动技能
 		//TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
+		//主动技能
 		if v.CastType == 2 && v.TriggerTime == 1 {
 			//检查cd 魔法消耗
 			if v.RemainCDTime <= 0 {
@@ -261,6 +262,25 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 					b.AddTargetBuff(v.TargetBuff, v.Level)
 				}
 			}
+		} else if v.CastType == 1 && v.CastTargetType == 4 && v.AttackAutoActive == 1 {
+			//主动技能 攻击时自动释放的攻击特效
+			if v.RemainCDTime > 0 {
+				continue
+			}
+			if this.SkillEnable != 1 {
+				continue
+			}
+			if b.DestUnit == nil {
+				continue
+			}
+			if b.DestUnit.MagicImmune == 1 {
+				if v.NoCareMagicImmune == 2 {
+					continue
+				}
+			}
+			//目标buff
+			b.AddTargetBuff(v.TargetBuff, v.Level)
+
 		}
 	}
 }
@@ -293,7 +313,7 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 	}
 	//BlinkToTarget
 	if skilldata.BlinkToTarget == 1 {
-		this.Body.BlinkToPos(targetpos)
+		this.Body.BlinkToPos(targetpos, 0)
 	}
 
 	//消耗 CD
@@ -338,8 +358,8 @@ func (this *Unit) UseSkillEnable(data *protomsg.CS_PlayerSkill) bool {
 		return false
 	}
 
-	//被动技能
-	if skilldata.CastType == 2 {
+	//不是主动技能
+	if skilldata.CastType != 1 {
 		return false
 	}
 	//cd中
@@ -366,6 +386,17 @@ func (this *Unit) UseSkillEnable(data *protomsg.CS_PlayerSkill) bool {
 
 //技能行为命令
 func (this *Unit) SkillCmd(data *protomsg.CS_PlayerSkill) {
+
+	//如果是攻击特效技能(比如小黑的冰箭)
+	//检查本单位是否有这个技能
+	skilldata, ok := this.Skills[data.SkillID]
+	if ok == false {
+		return
+	}
+	if skilldata.CastType == 1 && skilldata.CastTargetType == 4 {
+		skilldata.DoActive()
+		return
+	}
 
 	//判断阵营 攻击模式 是否允许本次攻击
 	if this.UseSkillEnable(data) == true {
@@ -1124,10 +1155,26 @@ func (this *Unit) CalPropertyByBuffCR(v1 *Buff) {
 		return
 	}
 	this.Attack += int32(float32(this.Attack) * v1.AttackCR)
+	if this.Attack < 0 {
+		this.Attack = 0
+	}
 	this.MoveSpeed += this.MoveSpeed * float64(v1.MoveSpeedCR)
+	if this.MoveSpeed < 0 {
+		this.MoveSpeed = 0
+	}
 	this.MPRegain += this.MPRegain * v1.MPRegainCR
+	if this.MPRegain < 0 {
+		this.MPRegain = 0
+	}
 	this.PhysicalAmaor += this.PhysicalAmaor * v1.PhysicalAmaorCR
+	if this.PhysicalAmaor < 0 {
+		this.PhysicalAmaor = 0
+	}
 	this.HPRegain += this.HPRegain * v1.HPRegainCR
+	if this.HPRegain < 0 {
+		this.HPRegain = 0
+	}
+
 }
 
 //计算单个buff对属性的影响
@@ -1522,6 +1569,7 @@ func (this *Unit) FreshClientData() {
 		skdata.Cooldown = v.Cooldown
 		skdata.HurtRange = v.HurtRange
 		skdata.ManaCost = v.ManaCost
+		skdata.AttackAutoActive = v.AttackAutoActive
 		this.ClientData.SD = append(this.ClientData.SD, skdata)
 	}
 	//Buffs  map[int32][]*Buff //所有buff 同typeID下可能有多个buff
@@ -1630,6 +1678,7 @@ func (this *Unit) FreshClientDataSub() {
 		skdata.Cooldown = v.Cooldown - lastdata.Cooldown
 		skdata.HurtRange = v.HurtRange - lastdata.HurtRange
 		skdata.ManaCost = v.ManaCost - lastdata.ManaCost
+		skdata.AttackAutoActive = v.AttackAutoActive - lastdata.AttackAutoActive
 		this.ClientDataSub.SD = append(this.ClientDataSub.SD, skdata)
 	}
 

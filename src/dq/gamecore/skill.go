@@ -12,8 +12,18 @@ import (
 type Skill struct {
 	conf.SkillData //技能数据
 
-	Level        int32   //技能当前等级
-	RemainCDTime float32 //技能cd 剩余时间
+	Level            int32   //技能当前等级
+	RemainCDTime     float32 //技能cd 剩余时间
+	AttackAutoActive int32   //攻击时自动释放 是否激活 1:激活 2:否
+}
+
+//激活与不激活
+func (this *Skill) DoActive() {
+	if this.AttackAutoActive == 1 {
+		this.AttackAutoActive = 2
+	} else {
+		this.AttackAutoActive = 1
+	}
 }
 
 //创建子弹
@@ -114,6 +124,7 @@ func NewUnitSkills(dbdata []string, unitskilldata string) map[int32]*Skill {
 		sk.SkillData = *skdata
 		sk.Level = skilllevel
 		sk.RemainCDTime = skillcd
+		sk.AttackAutoActive = 1
 		//sk.RemainCDTime = 10.0
 		if initskill, ok := re[sk.TypeID]; ok {
 			sk.Index = initskill.Index

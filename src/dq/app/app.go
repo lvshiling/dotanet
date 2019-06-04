@@ -168,8 +168,12 @@ func (app *DefaultApp) Run() error {
 
 		pro.Add(1)
 		go func() {
-			mod.Run(closesig)
+			if mod != nil {
+				mod.Run(closesig)
+
+			}
 			pro.Done()
+
 		}()
 	}
 

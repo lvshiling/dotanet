@@ -4,6 +4,7 @@ import (
 	"dq/conf"
 	"dq/log"
 	"dq/protobuf"
+	"dq/utils"
 	"dq/vec2d"
 	"strings"
 )
@@ -87,7 +88,9 @@ func (this *Halo) Update(dt float32) {
 								v.AddBuffFromStr(this.InitBuff, this.Level, this.Parent)
 								//BlinkToTarget
 								if this.BlinkToTarget == 1 {
-									this.Parent.Body.BlinkToPos(v.Body.Position)
+
+									this.Parent.Body.BlinkToPos(v.Body.Position, float64(utils.GetRandomFloat(180)))
+									this.Parent.SetDirection(vec2d.Sub(v.Body.Position, this.Parent.Body.Position))
 								}
 
 								//技能免疫检测

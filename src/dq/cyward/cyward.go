@@ -212,7 +212,7 @@ func (this *Body) SetMoveDir(dir vec2d.Vec2) {
 }
 
 //瞬间移动到目的地
-func (this *Body) BlinkToPos(pos vec2d.Vec2) {
+func (this *Body) BlinkToPos(pos vec2d.Vec2, rotate float64) {
 	//log.Info("BlinkToPos")
 	//清空以前的目的地
 	this.ClearMoveDirAndMoveTarget()
@@ -239,7 +239,14 @@ func (this *Body) BlinkToPos(pos vec2d.Vec2) {
 			mypolygon2 := collisoin.GetMyPolygonBig(this, vec2d.Vec2{X: 0.01, Y: 0.01})
 			//mypolygon3 := collisoin.GetMyPolygon(this)
 			//log.Info("111:%v %v %v ", mypolygon2, this.Position, pos)
-			if this.Core.GetSegmentInsterset(this.Position, collisoin.Position, mypolygon2, &intersectPoint) {
+
+			dir2 := vec2d.Sub(this.Position, collisoin.Position)
+			dir2.Rotate(rotate)
+			dir2.Normalize()
+			dir2.MulToFloat64(10000.0)
+			dir2.Collect(&collisoin.Position)
+
+			if this.Core.GetSegmentInsterset(dir2, collisoin.Position, mypolygon2, &intersectPoint) {
 				//log.Info("222:%v ", mypolygon2)
 				collisoin1 := this.Core.GetTargetPosCollision(this, intersectPoint)
 				//log.Info("333:%v ", mypolygon2)
@@ -253,7 +260,7 @@ func (this *Body) BlinkToPos(pos vec2d.Vec2) {
 					for i := 1.0; i <= count; i++ {
 						//Rotate
 						dir := vec2d.Sub(this.Position, collisoin.Position)
-						dir.Rotate(float64(i * (180.0 / count)))
+						dir.Rotate(float64(i*(180.0/count)) + rotate)
 						dir.Normalize()
 						dir.MulToFloat64(10000.0)
 						dir.Collect(&collisoin.Position)
@@ -274,7 +281,7 @@ func (this *Body) BlinkToPos(pos vec2d.Vec2) {
 						}
 
 						dir2 := vec2d.Sub(this.Position, collisoin.Position)
-						dir2.Rotate(float64(0.0 - i*(180.0/count)))
+						dir2.Rotate(float64(0.0-i*(180.0/count)) + rotate)
 						dir2.Normalize()
 						dir2.MulToFloat64(10000.0)
 						dir2.Collect(&collisoin.Position)
@@ -300,6 +307,8 @@ func (this *Body) BlinkToPos(pos vec2d.Vec2) {
 				calced = append(calced, collisoin)
 				calcing = append(calcing[:0], calcing[1:]...)
 				//log.Info("len====%d  %d", len(calcing), len(calced))
+			} else {
+
 			}
 			//
 			count1++

@@ -367,6 +367,10 @@ func (this *AttackState) Update(dt float64) {
 
 			this.IsDoBullet = true
 		}
+
+		if this.AttackTarget != nil {
+			this.Parent.SetDirection(vec2d.Sub(this.AttackTarget.Body.Position, this.Parent.Body.Position))
+		}
 	}
 
 	if dotime/this.OneAttackTime >= 1 {
@@ -390,9 +394,9 @@ func (this *AttackState) OnStart() {
 	this.IsDone = false
 	this.OneAttackTime = float64(this.Parent.GetOneAttackTime())
 
-	if this.Parent.UnitType == 1 {
-		log.Info(" Attacktime%f   speed:%f", this.OneAttackTime, this.Parent.AttackSpeed)
-	}
+	//	if this.Parent.UnitType == 1 {
+	//		log.Info(" Attacktime%f   speed:%f", this.OneAttackTime, this.Parent.AttackSpeed)
+	//	}
 }
 
 //------------------------------死亡状态-------------------------
