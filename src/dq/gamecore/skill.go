@@ -41,7 +41,7 @@ func (this *Skill) CreateBullet(unit *Unit, data *protomsg.CS_PlayerSkill) *Bull
 		targetunit := unit.InScene.FindUnitByID(data.TargetUnitID)
 		b = NewBullet1(unit, targetunit)
 
-	} else if this.CastTargetType == 3 { //目的点
+	} else if this.CastTargetType == 3 || this.CastTargetType == 5 { //目的点
 		b = NewBullet2(unit, vec2d.Vec2{float64(data.X), float64(data.Y)})
 	}
 
@@ -59,6 +59,14 @@ func (this *Skill) CreateBullet(unit *Unit, data *protomsg.CS_PlayerSkill) *Bull
 	b.SkillLevel = this.Level
 	//召唤信息
 	b.BulletCallUnitInfo = BulletCallUnitInfo{this.CallUnitInfo, this.Level}
+	if this.AwaysHurt == 1 {
+		b.IsDoHurtOnMove = 1
+	}
+	//伤害范围 和目标关系
+	b.SetRange(this.HurtRange)
+	b.UnitTargetTeam = this.UnitTargetTeam
+	//强制移动
+	b.SetForceMove(this.ForceMoveTime, this.ForceMoveSpeedSize, this.ForceMoveLevel)
 
 	return b
 }

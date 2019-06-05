@@ -91,7 +91,7 @@ type CallUnitInfo struct {
 type SkillBaseData struct {
 	TypeID                int32   //类型ID
 	CastType              int32   // 施法类型:  1:主动技能  2:被动技能
-	CastTargetType        int32   //施法目标类型 1:自身为目标 2:以单位为目标 3:以地面1点为目标 4:攻击时自动释放(攻击特效)
+	CastTargetType        int32   //施法目标类型 1:自身为目标 2:以单位为目标 3:以地面1点为目标 4:攻击时自动释放(攻击特效) 5:以地面一点为方向
 	CastTargetRange       float32 //施法目标范围 小于等于0表示单体 以施法目标点为中心的范围内的多个目标为 最终弹道目标
 	UnitTargetTeam        int32   //目标单位关系 1:友方  2:敌方 3:友方敌方都行
 	UnitTargetCamp        int32   //目标单位阵营 (1:玩家 2:NPC) 3:玩家NPC都行
@@ -114,8 +114,8 @@ type SkillBaseData struct {
 	InitHalo              string  //拥有技能技能时的halo (技能携带的halo)
 	MyClearLevel          int32   //释放时 对自己的驱散等级  能驱散 驱散等级 小于等于该值的buff
 	TargetClearLevel      int32   //释放时 对目标的驱散等级  能驱散 驱散等级 小于等于该值的buff
-
-	CallUnitInfo //召唤信息
+	AwaysHurt             int32   //总是造成伤害 1:是 2:否
+	CallUnitInfo                  //召唤信息
 
 	//被动技能相关参数
 	TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
@@ -136,6 +136,11 @@ type SkillData struct {
 	TriggerProbability float32 //触发几率 0.5表示50%
 	TriggerCrit        float32 //触发的暴击 倍数 2.5表示2.5倍攻击 1表示正常攻击
 
+	//强制移动相关
+	ForceMoveTime      float32 //强制移动时间
+	ForceMoveSpeedSize float32 //强制移动速度大小
+	ForceMoveLevel     int32   //强制移动等级
+
 }
 
 //单位配置文件数据
@@ -153,6 +158,11 @@ type SkillFileData struct {
 	//被动技能相关参数
 	TriggerProbability string //触发几率 0.5表示50%
 	TriggerCrit        string //触发的暴击 倍数 2.5表示2.5倍攻击
+
+	//强制移动相关
+	ForceMoveTime      string //强制移动时间
+	ForceMoveSpeedSize string //强制移动速度大小
+	ForceMoveLevel     string //强制移动等级
 }
 
 //把等级相关的字符串 转成具体类型数据
@@ -171,6 +181,11 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 	//被动技能相关参数
 	TriggerProbability := utils.GetFloat32FromString2(this.TriggerProbability)
 	TriggerCrit := utils.GetFloat32FromString2(this.TriggerCrit)
+
+	//强制移动相关
+	ForceMoveTime := utils.GetFloat32FromString2(this.ForceMoveTime)
+	ForceMoveSpeedSize := utils.GetFloat32FromString2(this.ForceMoveSpeedSize)
+	ForceMoveLevel := utils.GetInt32FromString2(this.ForceMoveLevel)
 
 	for i := int32(0); i < this.MaxLevel; i++ {
 		ssd := SkillData{}
@@ -215,6 +230,22 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 			ssd.TriggerCrit = TriggerCrit[len(TriggerCrit)-1]
 		} else {
 			ssd.TriggerCrit = TriggerCrit[i]
+		}
+
+		if int32(len(ForceMoveTime)) <= i {
+			ssd.ForceMoveTime = ForceMoveTime[len(ForceMoveTime)-1]
+		} else {
+			ssd.ForceMoveTime = ForceMoveTime[i]
+		}
+		if int32(len(ForceMoveSpeedSize)) <= i {
+			ssd.ForceMoveSpeedSize = ForceMoveSpeedSize[len(ForceMoveSpeedSize)-1]
+		} else {
+			ssd.ForceMoveSpeedSize = ForceMoveSpeedSize[i]
+		}
+		if int32(len(ForceMoveLevel)) <= i {
+			ssd.ForceMoveLevel = ForceMoveLevel[len(ForceMoveLevel)-1]
+		} else {
+			ssd.ForceMoveLevel = ForceMoveLevel[i]
 		}
 		//log.Info("111-:%v--%d", ssd)
 		*re = append(*re, ssd)

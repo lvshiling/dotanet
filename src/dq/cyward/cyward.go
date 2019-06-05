@@ -100,9 +100,10 @@ type Body struct {
 	CollisoinStopTime float64 //碰撞停止移动剩余时间
 	CurSpeedSize      float64 //当前速度大小
 
-	TargetIndex  int        //计算后的目标位置索引
-	NextPosition vec2d.Vec2 //计算后的下一帧位置
-	Direction    vec2d.Vec2 //速度方向
+	TargetIndex   int        //计算后的目标位置索引
+	NextPosition  vec2d.Vec2 //计算后的下一帧位置
+	Direction     vec2d.Vec2 //速度方向
+	TurnDirection bool       //是否改变朝向
 
 	Tag int //标记
 
@@ -155,6 +156,7 @@ func (this *Body) SetTag(tag int) {
 func (this *Body) Update(dt float64) {
 	//log.Info(" %v---%v", dt, this.CollisoinStopTime)
 	this.CollisoinStopTime -= dt
+	oldDirection := this.Direction
 	if this.CalcNextPosition(dt) {
 
 		//log.Info("nextposition x:%f y:%f", this.NextPosition.X, this.NextPosition.Y)
@@ -191,6 +193,10 @@ func (this *Body) Update(dt float64) {
 			//log.Info("DetourPathlen:%d", len(this.DetourPath))
 		}
 
+	}
+
+	if this.TurnDirection == false {
+		this.Direction = oldDirection
 	}
 
 }
@@ -1312,6 +1318,7 @@ func (this *WardCore) CreateBody(position vec2d.Vec2, r vec2d.Vec2, speedsize fl
 	//CollisoinLevel int32      // 碰撞等级 障碍物石头为2 普通单位为1
 	body.CollisoinLevel = level
 	body.IsCollisoin = true
+	body.TurnDirection = true
 	this.Bodys[body] = body
 
 	//body.BlinkToPos(position)
@@ -1328,6 +1335,7 @@ func (this *WardCore) CreateBodyPolygon(position vec2d.Vec2, points []vec2d.Vec2
 	body.MoveDir = vec2d.Vec2{X: 0, Y: 0}
 	body.CollisoinLevel = level
 	body.IsCollisoin = true
+	body.TurnDirection = true
 	this.Bodys[body] = body
 	return body
 }

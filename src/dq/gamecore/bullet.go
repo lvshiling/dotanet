@@ -53,6 +53,8 @@ type Bullet struct {
 	Position      vec2d.Vector3 //子弹的当前位置
 	StartPosition vec2d.Vector3 //子弹的初始位置
 
+	UnitTargetTeam int32 //目标单位关系 1:友方  2:敌方 3:友方敌方都行
+
 	ModeType string  //子弹模型
 	Speed    float32 //子弹速度
 	MoveType int32   //移动类型 1:瞬间移动  2:直线移动
@@ -77,6 +79,15 @@ type Bullet struct {
 	//召唤信息
 	BulletCallUnitInfo
 
+	//保存计算伤害后的单位
+	HurtUnits      map[int32]*Unit //保存计算伤害后的单位
+	IsDoHurtOnMove int32           //在移动的时候也要计算伤害 1:要计算 2:否
+
+	//对目标造成强制移动相关
+	ForceMoveTime      float32 //强制移动时间
+	ForceMoveSpeedSize float32 //强制移动速度大小
+	ForceMoveLevel     int32   //强制移动等级
+
 	//--------附加攻击特效------
 
 	//发送数据部分
@@ -100,7 +111,7 @@ func NewBullet2(src *Unit, pos vec2d.Vec2) *Bullet {
 	re := &Bullet{}
 	re.SrcUnit = src
 	re.DestUnit = nil
-	re.DestPos = vec2d.Vector3{pos.X, 0, pos.Y}
+	re.DestPos = vec2d.Vector3{pos.X, pos.Y, 0}
 	//唯一ID处理
 	re.ID = GetBulletID()
 
@@ -122,12 +133,36 @@ func (this *Bullet) Init() {
 
 	this.OtherHurt = make([]HurtInfo, 0)
 	this.TargetBuff = make([]BuffInfo, 0)
+	this.HurtUnits = make(map[int32]*Unit)
+	this.IsDoHurtOnMove = 2
+	this.UnitTargetTeam = 2
 
 	this.HurtRange.RangeType = 1 //单体攻击范围
 	this.MoveType = 1            //瞬间移动
 
 	this.Crit = 1
 	this.ClearLevel = 0
+
+	this.SetForceMove(0, 0, 0)
+}
+
+//设置强制移动相关
+func (this *Bullet) SetForceMove(time float32, speedsize float32, level int32) {
+	//对目标造成强制移动相关
+	this.ForceMoveTime = time           //强制移动时间
+	this.ForceMoveSpeedSize = speedsize //强制移动速度大小
+	this.ForceMoveLevel = level         //强制移动等级
+
+}
+
+//设置范围
+func (this *Bullet) SetRange(r float32) {
+	if r <= 0 {
+		this.HurtRange.RangeType = 1 //单体攻击范围
+	} else {
+		this.HurtRange.RangeType = 2 //圆
+		this.HurtRange.Radius = r
+	}
 }
 
 //设置暴击倍数
@@ -267,39 +302,95 @@ func (this *Bullet) DoCallUnit() {
 		}
 	}
 }
+func (this *Bullet) GetPosition2D() vec2d.Vec2 {
+	return vec2d.Vec2{this.Position.X, this.Position.Y}
+}
+
+//对单位造成伤害 只计算一次
+func (this *Bullet) HurtUnit(unit *Unit) {
+	if unit == nil {
+		return
+	}
+	if _, ok := this.HurtUnits[unit.ID]; ok {
+		return
+	}
+
+	this.HurtUnits[unit.ID] = unit
+	//伤害
+	hurtvalue := unit.BeAttacked(this)
+	//驱散buff
+	unit.ClearBuffForTarget(this.SrcUnit, this.ClearLevel)
+
+	//强制移动
+	if this.ForceMoveTime > 0 {
+		if this.HurtRange.RangeType == 1 {
+
+			dir := vec2d.Sub(unit.Body.Position, vec2d.Vec2{this.StartPosition.X, this.StartPosition.Y})
+			dir.Normalize()
+			dir.MulToFloat64(float64(this.ForceMoveSpeedSize))
+			unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel)
+		} else {
+			dir := vec2d.Sub(unit.Body.Position, this.GetPosition2D())
+			dir.Normalize()
+			dir.MulToFloat64(float64(this.ForceMoveSpeedSize))
+			unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel)
+		}
+
+	}
+
+	//buff
+	for _, v := range this.TargetBuff {
+		unit.AddBuffFromStr(v.Buff, v.BuffLevel, this.SrcUnit)
+	}
+
+	if this.SrcUnit == nil || this.SrcUnit.MyPlayer == nil {
+		return
+	}
+	//为了显示 玩家造成的伤害
+	mph := &protomsg.MsgPlayerHurt{HurtUnitID: unit.ID, HurtAllValue: hurtvalue}
+	if this.Crit > 1 {
+		mph.IsCrit = 1
+	}
+	this.SrcUnit.MyPlayer.AddHurtValue(mph)
+}
 
 //计算伤害
 func (this *Bullet) DoHurt() {
 	//获取到受伤害的单位 (狂战斧攻击特效也会影响单位数量 )
-
-	//处理召唤
-	this.DoCallUnit()
 
 	if this.HurtRange.RangeType == 1 {
 		//单体范围
 		if this.DestUnit == nil {
 			return
 		}
-		//伤害
-		hurtvalue := this.DestUnit.BeAttacked(this)
-		//驱散buff
-		this.DestUnit.ClearBuffForTarget(this.SrcUnit, this.ClearLevel)
-
-		//buff
-		for _, v := range this.TargetBuff {
-			this.DestUnit.AddBuffFromStr(v.Buff, v.BuffLevel, this.SrcUnit)
-		}
-
-		if this.SrcUnit == nil || this.SrcUnit.MyPlayer == nil {
+		this.HurtUnit(this.DestUnit)
+	} else if this.HurtRange.RangeType == 2 {
+		if this.SrcUnit == nil || this.SrcUnit.IsDisappear() {
 			return
 		}
-		//为了显示 玩家造成的伤害
-		mph := &protomsg.MsgPlayerHurt{HurtUnitID: this.DestUnit.ID, HurtAllValue: hurtvalue}
-		if this.Crit > 1 {
-			mph.IsCrit = 1
-		}
-		this.SrcUnit.MyPlayer.AddHurtValue(mph)
+		allunit := this.SrcUnit.InScene.FindVisibleUnitsByPos(this.GetPosition2D())
+		for _, v := range allunit {
+			if v.IsDisappear() {
+				continue
+			}
+			//UnitTargetTeam      int32   //目标单位关系 1:友方  2:敌方 3:友方敌方都行
+			if this.UnitTargetTeam == 1 && this.SrcUnit.CheckIsEnemy(v) == true {
+				continue
+			}
+			if this.UnitTargetTeam == 2 && this.SrcUnit.CheckIsEnemy(v) == false {
+				continue
+			}
+			//检测是否在范围内
+			if v.Body == nil || this.HurtRange.Radius <= 0 {
+				continue
+			}
+			dis := float32(vec2d.Distanse(this.GetPosition2D(), v.Body.Position))
+			//log.Info("-----------------dis:%f", dis)
+			if dis <= this.HurtRange.Radius {
+				this.HurtUnit(v)
+			}
 
+		}
 	}
 
 }
@@ -332,6 +423,8 @@ func (this *Bullet) GetAttackOfType(hurttype int32) int32 {
 //计算结果
 func (this *Bullet) CalResult() {
 
+	//处理召唤
+	this.DoCallUnit()
 	//计算伤害
 	this.DoHurt()
 
@@ -348,6 +441,9 @@ func (this *Bullet) Update(dt float32) {
 		this.OnCreate()
 	} else if this.State == 2 {
 		this.DoMove(dt)
+		if this.IsDoHurtOnMove == 1 {
+			this.DoHurt()
+		}
 	} else if this.State == 3 {
 		this.CalResult()
 	} else if this.State == 4 {

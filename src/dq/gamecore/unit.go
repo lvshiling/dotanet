@@ -260,6 +260,8 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 					b.BulletCallUnitInfo = BulletCallUnitInfo{v.CallUnitInfo, v.Level}
 					//目标buff
 					b.AddTargetBuff(v.TargetBuff, v.Level)
+					//强制移动
+					b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel)
 				}
 			}
 		} else if v.CastType == 1 && v.CastTargetType == 4 && v.AttackAutoActive == 1 {
@@ -280,6 +282,8 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 			}
 			//目标buff
 			b.AddTargetBuff(v.TargetBuff, v.Level)
+			//强制移动
+			b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel)
 
 		}
 	}
@@ -403,6 +407,15 @@ func (this *Unit) SkillCmd(data *protomsg.CS_PlayerSkill) {
 		this.SkillCmdData = data
 		//this.AttackCmdDataTarget = at
 		log.Info("---------SkillCmd")
+		//处理指定方向的技能的目标位置
+		if skilldata.CastTargetType == 5 {
+			dir := vec2d.Sub(vec2d.Vec2{float64(data.X), float64(data.Y)}, this.Body.Position)
+			dir.Normalize()
+			dir.MulToFloat64(float64(skilldata.CastRange + this.AddedMagicRange))
+			dir.Collect(&this.Body.Position)
+			this.SkillCmdData.X = float32(dir.X)
+			this.SkillCmdData.Y = float32(dir.Y)
+		}
 	}
 
 }
@@ -700,6 +713,11 @@ type UnitProperty struct {
 
 	Invisible int32 //隐身 1:是 2:否
 
+	//强制移动相关
+	ForceMoveRemainTime float32    //强制移动剩余时间
+	ForceMoveSpeed      vec2d.Vec2 //强制移动速度 包括方向和大小
+	ForceMoveLevel      int32      //强制移动等级
+
 }
 
 type Unit struct {
@@ -816,6 +834,37 @@ func (this *Unit) Init() {
 	//this.TestData()
 }
 
+//设置强制移动相关
+func (this *Unit) SetForceMove(time float32, speed vec2d.Vec2, level int32) {
+
+	//direction.Normalize()
+
+	if this.ForceMoveRemainTime <= 0 {
+		this.ForceMoveRemainTime = time
+		this.ForceMoveSpeed = speed
+		this.ForceMoveLevel = level
+	} else {
+		if level >= this.ForceMoveLevel {
+			this.ForceMoveRemainTime = time
+			this.ForceMoveSpeed = speed
+			this.ForceMoveLevel = level
+		}
+	}
+}
+
+//更新强制移动
+func (this *Unit) UpdateForceMove(dt float64) {
+	if this.ForceMoveRemainTime > 0 {
+		this.ForceMoveRemainTime -= float32(dt)
+		//movedelta := vec2d.Mul(this.ForceMoveSpeed.GetNormalized(),dt)
+		this.Body.SpeedSize = this.ForceMoveSpeed.Length()
+		this.Body.IsCollisoin = false
+		this.Body.TurnDirection = false
+		this.Body.CollisoinLevel = 2
+		this.Body.SetMoveDir(this.ForceMoveSpeed)
+	}
+}
+
 //
 func (this *Unit) EveryTimeDo(dt float64) {
 
@@ -888,12 +937,6 @@ func (this *Unit) Update(dt float64) {
 	//移动核心
 	//移动行为逻辑速度设置
 	this.Body.SpeedSize = this.MoveSpeed
-	//设置碰撞等级
-	if this.IsDeath == 1 {
-		this.Body.IsCollisoin = false
-	} else {
-		this.Body.IsCollisoin = true
-	}
 
 	//AI
 	if this.AI != nil {
@@ -908,6 +951,14 @@ func (this *Unit) Update(dt float64) {
 	//逻辑状态更新
 	this.State.OnTransform()
 	this.State.Update(dt)
+
+	//强制移动更新
+	this.UpdateForceMove(dt)
+
+	//设置碰撞等级
+	if this.IsDeath == 1 {
+		this.Body.IsCollisoin = false
+	}
 }
 
 //AttributeStrength float32//当前力量属性
@@ -1147,6 +1198,11 @@ func (this *Unit) CalControlState() {
 	this.ManaCost = 0        //魔法消耗降低
 	this.MagicCD = 0         //技能CD降低
 	this.Invisible = 2       //隐身   否
+
+	this.Body.IsCollisoin = true
+	this.Body.TurnDirection = true
+	this.Body.CollisoinLevel = 1
+	this.Body.MoveDir = vec2d.Vec2{}
 }
 
 //计算单个buff对属性的影响

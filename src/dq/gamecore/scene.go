@@ -133,6 +133,26 @@ func (this *Scene) FindUnitByID(id int32) *Unit {
 }
 
 //获取可视范围内的所有单位
+func (this *Scene) FindVisibleUnitsByPos(pos vec2d.Vec2) []*Unit {
+
+	units := make([]*Unit, 0)
+
+	zones := utils.GetVisibleZones((pos.X), (pos.Y))
+	//遍历可视区域
+	for _, vzone := range zones {
+		if _, ok := this.ZoneUnits[vzone]; ok {
+			//遍历区域中的单位
+			for _, unit := range this.ZoneUnits[vzone] {
+				units = append(units, unit)
+
+			}
+		}
+	}
+
+	return units
+}
+
+//获取可视范围内的所有单位
 func (this *Scene) FindVisibleUnits(my *Unit) []*Unit {
 
 	units := make([]*Unit, 0)
