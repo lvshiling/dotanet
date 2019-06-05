@@ -68,6 +68,7 @@ func (this *Halo) Update(dt float32) {
 								continue
 							}
 							//UnitTargetTeam      int32   //目标单位关系 1:友方  2:敌方 3:友方敌方都行
+
 							if this.UnitTargetTeam == 1 && this.Parent.CheckIsEnemy(v) == true {
 								continue
 							}
@@ -86,6 +87,7 @@ func (this *Halo) Update(dt float32) {
 
 								//增加buff
 								v.AddBuffFromStr(this.InitBuff, this.Level, this.Parent)
+								//log.Info("-----------------InitBuff:%s", this.InitBuff)
 								//BlinkToTarget
 								if this.BlinkToTarget == 1 {
 

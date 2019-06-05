@@ -103,6 +103,7 @@ func (this *Scene) Init() {
 	//创建英雄
 	hero1 := CreateUnit(this, 1)
 	hero1.AttackMode = 3 //全体攻击模式
+	hero1.SetAI(NewNormalAI(hero1))
 	//设置移动核心body
 	pos1 := vec2d.Vec2{float64(5), float64(5)}
 	r1 := vec2d.Vec2{hero1.CollisionR, hero1.CollisionR}
@@ -112,6 +113,7 @@ func (this *Scene) Init() {
 	//创建英雄2
 	hero2 := CreateUnit(this, 1)
 	hero2.AttackMode = 1 //和平攻击模式
+	hero2.SetAI(NewNormalAI(hero2))
 	//设置移动核心body
 	pos2 := vec2d.Vec2{float64(7), float64(5)}
 	r2 := vec2d.Vec2{hero2.CollisionR, hero2.CollisionR}
@@ -336,6 +338,11 @@ func (this *Scene) AddHalo(halo *Halo) {
 }
 
 //删除光环
+func (this *Scene) RemoveHalo(id int32) {
+	delete(this.Halos, id)
+}
+
+//删除时间结束的光环
 func (this *Scene) DoRemoveHalo() {
 	//ZoneBullets
 	for k, v := range this.Halos {

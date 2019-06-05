@@ -468,6 +468,9 @@ func (this *Unit) CheckIsEnemy(target *Unit) bool {
 		if this.ControlID != target.ControlID {
 			return true
 		} else {
+			if this.ControlID == -1 && this.ID != target.ID {
+				return true
+			}
 			return false
 		}
 
@@ -508,7 +511,10 @@ func (this *Unit) AttackCmd(data *protomsg.CS_PlayerAttack) {
 	if this.CheckAttackEnable2Target(at) == true {
 		this.AttackCmdData = data
 		this.AttackCmdDataTarget = at
-		//log.Info("---------AttackCmd")
+		//		if this.AttackMode == 3 {
+		//			log.Info("---------AttackCmd")
+		//		}
+
 	}
 
 }
@@ -524,6 +530,7 @@ func (this *Unit) CheckAttackCmd() {
 	}
 	///at := this.InScene.FindUnitByID(this.AttackCmdDataTarget.ID)
 	if this.CheckAttackEnable2Target(this.AttackCmdDataTarget) == false {
+		//log.Info("---------tttt:%d", this.AttackCmdDataTarget.ID)
 		this.StopAttackCmd()
 	}
 }
@@ -584,10 +591,12 @@ func (this *Unit) MoveCmd(data *protomsg.CS_PlayerMove) {
 	}
 	//检测是否要中断攻击
 	if this.MoveCmdData == nil {
+		log.Info("---------111111")
 		this.StopAttackCmd()
 		this.MoveCmdData = data
 	} else {
 		if this.MoveCmdData.IsStart == false && data.IsStart == true {
+			log.Info("---------2222")
 			this.StopAttackCmd()
 			this.MoveCmdData = data
 		}
@@ -598,6 +607,7 @@ func (this *Unit) MoveCmd(data *protomsg.CS_PlayerMove) {
 			angle := vec2d.Angle(v1, v2)
 
 			if math.Abs(angle) >= 0.4 {
+
 				this.StopAttackCmd()
 				this.MoveCmdData = data
 				log.Info("---------angle:%f", angle)
@@ -737,6 +747,8 @@ type Unit struct {
 	Skills map[int32]*Skill  //所有技能
 	Buffs  map[int32][]*Buff //所有buff 同typeID下可能有多个buff
 
+	HaloInSkills map[int32][]int32 //来自被动技能的光环
+
 	//每秒钟干事 剩余时间
 	EveryTimeDoRemainTime float32 //每秒钟干事 的剩余时间
 
@@ -748,6 +760,33 @@ type Unit struct {
 func (this *Unit) SetAI(ai UnitAI) {
 	this.AI = ai
 
+}
+func (this *Unit) FreshHaloInSkills() {
+	for _, v := range this.Skills {
+		if len(v.InitHalo) > 0 {
+			//已经有此halo 就要删除之前的
+			if _, ok := this.HaloInSkills[v.TypeID]; ok {
+				for _, v1 := range this.HaloInSkills[v.TypeID] {
+					this.InScene.RemoveHalo(v1)
+				}
+			}
+			//---------------
+			//log.Info("111111111111")
+			halos := utils.GetInt32FromString2(v.InitHalo)
+			re := make([]int32, 0)
+			for _, v1 := range halos {
+				halo := NewHalo(v1, v.Level)
+				halo.SetParent(this)
+				if halo != nil {
+					this.InScene.AddHalo(halo)
+					//log.Info("2222222222222")
+				}
+				re = append(re, halo.ID)
+			}
+			this.HaloInSkills[v.TypeID] = re
+
+		}
+	}
 }
 
 func CreateUnit(scene *Scene, typeid int32) *Unit {
@@ -806,6 +845,9 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 	for _, v := range unitre.Skills {
 		log.Info("-------new skill:%v", v)
 	}
+	//初始化技能被动光环
+	unitre.HaloInSkills = make(map[int32][]int32)
+	unitre.FreshHaloInSkills()
 
 	//初始化
 	unitre.Init()
@@ -1442,6 +1484,13 @@ func (this *Unit) ClearBuffForTarget(target *Unit, clearlevel int32) {
 func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 
 	if castunit == nil || castunit.IsDisappear() || this.IsDisappear() {
+		return nil
+	}
+	//攻击距离类型
+	if buff.ActiveUnitAcpabilities == 1 && this.AttackAcpabilities != 1 {
+		return nil
+	}
+	if buff.ActiveUnitAcpabilities == 2 && this.AttackAcpabilities != 2 {
 		return nil
 	}
 	//BuffType         int32 //buff类型 1:表示良性 2:表示恶性  队友只能驱散我的恶性buff 敌人只能驱散我的良性buff

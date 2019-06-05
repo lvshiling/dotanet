@@ -53,15 +53,22 @@ func (this *NormalAI) Update(dt float64) {
 	this.UpdateEnemies()
 
 	//通过仇恨值攻击目标
-	bigEnemies := this.GetBigEnemies()
-	if bigEnemies != nil {
-		this.AttackTarget = bigEnemies.Target
-		this.CreateAttackCmd(bigEnemies.Target)
-		return
-	}
+	//	bigEnemies := this.GetBigEnemies()
+	//	if bigEnemies != nil {
+	//		this.AttackTarget = bigEnemies.Target
+	//		this.CreateAttackCmd(bigEnemies.Target)
+	//		return
+	//	}
 	//获取最近的敌人
 	nearestEnemies := this.GetNearestEnemies()
 	if nearestEnemies != nil {
+		//		if this.Parent.AttackMode == 3 {
+		//			log.Info("------:%d", nearestEnemies.ID)
+		//		}
+		//		if this.Parent.AttackMode == 1 {
+		//			log.Info("1111------:%d", nearestEnemies.ID)
+		//		}
+
 		this.AttackTarget = nearestEnemies
 		this.CreateAttackCmd(nearestEnemies)
 		return
@@ -69,6 +76,7 @@ func (this *NormalAI) Update(dt float64) {
 
 	//脱离 自动攻击取消追击范围
 	if this.Parent.IsOutAutoAttackTraceOutRange(this.AttackTarget) == true {
+
 		this.Parent.StopAttackCmd()
 	}
 
