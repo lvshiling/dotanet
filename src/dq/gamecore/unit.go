@@ -255,7 +255,19 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 					this.AddBuffFromStr(v.MyBuff, v.Level, this)
 					//暴击
 					b.SetCrit(v.TriggerCrit)
-					//召唤信息
+					b.AddNoCareDodge(v.NoCareDodge)
+					b.AddDoHurtPhysicalAmaorCV(v.PhysicalAmaorCV)
+					//额外伤害
+					if v.HurtValue > 0 {
+						//技能增强
+						if v.HurtType == 2 {
+							hurtvalue := (v.HurtValue + int32(float32(v.HurtValue)*this.MagicScale))
+							b.AddOtherHurt(HurtInfo{HurtType: v.HurtType, HurtValue: hurtvalue})
+						} else {
+							b.AddOtherHurt(HurtInfo{HurtType: v.HurtType, HurtValue: v.HurtValue})
+						}
+					}
+
 					//召唤信息
 					b.BulletCallUnitInfo = BulletCallUnitInfo{v.CallUnitInfo, v.Level}
 					//目标buff
@@ -664,6 +676,33 @@ func (this *Unit) InitHPandMP(hp float32, mp float32) {
 	//log.Info("---hp:%d---mp:%d", this.HP, this.MP)
 }
 
+//--------------单位面板数据-----------
+type UnitBaseProperty struct {
+	//-
+	AttributeStrength     float32 //当前力量属性
+	AttributeIntelligence float32 //当前智力属性
+	AttributeAgility      float32 //当前敏捷属性
+	//------攻击---------
+	AttackSpeed float32 //攻击速度
+	Attack      int32   //攻击力 (基础攻击力+属性影响+buff影响)
+	AttackRange float32 //攻击范围 攻击距离
+	MoveSpeed   float64 //移动速度
+	MagicScale  float32 //技能增强
+	MPRegain    float32 //魔法恢复
+	//------防御---------
+	PhysicalAmaor  float32 //物理护甲(-1)
+	PhysicalResist float32 //物理伤害抵挡
+	MagicAmaor     float32 //魔法抗性(0.25)
+	StatusAmaor    float32 //状态抗性(0)
+	Dodge          float32 //闪避(0)
+	HPRegain       float32 //生命恢复
+
+	NoCareDodge     float32 //无视闪避几率
+	AddedMagicRange float32 //额外施法距离
+	ManaCost        float32 //魔法消耗降低 (0.1)表示降低 10%
+	MagicCD         float32 //技能CD降低 (0.1)表示降低 10%
+}
+
 //------------------单位本体------------------
 type UnitProperty struct {
 	conf.UnitFileData //单位配置文件数据
@@ -688,26 +727,8 @@ type UnitProperty struct {
 	Level         int32 //等级 会影响属性
 	Experience    int32
 	MaxExperience int32
-	//-
-	AttributeStrength     float32 //当前力量属性
-	AttributeIntelligence float32 //当前智力属性
-	AttributeAgility      float32 //当前敏捷属性
-	//------攻击---------
-	AttackSpeed float32 //攻击速度
-	Attack      int32   //攻击力 (基础攻击力+属性影响+buff影响)
-	AttackRange float32 //攻击范围 攻击距离
-	MoveSpeed   float64 //移动速度
-	MagicScale  float32 //技能增强
-	MPRegain    float32 //魔法恢复
-	//------防御---------
-	PhysicalAmaor  float32 //物理护甲(-1)
-	PhysicalResist float32 //物理伤害抵挡
-	MagicAmaor     float32 //魔法抗性(0.25)
-	StatusAmaor    float32 //状态抗性(0)
-	Dodge          float32 //闪避(0)
-	HPRegain       float32 //生命恢复
 
-	NoCareDodge float32 //无视闪避几率
+	UnitBaseProperty
 
 	MoveEnable   int32 //能否移动 (比如 被缠绕不能移动) 1:可以 2:不可以
 	TurnEnable   int32 //能否转向 (比如 被眩晕不能转向) 1:可以 2:不可以
@@ -716,10 +737,6 @@ type UnitProperty struct {
 	ItemEnable   int32 //能否使用主动道具 (比如 被眩晕和禁用道具不能使用主动道具) 1:可以 2:不可以
 	MagicImmune  int32 //是否技能免疫 1：是 2:不是
 	PhisicImmune int32 //是否物理攻击免疫 1:是 2:否
-
-	AddedMagicRange float32 //额外施法距离
-	ManaCost        float32 //魔法消耗降低 (0.1)表示降低 10%
-	MagicCD         float32 //技能CD降低 (0.1)表示降低 10%
 
 	Invisible int32 //隐身 1:是 2:否
 
@@ -1150,23 +1167,22 @@ func (this *Unit) CalMPRegain() {
 }
 
 ////------防御---------
-//	PhysicalAmaor  float32 //物理护甲(-1)
-//	PhysicalResist float32 //物理伤害抵挡
-//	MagicAmaor     float32 //魔法抗性(0.25)
-//	StatusAmaor    float32 //状态抗性(0)
-//	Dodge          float32 //闪避(0)
-//	HPRegain       float32 //生命恢复
+
+func (this *Unit) GetBasePhysicalAmaor() float32 {
+	return this.BasePhysicalAmaor + float32(this.AttributeAgility*conf.AgilityAddPhysicalAmaor)
+}
+
 //计算护甲和物理抵抗
 func (this *Unit) CalPhysicalAmaor() {
 	//基础护甲+敏捷增减的护甲
-	this.PhysicalAmaor = this.BasePhysicalAmaor + float32(this.AttributeAgility*conf.AgilityAddPhysicalAmaor)
+	this.PhysicalAmaor = this.GetBasePhysicalAmaor()
 
 	//装备
 	//技能
 	//buff
 
 	//计算物理伤害抵挡
-	this.PhysicalResist = 0.052 * this.PhysicalAmaor / (0.9 + 0.048*this.PhysicalAmaor)
+	this.PhysicalResist = utils.UnitPhysicalAmaor2PhysicalResist(this.PhysicalAmaor)
 
 	//	if this.UnitType == 1 {
 	//		log.Info("CalPhysicalAmaor %f   %f", this.PhysicalAmaor, this.PhysicalResist)
@@ -1247,62 +1263,118 @@ func (this *Unit) CalControlState() {
 	this.Body.MoveDir = vec2d.Vec2{}
 }
 
+////计算单个buff对属性的影响
+//func (this *Unit) CalPropertyByBuffCR(v1 *Buff) {
+//	if v1 == nil || v1.IsActive == false {
+//		return
+//	}
+//	this.Attack += int32(float32(this.Attack) * v1.AttackCR)
+//	if this.Attack < 0 {
+//		this.Attack = 0
+//	}
+//	this.MoveSpeed += this.MoveSpeed * float64(v1.MoveSpeedCR)
+//	if this.MoveSpeed < 0 {
+//		this.MoveSpeed = 0
+//	}
+//	this.MPRegain += this.MPRegain * v1.MPRegainCR
+//	if this.MPRegain < 0 {
+//		this.MPRegain = 0
+//	}
+//	this.PhysicalAmaor += this.PhysicalAmaor * v1.PhysicalAmaorCR
+//	if this.PhysicalAmaor < 0 {
+//		this.PhysicalAmaor = 0
+//	}
+//	this.HPRegain += this.HPRegain * v1.HPRegainCR
+//	if this.HPRegain < 0 {
+//		this.HPRegain = 0
+//	}
+
+//}
+
+////计算单个buff对属性的影响
+//func (this *Unit) CalPropertyByBuffCV(v1 *Buff) {
+//	if v1 == nil || v1.IsActive == false {
+//		return
+//	}
+
+//	//log.Info("--11--speed:%f", this.AttackSpeed)
+//	this.AttributeStrength += v1.AttributeStrengthCV
+//	this.AttributeIntelligence += v1.AttributeIntelligenceCV
+//	this.AttributeAgility += v1.AttributeAgilityCV
+//	this.AttackSpeed += v1.AttackSpeedCV
+
+//	this.Attack += int32(v1.AttackCV)
+
+//	this.MoveSpeed += float64(v1.MoveSpeedCV)
+//	this.MagicScale = utils.NoLinerAdd(this.MagicScale, v1.MagicScaleCV)
+
+//	this.MPRegain += v1.MPRegainCV
+
+//	this.PhysicalAmaor += v1.PhysicalAmaorCV
+//	this.MagicAmaor = utils.NoLinerAdd(this.MagicAmaor, v1.MagicAmaorCV)
+//	this.Dodge = utils.NoLinerAdd(this.Dodge, v1.DodgeCV)
+
+//	this.HPRegain += v1.HPRegainCV
+//	this.HPRegain += v1.HPRegainCVOfMaxHP * float32(this.MAX_HP)
+
+//	this.NoCareDodge = utils.NoLinerAdd(this.NoCareDodge, v1.NoCareDodgeCV)
+//	this.AddedMagicRange += v1.AddedMagicRangeCV
+//	this.ManaCost = utils.NoLinerAdd(this.ManaCost, v1.ManaCostCV)
+//	this.MagicCD = utils.NoLinerAdd(this.MagicCD, v1.MagicCDCV)
+
+//	if v1.NoMove == 1 {
+//		this.MoveEnable = 2
+//	}
+//	if v1.NoTurn == 1 {
+//		this.TurnEnable = 2
+//	}
+//	if v1.NoAttack == 1 {
+//		this.AttackEnable = 2
+//	}
+//	if v1.NoSkill == 1 {
+//		this.SkillEnable = 2
+//	}
+//	if v1.NoItem == 1 {
+//		this.ItemEnable = 2
+//	}
+//	if v1.MagicImmune == 1 {
+//		this.MagicImmune = 1
+//	}
+//	if v1.Invisible == 1 {
+//		this.Invisible = 1
+//	}
+//	if v1.PhisicImmune == 1 {
+//		this.PhisicImmune = 1
+//	}
+
+//}
+
 //计算单个buff对属性的影响
-func (this *Unit) CalPropertyByBuffCR(v1 *Buff) {
+func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 	if v1 == nil || v1.IsActive == false {
 		return
 	}
-	this.Attack += int32(float32(this.Attack) * v1.AttackCR)
-	if this.Attack < 0 {
-		this.Attack = 0
-	}
-	this.MoveSpeed += this.MoveSpeed * float64(v1.MoveSpeedCR)
-	if this.MoveSpeed < 0 {
-		this.MoveSpeed = 0
-	}
-	this.MPRegain += this.MPRegain * v1.MPRegainCR
-	if this.MPRegain < 0 {
-		this.MPRegain = 0
-	}
-	this.PhysicalAmaor += this.PhysicalAmaor * v1.PhysicalAmaorCR
-	if this.PhysicalAmaor < 0 {
-		this.PhysicalAmaor = 0
-	}
-	this.HPRegain += this.HPRegain * v1.HPRegainCR
-	if this.HPRegain < 0 {
-		this.HPRegain = 0
-	}
+	add.Attack += int32(float32(this.Attack) * v1.AttackCR)
+	add.MoveSpeed += this.MoveSpeed * float64(v1.MoveSpeedCR)
+	add.MPRegain += this.MPRegain * v1.MPRegainCR
+	add.PhysicalAmaor += this.PhysicalAmaor * v1.PhysicalAmaorCR
+	add.HPRegain += this.HPRegain * v1.HPRegainCR
+	add.AttributeStrength += v1.AttributeStrengthCV
+	add.AttributeIntelligence += v1.AttributeIntelligenceCV
+	add.AttributeAgility += v1.AttributeAgilityCV
+	add.AttackSpeed += v1.AttackSpeedCV
+	add.Attack += int32(v1.AttackCV)
+	add.MoveSpeed += float64(v1.MoveSpeedCV)
+	add.MPRegain += v1.MPRegainCV
+	add.PhysicalAmaor += v1.PhysicalAmaorCV
+	add.HPRegain += v1.HPRegainCV
+	add.HPRegain += v1.HPRegainCVOfMaxHP * float32(this.MAX_HP)
+	add.AddedMagicRange += v1.AddedMagicRangeCV
 
-}
-
-//计算单个buff对属性的影响
-func (this *Unit) CalPropertyByBuffCV(v1 *Buff) {
-	if v1 == nil || v1.IsActive == false {
-		return
-	}
-
-	//log.Info("--11--speed:%f", this.AttackSpeed)
-	this.AttributeStrength += v1.AttributeStrengthCV
-	this.AttributeIntelligence += v1.AttributeIntelligenceCV
-	this.AttributeAgility += v1.AttributeAgilityCV
-	this.AttackSpeed += v1.AttackSpeedCV
-
-	this.Attack += int32(v1.AttackCV)
-
-	this.MoveSpeed += float64(v1.MoveSpeedCV)
 	this.MagicScale = utils.NoLinerAdd(this.MagicScale, v1.MagicScaleCV)
-
-	this.MPRegain += v1.MPRegainCV
-
-	this.PhysicalAmaor += v1.PhysicalAmaorCV
 	this.MagicAmaor = utils.NoLinerAdd(this.MagicAmaor, v1.MagicAmaorCV)
 	this.Dodge = utils.NoLinerAdd(this.Dodge, v1.DodgeCV)
-
-	this.HPRegain += v1.HPRegainCV
-	this.HPRegain += v1.HPRegainCVOfMaxHP * float32(this.MAX_HP)
-
 	this.NoCareDodge = utils.NoLinerAdd(this.NoCareDodge, v1.NoCareDodgeCV)
-	this.AddedMagicRange += v1.AddedMagicRangeCV
 	this.ManaCost = utils.NoLinerAdd(this.ManaCost, v1.ManaCostCV)
 	this.MagicCD = utils.NoLinerAdd(this.MagicCD, v1.MagicCDCV)
 
@@ -1331,12 +1403,25 @@ func (this *Unit) CalPropertyByBuffCV(v1 *Buff) {
 		this.PhisicImmune = 1
 	}
 
-	//log.Info("--22--speed:%f", this.AttackSpeed)
+}
+
+func (this *Unit) AddBuffProperty(add *UnitBaseProperty) {
+	this.AttributeStrength += add.AttributeStrength
+	this.AttributeIntelligence += add.AttributeIntelligence
+	this.AttributeAgility += add.AttributeAgility
+	this.AttackSpeed += add.AttackSpeed
+	this.Attack += add.Attack
+	this.MoveSpeed += add.MoveSpeed
+	this.MPRegain += add.MPRegain
+	this.PhysicalAmaor += add.PhysicalAmaor
+	this.HPRegain += add.HPRegain
+	this.AddedMagicRange += add.AddedMagicRange
 }
 
 //计算所有buff对属性的影响
 func (this *Unit) CalPropertyByBuffs() {
-	//技能携带的buf cr
+	add := &UnitBaseProperty{}
+	//技能携带的buf
 	for _, v := range this.Skills {
 		if v.Level <= 0 {
 			continue
@@ -1346,40 +1431,21 @@ func (this *Unit) CalPropertyByBuffs() {
 		for _, v1 := range buffs {
 			buff := NewBuff(v1, v.Level, this)
 			if buff != nil {
-				this.CalPropertyByBuffCR(buff)
+				this.CalPropertyByBuff(buff, add)
 			}
 		}
 	}
-	//buff cr
+	//buff
 	for _, v := range this.Buffs {
 		for _, v1 := range v {
-			this.CalPropertyByBuffCR(v1)
-
+			this.CalPropertyByBuff(v1, add)
 		}
 
 	}
+	this.AddBuffProperty(add)
 
-	//技能携带的buf cv
-	for _, v := range this.Skills {
-		if v.Level <= 0 {
-			continue
-		}
-
-		buffs := utils.GetInt32FromString2(v.InitBuff)
-		for _, v1 := range buffs {
-			buff := NewBuff(v1, v.Level, this)
-			if buff != nil {
-				this.CalPropertyByBuffCV(buff)
-			}
-		}
-	}
-	//buff cv
-	for _, v := range this.Buffs {
-		for _, v1 := range v {
-			this.CalPropertyByBuffCV(v1)
-		}
-
-	}
+	//物理伤害抵挡
+	this.PhysicalResist = utils.UnitPhysicalAmaor2PhysicalResist(this.PhysicalAmaor)
 
 	//攻击速度取值范围
 	if this.AttackSpeed <= 10 {
@@ -1530,7 +1596,7 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 		bfs = append(bfs, buff)
 		this.Buffs[buff.TypeID] = bfs
 		//给单位计算buff效果
-		this.CalPropertyByBuffCV(buff)
+		//this.CalPropertyByBuffCV(buff)
 
 		return buff
 	}
@@ -1576,7 +1642,7 @@ func (this *Unit) BeAttacked(bullet *Bullet) int32 {
 		//普通攻击
 		isDodge := false //闪避
 		//无视闪避
-		if utils.CheckRandom(this.NoCareDodge) {
+		if utils.CheckRandom(bullet.NoCareDodge) {
 			isDodge = false
 		} else {
 			if utils.CheckRandom(this.Dodge) {
@@ -1598,7 +1664,14 @@ func (this *Unit) BeAttacked(bullet *Bullet) int32 {
 	if this.PhisicImmune != 1 {
 		physicAttack = bullet.GetAttackOfType(1) //物理攻击
 		//计算护甲抵消后伤害
-		physicAttack = int32(utils.SetValueGreaterE(float32(physicAttack)*(1-this.PhysicalResist), 0))
+		if bullet.DoHurtPhysicalAmaorCV == 0 {
+			physicAttack = int32(utils.SetValueGreaterE(float32(physicAttack)*(1-this.PhysicalResist), 0))
+		} else {
+			physicalAmaor := this.PhysicalAmaor + bullet.DoHurtPhysicalAmaorCV
+			physicalResist := utils.UnitPhysicalAmaor2PhysicalResist(physicalAmaor)
+			physicAttack = int32(utils.SetValueGreaterE(float32(physicAttack)*(1-physicalResist), 0))
+		}
+
 	}
 	magicAttack := bullet.GetAttackOfType(2) //魔法攻击
 	pureAttack := bullet.GetAttackOfType(3)  //纯粹攻击

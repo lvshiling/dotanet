@@ -73,8 +73,10 @@ type Bullet struct {
 
 	HurtRange BulletRange //范围
 
-	Crit       float32 //暴击倍数
-	ClearLevel int32   //驱散等级
+	Crit                  float32 //暴击倍数
+	ClearLevel            int32   //驱散等级
+	NoCareDodge           float32 //无视闪避几率
+	DoHurtPhysicalAmaorCV float32 //计算伤害时的护甲变化量
 
 	//召唤信息
 	BulletCallUnitInfo
@@ -142,8 +144,28 @@ func (this *Bullet) Init() {
 
 	this.Crit = 1
 	this.ClearLevel = 0
+	this.NoCareDodge = 0
+	this.DoHurtPhysicalAmaorCV = 0
 
 	this.SetForceMove(0, 0, 0)
+}
+
+//增加无视闪避几率
+func (this *Bullet) AddNoCareDodge(val float32) {
+	this.NoCareDodge += val
+}
+
+//设置削弱护甲
+func (this *Bullet) AddDoHurtPhysicalAmaorCV(val int32) {
+	if val == -10000 {
+		if this.DestUnit == nil || this.DestUnit.IsDisappear() {
+			return
+		}
+
+		this.DoHurtPhysicalAmaorCV += 0 - this.DestUnit.GetBasePhysicalAmaor()
+	} else {
+		this.DoHurtPhysicalAmaorCV += float32(val)
+	}
 }
 
 //设置强制移动相关

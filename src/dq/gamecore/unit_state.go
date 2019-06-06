@@ -356,6 +356,7 @@ func (this *AttackState) Update(dt float64) {
 
 			b := NewBullet1(this.Parent, this.AttackTarget)
 			b.SetNormalHurtRatio(1)
+			b.AddNoCareDodge(this.Parent.NoCareDodge)
 			b.SetProjectileMode(this.Parent.ProjectileMode, this.Parent.ProjectileSpeed)
 			this.Parent.CheckTriggerAttackSkill(b)
 			this.Parent.AddBullet(b)

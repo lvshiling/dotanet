@@ -18,6 +18,11 @@ import (
 
 //}
 
+//护甲转物理伤害抵消
+func UnitPhysicalAmaor2PhysicalResist(pa float32) float32 {
+	return 0.052 * pa / (0.9 + 0.048*pa)
+}
+
 func FindFromSlice(slice []interface{}, k interface{}) interface{} {
 	for _, v := range slice {
 		if reflect.DeepEqual(v, k) {

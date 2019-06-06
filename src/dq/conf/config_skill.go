@@ -135,6 +135,8 @@ type SkillData struct {
 	//被动技能相关参数
 	TriggerProbability float32 //触发几率 0.5表示50%
 	TriggerCrit        float32 //触发的暴击 倍数 2.5表示2.5倍攻击 1表示正常攻击
+	NoCareDodge        float32 //无视闪避几率
+	PhysicalAmaorCV    int32   //物理护甲削弱 -7表示本次计算伤害减7点护甲  -10000表示本次计算伤害减光目标的基础护甲
 
 	//强制移动相关
 	ForceMoveTime      float32 //强制移动时间
@@ -158,6 +160,8 @@ type SkillFileData struct {
 	//被动技能相关参数
 	TriggerProbability string //触发几率 0.5表示50%
 	TriggerCrit        string //触发的暴击 倍数 2.5表示2.5倍攻击
+	NoCareDodge        string //无视闪避几率
+	PhysicalAmaorCV    string //物理护甲削弱 -7表示本次计算伤害减7点护甲  -10000表示本次计算伤害减光基础护甲
 
 	//强制移动相关
 	ForceMoveTime      string //强制移动时间
@@ -181,6 +185,8 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 	//被动技能相关参数
 	TriggerProbability := utils.GetFloat32FromString2(this.TriggerProbability)
 	TriggerCrit := utils.GetFloat32FromString2(this.TriggerCrit)
+	NoCareDodge := utils.GetFloat32FromString2(this.NoCareDodge)
+	PhysicalAmaorCV := utils.GetInt32FromString2(this.PhysicalAmaorCV)
 
 	//强制移动相关
 	ForceMoveTime := utils.GetFloat32FromString2(this.ForceMoveTime)
@@ -230,6 +236,16 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 			ssd.TriggerCrit = TriggerCrit[len(TriggerCrit)-1]
 		} else {
 			ssd.TriggerCrit = TriggerCrit[i]
+		}
+		if int32(len(NoCareDodge)) <= i {
+			ssd.NoCareDodge = NoCareDodge[len(NoCareDodge)-1]
+		} else {
+			ssd.NoCareDodge = NoCareDodge[i]
+		}
+		if int32(len(PhysicalAmaorCV)) <= i {
+			ssd.PhysicalAmaorCV = PhysicalAmaorCV[len(PhysicalAmaorCV)-1]
+		} else {
+			ssd.PhysicalAmaorCV = PhysicalAmaorCV[i]
 		}
 
 		if int32(len(ForceMoveTime)) <= i {
