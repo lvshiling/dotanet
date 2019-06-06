@@ -9,6 +9,7 @@ import (
 )
 
 func main() {
+
 	//	count := 20.0
 	//	for i := 1.0; i <= count; i++ {
 	//		dir := vec2d.Vec2{0, 1}

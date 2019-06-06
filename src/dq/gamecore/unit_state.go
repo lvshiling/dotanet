@@ -549,7 +549,7 @@ func (this *ChantState) Update(dt float64) {
 
 }
 func (this *ChantState) OnEnd() {
-	log.Info(" ChantState end%f", utils.GetCurTimeOfSecond())
+	//log.Info(" ChantState end%f", utils.GetCurTimeOfSecond())
 }
 func (this *ChantState) OnStart() {
 	this.Parent.SetAnimotorState(10)

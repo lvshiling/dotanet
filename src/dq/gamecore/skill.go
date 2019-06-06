@@ -66,7 +66,13 @@ func (this *Skill) CreateBullet(unit *Unit, data *protomsg.CS_PlayerSkill) *Bull
 	b.SetRange(this.HurtRange)
 	b.UnitTargetTeam = this.UnitTargetTeam
 	//强制移动
-	b.SetForceMove(this.ForceMoveTime, this.ForceMoveSpeedSize, this.ForceMoveLevel)
+	if this.ForceMoveType == 1 {
+		b.SetForceMove(this.ForceMoveTime, this.ForceMoveSpeedSize, this.ForceMoveLevel, this.ForceMoveBuff)
+	}
+	//加血
+	if this.AddHPTarget == 2 {
+		b.SetAddHP(this.AddHPType, this.AddHPValue)
+	}
 
 	return b
 }

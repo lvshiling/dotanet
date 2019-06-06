@@ -120,6 +120,13 @@ type SkillBaseData struct {
 	//被动技能相关参数
 	TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
 
+	ForceMoveType int32  //强制移动类型 0:表示不强制移动 1:表示用子弹向后推开目标(小黑) 2:强制移动自己到指定位置
+	ForceMoveBuff string //强制移动时的buff 随着移动结束消失
+
+	//加血相关
+	AddHPType   int32 //加血类型 0:不加 1:以AddHPValue为固定值 2:以AddHPValue为时间 加单位在此时间内受到的伤害值
+	AddHPTarget int32 //加血的目标 1:表示自己 2:表示目标
+
 }
 
 //技能数据 (会根据等级变化的数据)
@@ -142,6 +149,8 @@ type SkillData struct {
 	ForceMoveTime      float32 //强制移动时间
 	ForceMoveSpeedSize float32 //强制移动速度大小
 	ForceMoveLevel     int32   //强制移动等级
+
+	AddHPValue float32 //加血值
 
 }
 
@@ -167,6 +176,8 @@ type SkillFileData struct {
 	ForceMoveTime      string //强制移动时间
 	ForceMoveSpeedSize string //强制移动速度大小
 	ForceMoveLevel     string //强制移动等级
+
+	AddHPValue string //加血值
 }
 
 //把等级相关的字符串 转成具体类型数据
@@ -192,6 +203,8 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 	ForceMoveTime := utils.GetFloat32FromString2(this.ForceMoveTime)
 	ForceMoveSpeedSize := utils.GetFloat32FromString2(this.ForceMoveSpeedSize)
 	ForceMoveLevel := utils.GetInt32FromString2(this.ForceMoveLevel)
+
+	AddHPValue := utils.GetFloat32FromString2(this.AddHPValue)
 
 	for i := int32(0); i < this.MaxLevel; i++ {
 		ssd := SkillData{}
@@ -263,6 +276,13 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 		} else {
 			ssd.ForceMoveLevel = ForceMoveLevel[i]
 		}
+
+		if int32(len(AddHPValue)) <= i {
+			ssd.AddHPValue = AddHPValue[len(AddHPValue)-1]
+		} else {
+			ssd.AddHPValue = AddHPValue[i]
+		}
+
 		//log.Info("111-:%v--%d", ssd)
 		*re = append(*re, ssd)
 

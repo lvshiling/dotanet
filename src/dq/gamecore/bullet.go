@@ -89,6 +89,11 @@ type Bullet struct {
 	ForceMoveTime      float32 //强制移动时间
 	ForceMoveSpeedSize float32 //强制移动速度大小
 	ForceMoveLevel     int32   //强制移动等级
+	ForceMoveBuff      string  //强制移动时的buff 随着移动结束消失
+
+	//加血相关
+	AddHPType  int32   //加血类型 0:不加 1:以AddHPValue为固定值 2:以AddHPValue为时间 加单位在此时间内受到的伤害值
+	AddHPValue float32 //加血值
 
 	//--------附加攻击特效------
 
@@ -147,7 +152,16 @@ func (this *Bullet) Init() {
 	this.NoCareDodge = 0
 	this.DoHurtPhysicalAmaorCV = 0
 
-	this.SetForceMove(0, 0, 0)
+	this.AddHPType = 0
+	this.AddHPValue = 0
+
+	this.SetForceMove(0, 0, 0, "")
+}
+
+//设置加血信息
+func (this *Bullet) SetAddHP(hptype int32, val float32) {
+	this.AddHPType = hptype
+	this.AddHPValue = val
 }
 
 //增加无视闪避几率
@@ -169,11 +183,12 @@ func (this *Bullet) AddDoHurtPhysicalAmaorCV(val int32) {
 }
 
 //设置强制移动相关
-func (this *Bullet) SetForceMove(time float32, speedsize float32, level int32) {
+func (this *Bullet) SetForceMove(time float32, speedsize float32, level int32, buff string) {
 	//对目标造成强制移动相关
 	this.ForceMoveTime = time           //强制移动时间
 	this.ForceMoveSpeedSize = speedsize //强制移动速度大小
 	this.ForceMoveLevel = level         //强制移动等级
+	this.ForceMoveBuff = buff
 
 }
 
@@ -338,6 +353,12 @@ func (this *Bullet) HurtUnit(unit *Unit) {
 	}
 
 	this.HurtUnits[unit.ID] = unit
+
+	//对目标加血
+	if this.AddHPType != 0 {
+		unit.DoAddHP(this.AddHPType, this.AddHPValue)
+	}
+
 	//伤害
 	hurtvalue := unit.BeAttacked(this)
 	//驱散buff
@@ -357,7 +378,14 @@ func (this *Bullet) HurtUnit(unit *Unit) {
 			dir.MulToFloat64(float64(this.ForceMoveSpeedSize))
 			unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel)
 		}
-
+		//更改buff时间
+		if len(this.ForceMoveBuff) > 0 {
+			buffs := unit.AddBuffFromStr(this.ForceMoveBuff, this.SkillLevel, this.SrcUnit)
+			for _, v := range buffs {
+				v.RemainTime = this.ForceMoveTime
+				v.Time = this.ForceMoveTime
+			}
+		}
 	}
 
 	//buff

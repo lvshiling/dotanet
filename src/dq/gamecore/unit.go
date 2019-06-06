@@ -273,7 +273,10 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 					//目标buff
 					b.AddTargetBuff(v.TargetBuff, v.Level)
 					//强制移动
-					b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel)
+					if v.ForceMoveType == 1 {
+						b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel, v.ForceMoveBuff)
+					}
+
 				}
 			}
 		} else if v.CastType == 1 && v.CastTargetType == 4 && v.AttackAutoActive == 1 {
@@ -295,7 +298,9 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 			//目标buff
 			b.AddTargetBuff(v.TargetBuff, v.Level)
 			//强制移动
-			b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel)
+			if v.ForceMoveType == 1 {
+				b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel, v.ForceMoveBuff)
+			}
 
 		}
 	}
@@ -330,6 +335,26 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 	//BlinkToTarget
 	if skilldata.BlinkToTarget == 1 {
 		this.Body.BlinkToPos(targetpos, 0)
+	}
+	//自己强制移动到指定位置
+	if skilldata.ForceMoveType == 2 { //自己强制移动到指定位置
+		dir := vec2d.Sub(targetpos, this.Body.Position)
+		time := float32(dir.Length()) / skilldata.ForceMoveSpeedSize
+		dir.Normalize()
+		dir.MulToFloat64(float64(skilldata.ForceMoveSpeedSize))
+		this.SetForceMove(time, dir, skilldata.ForceMoveLevel)
+		//更改buff时间
+		if len(skilldata.ForceMoveBuff) > 0 {
+			buffs := this.AddBuffFromStr(skilldata.ForceMoveBuff, skilldata.Level, this)
+			for _, v := range buffs {
+				v.RemainTime = time
+				v.Time = time
+			}
+		}
+	}
+	//加血
+	if skilldata.AddHPTarget == 1 {
+		this.DoAddHP(skilldata.AddHPType, skilldata.AddHPValue)
 	}
 
 	//消耗 CD
@@ -747,6 +772,49 @@ type UnitProperty struct {
 
 }
 
+//时间点的伤害
+type TimeAndHurt struct {
+	Time      float64
+	HurtValue int32
+}
+
+//存储时间点受到的伤害
+func (this *Unit) SaveTimeAndHurt(hurt int32) {
+	tah := TimeAndHurt{}
+	tah.Time = utils.GetCurTimeOfSecond()
+	tah.HurtValue = hurt
+	this.TimeHurts = append(this.TimeHurts, tah)
+}
+
+//自动删除8秒前 存储的时间点受到的伤害
+func (this *Unit) AutoRemoveTimeAndHurt() {
+	curtime := utils.GetCurTimeOfSecond()
+	deleteindex := -1 //删除的索引
+	for k, v := range this.TimeHurts {
+		if curtime-v.Time > 8 {
+			deleteindex = k
+		} else {
+			break
+		}
+	}
+	if deleteindex >= 0 {
+		this.TimeHurts = this.TimeHurts[deleteindex+1:]
+	}
+
+}
+
+//获取time之内受到的伤害
+func (this *Unit) GetTimeAndHurt(t float32) int32 {
+	re := int32(0)
+	curtime := utils.GetCurTimeOfSecond()
+	for _, v := range this.TimeHurts {
+		if curtime-v.Time < float64(t) {
+			re += v.HurtValue
+		}
+	}
+	return re
+}
+
 type Unit struct {
 	UnitProperty
 	UnitCmd
@@ -765,6 +833,9 @@ type Unit struct {
 	Buffs  map[int32][]*Buff //所有buff 同typeID下可能有多个buff
 
 	HaloInSkills map[int32][]int32 //来自被动技能的光环
+
+	//记录时间点的伤害
+	TimeHurts []TimeAndHurt
 
 	//每秒钟干事 剩余时间
 	EveryTimeDoRemainTime float32 //每秒钟干事 的剩余时间
@@ -891,6 +962,7 @@ func (this *Unit) Init() {
 	utils.GetFloat32FromString(this.ProjectileEndPos, &this.ProjectileEndPosDis, &this.ProjectileEndPosHeight)
 
 	//this.TestData()
+	this.TimeHurts = make([]TimeAndHurt, 0)
 }
 
 //设置强制移动相关
@@ -930,6 +1002,8 @@ func (this *Unit) EveryTimeDo(dt float64) {
 	if this.IsDisappear() {
 		return
 	}
+
+	this.AutoRemoveTimeAndHurt()
 
 	this.EveryTimeDoRemainTime -= float32(dt)
 	if this.EveryTimeDoRemainTime <= 0 {
@@ -1035,6 +1109,16 @@ func (this *Unit) CalAttribute() {
 	//装备
 	//技能
 
+}
+
+//加血
+func (this *Unit) DoAddHP(addType int32, addval float32) int32 {
+	if addType == 1 {
+		return this.ChangeHP(int32(addval))
+	} else if addType == 2 {
+		return this.ChangeHP(0 - this.GetTimeAndHurt(addval))
+	}
+	return 0
 }
 
 //改变血量
@@ -1683,6 +1767,8 @@ func (this *Unit) BeAttacked(bullet *Bullet) int32 {
 	//-----扣血--
 	hurtvalue := -(physicAttack + magicAttack + pureAttack)
 	this.ChangeHP(hurtvalue)
+
+	this.SaveTimeAndHurt(hurtvalue)
 	//log.Info("---hurtvalue---%d   %f", hurtvalue, this.PhysicalResist)
 	return hurtvalue
 }
