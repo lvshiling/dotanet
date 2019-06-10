@@ -67,12 +67,18 @@ func (this *Halo) Update(dt float32) {
 							if v.IsDisappear() {
 								continue
 							}
-							//UnitTargetTeam      int32   //目标单位关系 1:友方  2:敌方 3:友方敌方都行
+							//UnitTargetTeam      int32   //目标单位关系 1:友方  2:敌方 3:友方敌方都行 5:自己 10:除自己外的其他
 
 							if this.UnitTargetTeam == 1 && this.Parent.CheckIsEnemy(v) == true {
 								continue
 							}
 							if this.UnitTargetTeam == 2 && this.Parent.CheckIsEnemy(v) == false {
+								continue
+							}
+							if this.UnitTargetTeam == 5 && this.Parent != v {
+								continue
+							}
+							if this.UnitTargetTeam == 10 && this.Parent == v {
 								continue
 							}
 							//检测是否在范围内
@@ -179,6 +185,8 @@ func (this *Halo) SetParent(parent *Unit) {
 
 //创建buf
 func NewHalo(typeid int32, level int32) *Halo {
+
+	log.Info("---new halo:%d   %d", typeid, level)
 
 	halodata := conf.GetHaloData(typeid, level)
 	if halodata == nil {

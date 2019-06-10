@@ -81,7 +81,7 @@ func GetHaloData(typeid int32, level int32) *HaloData {
 type HaloBaseData struct {
 	TypeID int32 //类型ID
 
-	UnitTargetTeam      int32   //目标单位关系 1:友方  2:敌方 3:友方敌方都行
+	UnitTargetTeam      int32   //目标单位关系 1:友方  2:敌方 3:友方敌方都行 5:仅自己 10:除自己外的友方敌方都行
 	NoCareMagicImmune   int32   //无视技能免疫 (1:无视技能免疫 2:非)
 	BulletModeType      string  //子弹模型
 	BulletSpeed         float32 //子弹速度

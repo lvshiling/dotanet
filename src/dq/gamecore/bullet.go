@@ -37,6 +37,10 @@ type BuffInfo struct {
 	Buff      string //buff
 	BuffLevel int32  //buff等级
 }
+type HaloInfo struct {
+	Halo      string //buff
+	HaloLevel int32  //buff等级
+}
 
 type BulletCallUnitInfo struct {
 	conf.CallUnitInfo
@@ -67,6 +71,7 @@ type Bullet struct {
 	SkillID    int32      //技能ID  如果技能ID为 -1表示普通攻击  技能不会miss
 	SkillLevel int32      //技能等级
 	TargetBuff []BuffInfo //目标buff
+	TargetHalo []HaloInfo //目标halo
 
 	NormalHurt HurtInfo   //攻击伤害(以英雄攻击力计算伤害) 值为计算暴击后的值
 	OtherHurt  []HurtInfo //其他伤害也就是额外伤害
@@ -106,6 +111,9 @@ func NewBullet1(src *Unit, dest *Unit) *Bullet {
 	re := &Bullet{}
 	re.SrcUnit = src
 	re.DestUnit = dest
+	if dest != nil {
+		re.DestPos = dest.GetProjectileEndPos()
+	}
 
 	//唯一ID处理
 	re.ID = GetBulletID()
@@ -140,6 +148,7 @@ func (this *Bullet) Init() {
 
 	this.OtherHurt = make([]HurtInfo, 0)
 	this.TargetBuff = make([]BuffInfo, 0)
+	this.TargetHalo = make([]HaloInfo, 0)
 	this.HurtUnits = make(map[int32]*Unit)
 	this.IsDoHurtOnMove = 2
 	this.UnitTargetTeam = 2
@@ -247,9 +256,9 @@ func (this *Bullet) OnCreate() {
 		//开始位置
 		this.StartPosition = this.Position.Clone()
 
-		if this.DestUnit != nil {
-			this.DestPos = this.DestUnit.GetProjectileEndPos()
-		}
+		//		if this.DestUnit != nil {
+		//			this.DestPos = this.DestUnit.GetProjectileEndPos()
+		//		}
 
 	}
 
@@ -293,6 +302,12 @@ func (this *Bullet) DoMove(dt float32) {
 //增加目标buff
 func (this *Bullet) AddTargetBuff(buff string, level int32) {
 	this.TargetBuff = append(this.TargetBuff, BuffInfo{buff, level})
+}
+
+//增加目标buff
+func (this *Bullet) AddTargetHalo(buff string, level int32) {
+	this.TargetHalo = append(this.TargetHalo, HaloInfo{buff, level})
+	log.Info("---AddTargetHalo:%s   %d", buff, level)
 }
 
 //处理召唤
@@ -345,12 +360,14 @@ func (this *Bullet) GetPosition2D() vec2d.Vec2 {
 
 //对单位造成伤害 只计算一次
 func (this *Bullet) HurtUnit(unit *Unit) {
+	//log.Info("222222222")
 	if unit == nil {
 		return
 	}
 	if _, ok := this.HurtUnits[unit.ID]; ok {
 		return
 	}
+	//log.Info("33333333")
 
 	this.HurtUnits[unit.ID] = unit
 
@@ -360,9 +377,7 @@ func (this *Bullet) HurtUnit(unit *Unit) {
 	}
 
 	//伤害
-	hurtvalue := unit.BeAttacked(this)
-	//驱散buff
-	unit.ClearBuffForTarget(this.SrcUnit, this.ClearLevel)
+	ismiss, hurtvalue := unit.BeAttacked(this)
 
 	//强制移动
 	if this.ForceMoveTime > 0 {
@@ -387,28 +402,67 @@ func (this *Bullet) HurtUnit(unit *Unit) {
 			}
 		}
 	}
-
-	//buff
-	for _, v := range this.TargetBuff {
-		unit.AddBuffFromStr(v.Buff, v.BuffLevel, this.SrcUnit)
+	//	//光环
+	//	if len(this.TargetHalo) > 0 {
+	//		if this.DestUnit != nil {
+	//			if this.DestUnit.IsDisappear() == false {
+	//				for _, v := range this.TargetHalo {
+	//					this.DestUnit.AddHaloFromStr(v.Halo, v.HaloLevel, &vec2d.Vec2{this.DestPos.X, this.DestPos.Y})
+	//				}
+	//			}
+	//		} else {
+	//			if this.SrcUnit != nil && this.SrcUnit.IsDisappear() == false {
+	//				for _, v := range this.TargetHalo {
+	//					this.SrcUnit.AddHaloFromStr(v.Halo, v.HaloLevel, &vec2d.Vec2{this.DestPos.X, this.DestPos.Y})
+	//				}
+	//			}
+	//		}
+	//	}
+	//小于0 表示被miss
+	if ismiss == false {
+		//驱散buff
+		unit.ClearBuffForTarget(this.SrcUnit, this.ClearLevel)
+		//buff
+		for _, v := range this.TargetBuff {
+			unit.AddBuffFromStr(v.Buff, v.BuffLevel, this.SrcUnit)
+		}
+		if this.SrcUnit == nil || this.SrcUnit.MyPlayer == nil {
+			return
+		}
+		//为了显示 玩家造成的伤害
+		mph := &protomsg.MsgPlayerHurt{HurtUnitID: unit.ID, HurtAllValue: hurtvalue}
+		if this.Crit > 1 {
+			mph.IsCrit = 1
+		}
+		this.SrcUnit.MyPlayer.AddHurtValue(mph)
 	}
 
-	if this.SrcUnit == nil || this.SrcUnit.MyPlayer == nil {
-		return
+}
+func (this *Bullet) DoHalo() {
+	//光环
+	if len(this.TargetHalo) > 0 {
+		if this.DestUnit != nil {
+			if this.DestUnit.IsDisappear() == false {
+				for _, v := range this.TargetHalo {
+					this.DestUnit.AddHaloFromStr(v.Halo, v.HaloLevel, &vec2d.Vec2{this.DestPos.X, this.DestPos.Y})
+				}
+			}
+		} else {
+			if this.SrcUnit != nil && this.SrcUnit.IsDisappear() == false {
+				for _, v := range this.TargetHalo {
+					this.SrcUnit.AddHaloFromStr(v.Halo, v.HaloLevel, &vec2d.Vec2{this.DestPos.X, this.DestPos.Y})
+				}
+			}
+		}
 	}
-	//为了显示 玩家造成的伤害
-	mph := &protomsg.MsgPlayerHurt{HurtUnitID: unit.ID, HurtAllValue: hurtvalue}
-	if this.Crit > 1 {
-		mph.IsCrit = 1
-	}
-	this.SrcUnit.MyPlayer.AddHurtValue(mph)
 }
 
 //计算伤害
 func (this *Bullet) DoHurt() {
 	//获取到受伤害的单位 (狂战斧攻击特效也会影响单位数量 )
-
+	//log.Info("111111111111")
 	if this.HurtRange.RangeType == 1 {
+		this.DoHalo()
 		//单体范围
 		if this.DestUnit == nil {
 			return
@@ -418,6 +472,7 @@ func (this *Bullet) DoHurt() {
 		if this.SrcUnit == nil || this.SrcUnit.IsDisappear() {
 			return
 		}
+		this.DoHalo()
 		allunit := this.SrcUnit.InScene.FindVisibleUnitsByPos(this.GetPosition2D())
 		for _, v := range allunit {
 			if v.IsDisappear() {

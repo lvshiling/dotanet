@@ -110,6 +110,7 @@ type SkillBaseData struct {
 	BlinkToTarget         int32   //是否瞬间移动到目的地 1:是 2:否
 	MyBuff                string  //释放时 对自己造成的buff 比如 1,2 表示对目标造成typeid为 1和2的buff
 	InitBuff              string  //拥有技能技能时的buff (技能携带的buff)
+	TargetHalo            string  //释放时 对目标造成的halo
 	MyHalo                string  //释放时 对自己造成的halo 比如 1,2 表示对目标造成typeid为 1和2的halo
 	InitHalo              string  //拥有技能技能时的halo (技能携带的halo)
 	MyClearLevel          int32   //释放时 对自己的驱散等级  能驱散 驱散等级 小于等于该值的buff

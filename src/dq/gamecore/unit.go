@@ -324,13 +324,15 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 	this.AddHaloFromStr(skilldata.MyHalo, skilldata.Level, nil)
 
 	//创建子弹
-	b := skilldata.CreateBullet(this, data)
-	if b != nil {
-		b.ClearLevel = skilldata.TargetClearLevel //设置驱散等级
-		if skilldata.TriggerAttackEffect == 1 {
-			this.CheckTriggerAttackSkill(b)
+	bullets := skilldata.CreateBullet(this, data)
+	if len(bullets) > 0 {
+		for _, v := range bullets {
+			if skilldata.TriggerAttackEffect == 1 {
+				this.CheckTriggerAttackSkill(v)
+			}
+			this.AddBullet(v)
 		}
-		this.AddBullet(b)
+
 	}
 	//BlinkToTarget
 	if skilldata.BlinkToTarget == 1 {
@@ -755,13 +757,15 @@ type UnitProperty struct {
 
 	UnitBaseProperty
 
-	MoveEnable   int32 //能否移动 (比如 被缠绕不能移动) 1:可以 2:不可以
-	TurnEnable   int32 //能否转向 (比如 被眩晕不能转向) 1:可以 2:不可以
-	AttackEnable int32 //能否攻击 (比如 被眩晕和缴械不能攻击) 1:可以 2:不可以
-	SkillEnable  int32 //能否使用主动技能 (比如 被眩晕和沉默不能使用主动技能) 1:可以 2:不可以
-	ItemEnable   int32 //能否使用主动道具 (比如 被眩晕和禁用道具不能使用主动道具) 1:可以 2:不可以
-	MagicImmune  int32 //是否技能免疫 1：是 2:不是
-	PhisicImmune int32 //是否物理攻击免疫 1:是 2:否
+	MoveEnable    int32 //能否移动 (比如 被缠绕不能移动) 1:可以 2:不可以
+	TurnEnable    int32 //能否转向 (比如 被眩晕不能转向) 1:可以 2:不可以
+	AttackEnable  int32 //能否攻击 (比如 被眩晕和缴械不能攻击) 1:可以 2:不可以
+	SkillEnable   int32 //能否使用主动技能 (比如 被眩晕和沉默不能使用主动技能) 1:可以 2:不可以
+	ItemEnable    int32 //能否使用主动道具 (比如 被眩晕和禁用道具不能使用主动道具) 1:可以 2:不可以
+	MagicImmune   int32 //是否技能免疫 1：是 2:不是
+	PhisicImmune  int32 //是否物理攻击免疫 1:是 2:否
+	MagicCDStop   int32 //技能冷却停止 1:是 2:非
+	AnimotorPause int32 //是否暂停动画 1:是 2:非
 
 	Invisible int32 //隐身 1:是 2:否
 
@@ -1044,9 +1048,12 @@ func (this *Unit) Update(dt float64) {
 	//设置是否有碰撞  设置移动速度 和逻辑状态
 
 	//技能更新
-	for _, v := range this.Skills {
-		v.Update(dt)
+	if this.MagicCDStop != 1 {
+		for _, v := range this.Skills {
+			v.Update(dt)
+		}
 	}
+
 	//更新buff
 	for k, v := range this.Buffs {
 		for k1, v1 := range v {
@@ -1335,6 +1342,8 @@ func (this *Unit) CalControlState() {
 	this.ItemEnable = 1   //能否使用主动道具 (比如 被眩晕和禁用道具不能使用主动道具) 1:可以 2:不可以
 	this.MagicImmune = 2
 	this.PhisicImmune = 2
+	this.MagicCDStop = 2
+	this.AnimotorPause = 2
 
 	this.AddedMagicRange = 0 //额外施法距离
 	this.ManaCost = 0        //魔法消耗降低
@@ -1438,7 +1447,9 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 	if v1 == nil || v1.IsActive == false {
 		return
 	}
-	add.Attack += int32(float32(this.Attack) * v1.AttackCR)
+
+	//add.Attack += int32(float32(this.Attack) * v1.AttackSpeedCR)
+	add.AttackSpeed += float32(this.AttackSpeed) * v1.AttackSpeedCR
 	add.MoveSpeed += this.MoveSpeed * float64(v1.MoveSpeedCR)
 	add.MPRegain += this.MPRegain * v1.MPRegainCR
 	add.PhysicalAmaor += this.PhysicalAmaor * v1.PhysicalAmaorCR
@@ -1485,6 +1496,15 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 	}
 	if v1.PhisicImmune == 1 {
 		this.PhisicImmune = 1
+	}
+	if v1.MagicCDStop == 1 {
+		this.MagicCDStop = 1
+	}
+	if v1.AnimotorPause == 1 {
+		this.AnimotorPause = 1
+	}
+	if v1.IsCollisoin == 2 {
+		this.Body.IsCollisoin = false
 	}
 
 }
@@ -1720,7 +1740,7 @@ func (this *Unit) AddHaloFromStr(halosstr string, level int32, pos *vec2d.Vec2) 
 }
 
 //受到来自子弹的伤害
-func (this *Unit) BeAttacked(bullet *Bullet) int32 {
+func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32) {
 	//计算闪避
 	if bullet.SkillID == -1 {
 		//普通攻击
@@ -1740,7 +1760,7 @@ func (this *Unit) BeAttacked(bullet *Bullet) int32 {
 		if isDodge {
 			//本单位显示miss
 			this.ShowMiss(true)
-			return 0
+			return true, 0
 		}
 	}
 	//计算伤害
@@ -1770,7 +1790,7 @@ func (this *Unit) BeAttacked(bullet *Bullet) int32 {
 
 	this.SaveTimeAndHurt(hurtvalue)
 	//log.Info("---hurtvalue---%d   %f", hurtvalue, this.PhysicalResist)
-	return hurtvalue
+	return false, hurtvalue
 }
 
 //创建子弹
@@ -1814,6 +1834,9 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.IsDeath = this.IsDeath
 	this.ClientData.Invisible = this.Invisible
 	this.ClientData.Camp = this.Camp
+	this.ClientData.AnimotorPause = this.AnimotorPause
+	this.ClientData.SkillEnable = this.SkillEnable
+	this.ClientData.ItemEnable = this.ItemEnable
 
 	//技能
 	this.ClientData.SD = make([]*protomsg.SkillDatas, 0)
@@ -1914,6 +1937,9 @@ func (this *Unit) FreshClientDataSub() {
 	this.ClientDataSub.IsDeath = this.IsDeath - this.ClientData.IsDeath
 	this.ClientDataSub.Invisible = this.Invisible - this.ClientData.Invisible
 	this.ClientDataSub.Camp = this.Camp - this.ClientData.Camp
+	this.ClientDataSub.AnimotorPause = this.AnimotorPause - this.ClientData.AnimotorPause
+	this.ClientDataSub.SkillEnable = this.SkillEnable - this.ClientData.SkillEnable
+	this.ClientDataSub.ItemEnable = this.ItemEnable - this.ClientData.ItemEnable
 
 	//技能
 	this.ClientDataSub.SD = make([]*protomsg.SkillDatas, 0)

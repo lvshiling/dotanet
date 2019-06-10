@@ -88,13 +88,16 @@ type BuffBaseData struct {
 	ActiveUnitAcpabilities   int32 //生效的单位攻击类型(1:近程攻击 2:远程攻击 3:都生效)
 	NoCareMagicImmuneAddBuff int32 //添加此buff时 是否无视单位魔法免疫 1:是 2:非
 
-	NoMove       int32 //禁止移动 1:是 2:非
-	NoTurn       int32 //禁止转向 1:是 2:非
-	NoAttack     int32 //禁止攻击 1:是 2:非
-	NoSkill      int32 //禁止使用技能 1:是 2:非
-	NoItem       int32 //禁止使用道具 1:是 2:非
-	MagicImmune  int32 //是否魔法免疫 1:是 2:非
-	PhisicImmune int32 //物理攻击免疫 1:是 2:非
+	NoMove        int32 //禁止移动 1:是 2:非
+	NoTurn        int32 //禁止转向 1:是 2:非
+	NoAttack      int32 //禁止攻击 1:是 2:非
+	NoSkill       int32 //禁止使用技能 1:是 2:非
+	NoItem        int32 //禁止使用道具 1:是 2:非
+	MagicImmune   int32 //是否魔法免疫 1:是 2:非
+	PhisicImmune  int32 //物理攻击免疫 1:是 2:非
+	MagicCDStop   int32 //技能冷却停止 1:是 2:非
+	AnimotorPause int32 //是否暂停动画 1:是 2:非
+	IsCollisoin   int32 //是否碰撞检测 1:是 2:非
 
 	Invisible int32 //隐身 1:是 2:否  可以躲避攻击弹道 并且从显示屏上消失
 
@@ -119,6 +122,7 @@ type BuffData struct {
 	AttributeStrengthCV       float32 //力量变化值 20表示增加20点力量
 	AttributeIntelligenceCV   float32 //智力变化值 20表示增加20点智力
 	AttributeAgilityCV        float32 //敏捷变化值 20表示增加20点敏捷
+	AttackSpeedCR             float32 //攻击速度变化比率 0.2就是增加20%
 	AttackSpeedCV             float32 //攻击速度变化值 -10表示降低10点攻击速度
 	AttackCR                  float32 //攻击力变化比率 0.2就是增加20%
 	AttackCV                  float32 //攻击力变化量 -20就是减少20点攻击力
@@ -159,6 +163,7 @@ type BuffFileData struct {
 	AttributeStrengthCV       string //力量变化值 20表示增加20点力量
 	AttributeIntelligenceCV   string //智力变化值 20表示增加20点智力
 	AttributeAgilityCV        string //敏捷变化值 20表示增加20点敏捷
+	AttackSpeedCR             string //攻击速度变化比率 0.2就是增加20%
 	AttackSpeedCV             string //攻击速度变化值 -10表示降低10点攻击速度
 	AttackCR                  string //攻击力变化比率 0.2就是增加20%
 	AttackCV                  string //攻击力变化量 -20就是减少20点攻击力
@@ -198,6 +203,7 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 	AttributeStrengthCV := utils.GetFloat32FromString2(this.AttributeStrengthCV)
 	AttributeIntelligenceCV := utils.GetFloat32FromString2(this.AttributeIntelligenceCV)
 	AttributeAgilityCV := utils.GetFloat32FromString2(this.AttributeAgilityCV)
+	AttackSpeedCR := utils.GetFloat32FromString2(this.AttackSpeedCR)
 	AttackSpeedCV := utils.GetFloat32FromString2(this.AttackSpeedCV)
 	AttackCR := utils.GetFloat32FromString2(this.AttackCR)
 	AttackCV := utils.GetFloat32FromString2(this.AttackCV)
@@ -252,6 +258,11 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 			ssd.AttributeAgilityCV = AttributeAgilityCV[len(AttributeAgilityCV)-1]
 		} else {
 			ssd.AttributeAgilityCV = AttributeAgilityCV[i]
+		}
+		if int32(len(AttackSpeedCR)) <= i {
+			ssd.AttackSpeedCR = AttackSpeedCR[len(AttackSpeedCR)-1]
+		} else {
+			ssd.AttackSpeedCR = AttackSpeedCR[i]
 		}
 		if int32(len(AttackSpeedCV)) <= i {
 			ssd.AttackSpeedCV = AttackSpeedCV[len(AttackSpeedCV)-1]
