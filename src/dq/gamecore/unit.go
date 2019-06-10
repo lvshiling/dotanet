@@ -276,6 +276,11 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 					if v.ForceMoveType == 1 {
 						b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel, v.ForceMoveBuff)
 					}
+					b.PhysicalHurtAddHP += v.PhysicalHurtAddHP
+					b.MagicHurtAddHP += v.MagicHurtAddHP
+
+					cdtime := v.Cooldown - this.MagicCD*v.Cooldown
+					v.FreshCDTime(cdtime)
 
 				}
 			}
@@ -301,6 +306,12 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 			if v.ForceMoveType == 1 {
 				b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel, v.ForceMoveBuff)
 			}
+
+			b.PhysicalHurtAddHP += v.PhysicalHurtAddHP
+			b.MagicHurtAddHP += v.MagicHurtAddHP
+
+			cdtime := v.Cooldown - this.MagicCD*v.Cooldown
+			v.FreshCDTime(cdtime)
 
 		}
 	}
@@ -763,6 +774,9 @@ type UnitBaseProperty struct {
 	AddedMagicRange float32 //额外施法距离
 	ManaCost        float32 //魔法消耗降低 (0.1)表示降低 10%
 	MagicCD         float32 //技能CD降低 (0.1)表示降低 10%
+
+	PhysicalHurtAddHP float32 //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
+	MagicHurtAddHP    float32 //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 }
 
 //------------------单位本体------------------
@@ -1385,6 +1399,9 @@ func (this *Unit) CalControlState() {
 	this.MagicCD = 0         //技能CD降低
 	this.Invisible = 2       //隐身   否
 
+	this.PhysicalHurtAddHP = 0
+	this.MagicHurtAddHP = 0
+
 	this.Body.IsCollisoin = true
 	this.Body.TurnDirection = true
 	this.Body.CollisoinLevel = 1
@@ -1500,6 +1517,8 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 	add.HPRegain += v1.HPRegainCV
 	add.HPRegain += v1.HPRegainCVOfMaxHP * float32(this.MAX_HP)
 	add.AddedMagicRange += v1.AddedMagicRangeCV
+	add.PhysicalHurtAddHP += v1.PhysicalHurtAddHP
+	add.MagicHurtAddHP += v1.MagicHurtAddHP
 
 	this.MagicScale = utils.NoLinerAdd(this.MagicScale, v1.MagicScaleCV)
 	this.MagicAmaor = utils.NoLinerAdd(this.MagicAmaor, v1.MagicAmaorCV)
@@ -1555,6 +1574,9 @@ func (this *Unit) AddBuffProperty(add *UnitBaseProperty) {
 	this.PhysicalAmaor += add.PhysicalAmaor
 	this.HPRegain += add.HPRegain
 	this.AddedMagicRange += add.AddedMagicRange
+	this.PhysicalHurtAddHP += add.PhysicalHurtAddHP
+	this.MagicHurtAddHP += add.MagicHurtAddHP
+
 }
 
 //计算所有buff对属性的影响
@@ -1775,7 +1797,7 @@ func (this *Unit) AddHaloFromStr(halosstr string, level int32, pos *vec2d.Vec2) 
 }
 
 //受到来自子弹的伤害
-func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32) {
+func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 	//计算闪避
 	if bullet.SkillID == -1 {
 		//普通攻击
@@ -1795,7 +1817,7 @@ func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32) {
 		if isDodge {
 			//本单位显示miss
 			this.ShowMiss(true)
-			return true, 0
+			return true, 0, 0, 0
 		}
 	}
 	//计算伤害
@@ -1825,7 +1847,7 @@ func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32) {
 
 	this.SaveTimeAndHurt(hurtvalue)
 	//log.Info("---hurtvalue---%d   %f", hurtvalue, this.PhysicalResist)
-	return false, hurtvalue
+	return false, hurtvalue, -physicAttack, -magicAttack
 }
 
 //创建子弹

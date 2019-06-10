@@ -154,7 +154,9 @@ type SkillData struct {
 	ForceMoveSpeedSize float32 //强制移动速度大小
 	ForceMoveLevel     int32   //强制移动等级
 
-	AddHPValue float32 //加血值
+	AddHPValue        float32 //加血值
+	PhysicalHurtAddHP float32 //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
+	MagicHurtAddHP    float32 //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 
 	ExceptionParam string //特殊情况处理参数
 
@@ -183,7 +185,9 @@ type SkillFileData struct {
 	ForceMoveSpeedSize string //强制移动速度大小
 	ForceMoveLevel     string //强制移动等级
 
-	AddHPValue string //加血值
+	AddHPValue        string //加血值
+	PhysicalHurtAddHP string //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
+	MagicHurtAddHP    string //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 
 	ExceptionParam string //特殊情况处理参数
 }
@@ -213,6 +217,8 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 	ForceMoveLevel := utils.GetInt32FromString2(this.ForceMoveLevel)
 
 	AddHPValue := utils.GetFloat32FromString2(this.AddHPValue)
+	PhysicalHurtAddHP := utils.GetFloat32FromString2(this.PhysicalHurtAddHP)
+	MagicHurtAddHP := utils.GetFloat32FromString2(this.MagicHurtAddHP)
 
 	ExceptionParam := utils.GetStringFromString2(this.ExceptionParam)
 
@@ -291,6 +297,16 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 			ssd.AddHPValue = AddHPValue[len(AddHPValue)-1]
 		} else {
 			ssd.AddHPValue = AddHPValue[i]
+		}
+		if int32(len(PhysicalHurtAddHP)) <= i {
+			ssd.PhysicalHurtAddHP = PhysicalHurtAddHP[len(PhysicalHurtAddHP)-1]
+		} else {
+			ssd.PhysicalHurtAddHP = PhysicalHurtAddHP[i]
+		}
+		if int32(len(MagicHurtAddHP)) <= i {
+			ssd.MagicHurtAddHP = MagicHurtAddHP[len(MagicHurtAddHP)-1]
+		} else {
+			ssd.MagicHurtAddHP = MagicHurtAddHP[i]
 		}
 
 		if int32(len(ExceptionParam)) <= i {

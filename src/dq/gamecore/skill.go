@@ -60,6 +60,9 @@ func (this *Skill) SetBulletProperty(b *Bullet, unit *Unit) {
 	if this.AddHPTarget == 2 {
 		b.SetAddHP(this.AddHPType, this.AddHPValue)
 	}
+	b.PhysicalHurtAddHP += this.PhysicalHurtAddHP
+	b.MagicHurtAddHP += this.MagicHurtAddHP
+
 	b.ClearLevel = this.TargetClearLevel //设置驱散等级
 
 }

@@ -100,6 +100,9 @@ type Bullet struct {
 	AddHPType  int32   //加血类型 0:不加 1:以AddHPValue为固定值 2:以AddHPValue为时间 加单位在此时间内受到的伤害值
 	AddHPValue float32 //加血值
 
+	PhysicalHurtAddHP float32 //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
+	MagicHurtAddHP    float32 //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
+
 	//--------附加攻击特效------
 
 	//发送数据部分
@@ -114,6 +117,10 @@ func NewBullet1(src *Unit, dest *Unit) *Bullet {
 	if dest != nil {
 		re.DestPos = dest.GetProjectileEndPos()
 	}
+	if src != nil {
+		re.PhysicalHurtAddHP = src.PhysicalHurtAddHP
+		re.MagicHurtAddHP = src.MagicHurtAddHP
+	}
 
 	//唯一ID处理
 	re.ID = GetBulletID()
@@ -127,6 +134,10 @@ func NewBullet2(src *Unit, pos vec2d.Vec2) *Bullet {
 	re.SrcUnit = src
 	re.DestUnit = nil
 	re.DestPos = vec2d.Vector3{pos.X, pos.Y, 0}
+	if src != nil {
+		re.PhysicalHurtAddHP = src.PhysicalHurtAddHP
+		re.MagicHurtAddHP = src.MagicHurtAddHP
+	}
 	//唯一ID处理
 	re.ID = GetBulletID()
 
@@ -377,7 +388,7 @@ func (this *Bullet) HurtUnit(unit *Unit) {
 	}
 
 	//伤害
-	ismiss, hurtvalue := unit.BeAttacked(this)
+	ismiss, hurtvalue, physichurt, magichurt := unit.BeAttacked(this)
 
 	//强制移动
 	if this.ForceMoveTime > 0 {
@@ -402,31 +413,32 @@ func (this *Bullet) HurtUnit(unit *Unit) {
 			}
 		}
 	}
-	//	//光环
-	//	if len(this.TargetHalo) > 0 {
-	//		if this.DestUnit != nil {
-	//			if this.DestUnit.IsDisappear() == false {
-	//				for _, v := range this.TargetHalo {
-	//					this.DestUnit.AddHaloFromStr(v.Halo, v.HaloLevel, &vec2d.Vec2{this.DestPos.X, this.DestPos.Y})
-	//				}
-	//			}
-	//		} else {
-	//			if this.SrcUnit != nil && this.SrcUnit.IsDisappear() == false {
-	//				for _, v := range this.TargetHalo {
-	//					this.SrcUnit.AddHaloFromStr(v.Halo, v.HaloLevel, &vec2d.Vec2{this.DestPos.X, this.DestPos.Y})
-	//				}
-	//			}
-	//		}
-	//	}
+
 	//小于0 表示被miss
 	if ismiss == false {
+
 		//驱散buff
 		unit.ClearBuffForTarget(this.SrcUnit, this.ClearLevel)
 		//buff
 		for _, v := range this.TargetBuff {
 			unit.AddBuffFromStr(v.Buff, v.BuffLevel, this.SrcUnit)
 		}
-		if this.SrcUnit == nil || this.SrcUnit.MyPlayer == nil {
+		if this.SrcUnit == nil || this.SrcUnit.IsDisappear() {
+			return
+		}
+		//吸血
+		addhp := float32(0)
+		if this.PhysicalHurtAddHP > 0 {
+			addhp += this.PhysicalHurtAddHP * float32(-physichurt)
+		}
+		if this.MagicHurtAddHP > 0 {
+			addhp += this.MagicHurtAddHP * float32(-magichurt)
+		}
+		if addhp > 0 {
+			this.SrcUnit.ChangeHP(int32(addhp))
+		}
+
+		if this.SrcUnit.MyPlayer == nil {
 			return
 		}
 		//为了显示 玩家造成的伤害

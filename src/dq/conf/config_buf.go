@@ -145,6 +145,8 @@ type BuffData struct {
 	ManaCostCV                float32 //魔法消耗变化量 -0.1表示降低10%的魔法消耗
 	MagicCDCV                 float32 //技能CD变化量 -0.2表示降低20%的技能cd
 	AttackTargetAttackSpeedCV float32 //攻击指定目标攻击速度变化值 -10表示降低10点攻击速度
+	PhysicalHurtAddHP         float32 //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
+	MagicHurtAddHP            float32 //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 
 	//
 	HurtTimeInterval float32 //伤害时间间隔
@@ -186,6 +188,8 @@ type BuffFileData struct {
 	ManaCostCV                string //魔法消耗变化量 -0.1表示降低10%的魔法消耗
 	MagicCDCV                 string //技能CD变化量 -0.2表示降低20%的技能cd
 	AttackTargetAttackSpeedCV string //攻击指定目标攻击速度变化值 -10表示降低10点攻击速度
+	PhysicalHurtAddHP         string //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
+	MagicHurtAddHP            string //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 
 	//
 	HurtTimeInterval string //伤害时间间隔
@@ -226,6 +230,8 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 	ManaCostCV := utils.GetFloat32FromString2(this.ManaCostCV)
 	MagicCDCV := utils.GetFloat32FromString2(this.MagicCDCV)
 	AttackTargetAttackSpeedCV := utils.GetFloat32FromString2(this.AttackTargetAttackSpeedCV)
+	PhysicalHurtAddHP := utils.GetFloat32FromString2(this.PhysicalHurtAddHP)
+	MagicHurtAddHP := utils.GetFloat32FromString2(this.MagicHurtAddHP)
 
 	HurtTimeInterval := utils.GetFloat32FromString2(this.HurtTimeInterval)
 	HurtValue := utils.GetFloat32FromString2(this.HurtValue)
@@ -374,6 +380,16 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 			ssd.AttackTargetAttackSpeedCV = AttackTargetAttackSpeedCV[len(AttackTargetAttackSpeedCV)-1]
 		} else {
 			ssd.AttackTargetAttackSpeedCV = AttackTargetAttackSpeedCV[i]
+		}
+		if int32(len(PhysicalHurtAddHP)) <= i {
+			ssd.PhysicalHurtAddHP = PhysicalHurtAddHP[len(PhysicalHurtAddHP)-1]
+		} else {
+			ssd.PhysicalHurtAddHP = PhysicalHurtAddHP[i]
+		}
+		if int32(len(MagicHurtAddHP)) <= i {
+			ssd.MagicHurtAddHP = MagicHurtAddHP[len(MagicHurtAddHP)-1]
+		} else {
+			ssd.MagicHurtAddHP = MagicHurtAddHP[i]
 		}
 
 		if int32(len(HurtTimeInterval)) <= i {
