@@ -99,6 +99,35 @@ func GetFloat32FromString2(str string) []float32 {
 }
 
 //从字符串中获取数据 逗号分隔
+func GetStringFromString2(str string) []string {
+	str1 := strings.Split(str, ",")
+
+	return str1
+}
+
+//从字符串中获取数据 逗号分隔
+func GetStringFromString3(str string, slitstr string) []string {
+	str1 := strings.Split(str, slitstr)
+
+	return str1
+}
+
+//从字符串中获取数据 逗号分隔
+func GetFloat32FromString3(str string, slitstr string) []float32 {
+	re := make([]float32, 0)
+	str1 := strings.Split(str, slitstr)
+	//log.Info("str1len:%d", len(str1))
+	for _, v := range str1 {
+
+		value, err1 := strconv.ParseFloat(v, 32)
+		if err1 == nil {
+			re = append(re, float32(value))
+		}
+	}
+	return re
+}
+
+//从字符串中获取数据 逗号分隔
 func GetInt32FromString2(str string) []int32 {
 	re := make([]int32, 0)
 	str1 := strings.Split(str, ",")

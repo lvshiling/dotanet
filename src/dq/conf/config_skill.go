@@ -128,6 +128,9 @@ type SkillBaseData struct {
 	AddHPType   int32 //加血类型 0:不加 1:以AddHPValue为固定值 2:以AddHPValue为时间 加单位在此时间内受到的伤害值
 	AddHPTarget int32 //加血的目标 1:表示自己 2:表示目标
 
+	//特殊情况处理 //1:混沌间隙的目标和自己的瞬移
+	Exception int32 //0表示没有特殊情况
+
 }
 
 //技能数据 (会根据等级变化的数据)
@@ -152,6 +155,8 @@ type SkillData struct {
 	ForceMoveLevel     int32   //强制移动等级
 
 	AddHPValue float32 //加血值
+
+	ExceptionParam string //特殊情况处理参数
 
 }
 
@@ -179,6 +184,8 @@ type SkillFileData struct {
 	ForceMoveLevel     string //强制移动等级
 
 	AddHPValue string //加血值
+
+	ExceptionParam string //特殊情况处理参数
 }
 
 //把等级相关的字符串 转成具体类型数据
@@ -206,6 +213,8 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 	ForceMoveLevel := utils.GetInt32FromString2(this.ForceMoveLevel)
 
 	AddHPValue := utils.GetFloat32FromString2(this.AddHPValue)
+
+	ExceptionParam := utils.GetStringFromString2(this.ExceptionParam)
 
 	for i := int32(0); i < this.MaxLevel; i++ {
 		ssd := SkillData{}
@@ -282,6 +291,12 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 			ssd.AddHPValue = AddHPValue[len(AddHPValue)-1]
 		} else {
 			ssd.AddHPValue = AddHPValue[i]
+		}
+
+		if int32(len(ExceptionParam)) <= i {
+			ssd.ExceptionParam = ExceptionParam[len(ExceptionParam)-1]
+		} else {
+			ssd.ExceptionParam = ExceptionParam[i]
 		}
 
 		//log.Info("111-:%v--%d", ssd)

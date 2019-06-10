@@ -306,6 +306,39 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 	}
 }
 
+//技能特殊处理
+func (this *Unit) DoSkillException(skilldata *Skill, data *protomsg.CS_PlayerSkill) {
+	if skilldata.Exception == 0 || data == nil {
+		return
+	}
+	switch skilldata.Exception {
+	case 1: //1:混沌间隙的目标和自己的瞬移
+		{
+			param := utils.GetFloat32FromString3(skilldata.ExceptionParam, ":")
+			if len(param) <= 0 {
+				return
+			}
+			targetunit := this.InScene.FindUnitByID(data.TargetUnitID)
+			if targetunit == nil || targetunit.IsDisappear() {
+				return
+			}
+			dis := vec2d.Sub(this.Body.Position, targetunit.Body.Position)
+			if dis.Length() <= float64(param[0]) {
+				targetunit.Body.BlinkToPos(this.Body.Position, 0)
+				this.Body.BlinkToPos(targetunit.Body.Position, 0)
+			} else {
+				dis.Normalize()
+				dis.MulToFloat64(float64(param[0]))
+				dis.Collect(&targetunit.Body.Position)
+
+				targetunit.Body.BlinkToPos(dis, 0)
+				this.Body.BlinkToPos(dis, 0)
+			}
+		}
+	default:
+	}
+}
+
 //使用技能 创建子弹
 func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 
@@ -358,6 +391,8 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 	if skilldata.AddHPTarget == 1 {
 		this.DoAddHP(skilldata.AddHPType, skilldata.AddHPValue)
 	}
+	//特殊处理
+	this.DoSkillException(skilldata, data)
 
 	//消耗 CD
 	namacost := skilldata.ManaCost - int32(this.ManaCost*float32(skilldata.ManaCost))
