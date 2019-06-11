@@ -128,6 +128,21 @@ func GetFloat32FromString3(str string, slitstr string) []float32 {
 }
 
 //从字符串中获取数据 逗号分隔
+func GetInt32FromString3(str string, slitstr string) []int32 {
+	re := make([]int32, 0)
+	str1 := strings.Split(str, slitstr)
+	//log.Info("str1len:%d", len(str1))
+	for _, v := range str1 {
+
+		value, err1 := strconv.Atoi(v)
+		if err1 == nil {
+			re = append(re, int32(value))
+		}
+	}
+	return re
+}
+
+//从字符串中获取数据 逗号分隔
 func GetInt32FromString2(str string) []int32 {
 	re := make([]int32, 0)
 	str1 := strings.Split(str, ",")

@@ -274,6 +274,8 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 							b.AddOtherHurt(HurtInfo{HurtType: v.HurtType, HurtValue: v.HurtValue})
 						}
 					}
+					//特殊情况处理
+					this.DoSkillException(v, b.DestUnit, b)
 
 					//召唤信息
 					b.BulletCallUnitInfo = BulletCallUnitInfo{v.CallUnitInfo, v.Level}
@@ -325,8 +327,8 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 }
 
 //技能特殊处理
-func (this *Unit) DoSkillException(skilldata *Skill, data *protomsg.CS_PlayerSkill) {
-	if skilldata.Exception == 0 || data == nil {
+func (this *Unit) DoSkillException(skilldata *Skill, targetunit *Unit, b *Bullet) {
+	if skilldata.Exception == 0 {
 		return
 	}
 	switch skilldata.Exception {
@@ -336,7 +338,7 @@ func (this *Unit) DoSkillException(skilldata *Skill, data *protomsg.CS_PlayerSki
 			if len(param) <= 0 {
 				return
 			}
-			targetunit := this.InScene.FindUnitByID(data.TargetUnitID)
+			//targetunit := this.InScene.FindUnitByID(data.TargetUnitID)
 			if targetunit == nil || targetunit.IsDisappear() {
 				return
 			}
@@ -378,6 +380,38 @@ func (this *Unit) DoSkillException(skilldata *Skill, data *protomsg.CS_PlayerSki
 
 					}
 				}
+			}
+		}
+	case 2: //熊战士的怒意狂击
+		{
+			param := utils.GetInt32FromString3(skilldata.ExceptionParam, ":")
+			if len(param) <= 0 {
+				return
+			}
+			if targetunit == nil || targetunit.IsDisappear() {
+				return
+			}
+			//怒意狂击
+			buff := targetunit.GetBuff(param[0])
+			if buff == nil {
+				b.OtherHurt[0].HurtValue *= 0
+				return
+			}
+			//大招的倍率伤害
+			beilv := float32(1)
+			if len(param) >= 2 {
+				mybigbuff := this.GetBuff(param[1])
+				if mybigbuff != nil {
+					param1 := utils.GetFloat32FromString3(mybigbuff.ExceptionParam, ":")
+					if len(param1) >= 1 {
+						beilv = param1[0]
+					}
+				}
+			}
+
+			if len(b.OtherHurt) > 0 {
+				b.OtherHurt[0].HurtValue = int32(float32(b.OtherHurt[0].HurtValue) * float32(buff.TagNum) * beilv)
+
 			}
 		}
 	default:
@@ -446,7 +480,8 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 		this.DoAddHP(skilldata.AddHPType, skilldata.AddHPValue)
 	}
 	//特殊处理
-	this.DoSkillException(skilldata, data)
+	targetunit := this.InScene.FindUnitByID(data.TargetUnitID)
+	this.DoSkillException(skilldata, targetunit, nil)
 
 	//消耗 CD
 	namacost := skilldata.ManaCost - int32(this.ManaCost*float32(skilldata.ManaCost))
@@ -459,7 +494,7 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 	this.StopSkillCmd()
 
 	//如果目标是敌人 则自动攻击
-	targetunit := this.InScene.FindUnitByID(data.TargetUnitID)
+	//targetunit := this.InScene.FindUnitByID(data.TargetUnitID)
 	if targetunit != nil {
 		if this.CheckIsEnemy(targetunit) == true {
 			acd := &protomsg.CS_PlayerAttack{}
@@ -1781,7 +1816,13 @@ func (this *Unit) RemoveBuffForAttacked() {
 	//buff
 	for k, v := range this.Buffs {
 		for k1, v1 := range v {
-			if v1.AttackedInvalid == 1 {
+
+			//攻击时减少标记
+			if v1.SubTagNumRule == 1 {
+				v1.TagNum -= 1
+			}
+
+			if v1.AttackedInvalid == 1 || v1.TagNum == 0 {
 				this.Buffs[k] = append(this.Buffs[k][:k1], this.Buffs[k][k1+1:]...)
 			}
 
@@ -1847,12 +1888,20 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 	bf, ok := this.Buffs[buff.TypeID]
 	//叠加机制
 	//		OverlyingType          int32 //叠加类型 1:只更新最大时间 2:完美叠加(小鱼的偷属性)
-	//	OverlyingAddTag        int32 //叠加时是否增加标记数字 1:表示增加 2:表示不增加
+	//	OverlyingAddTag        int32 //叠加时是否增加标记数字 1:表示增加 2:表示不增加 3:最大标记覆盖原值
 	if ok == true && len(bf) > 0 {
 		if buff.OverlyingType == 1 {
 
 			if bf[0].RemainTime < buff.Time {
 				bf[0].RemainTime = buff.Time
+			}
+			if buff.OverlyingAddTag == 1 {
+				bf[0].TagNum += buff.TagNum
+			} else if buff.OverlyingAddTag == 3 {
+				log.Info("--11111111---%d   %d", buff.TagNum, bf[0].TagNum)
+				if buff.TagNum > bf[0].TagNum {
+					bf[0].TagNum = buff.TagNum
+				}
 			}
 			return bf[0]
 
@@ -1869,6 +1918,16 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 
 		return buff
 	}
+	return nil
+}
+
+func (this *Unit) GetBuff(typeid int32) *Buff {
+	//var re *Buff = nil
+	bf, ok := this.Buffs[typeid]
+	if ok == true && len(bf) > 0 {
+		return bf[0]
+	}
+
 	return nil
 }
 

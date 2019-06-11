@@ -110,7 +110,7 @@ type BuffBaseData struct {
 	DoSkilledInvalid int32 //使用技能后失效 1:是 2:否
 	BuffType         int32 //buff类型 1:表示良性 2:表示恶性  队友只能驱散我的恶性buff 敌人只能驱散我的良性buff 3:中性
 	ClearLevel       int32 //驱散等级 1 表示需要驱散等级大于等于1的 驱散效果才能驱散此buff pa的标为1 眩晕为2 小鱼偷属性和光环buff为3
-
+	SubTagNumRule    int32 //标记减少规则 减少为0会自动删除buff 0:表示不减少 1:表示攻击时减少
 	//伤害相关  剧毒类buff
 	HurtType int32 //伤害类型(1:物理伤害 2:魔法伤害 3:纯粹伤害 4:不造成伤害)
 }
@@ -151,10 +151,13 @@ type BuffData struct {
 	PhysicalHurtAddHP         float32 //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 	MagicHurtAddHP            float32 //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 	AllHurtCV                 float32 //总伤害变化率 0.1表示 增加10%的总伤害 -0.1表示减少10%总伤害
+	InitTagNum                int32   //初始标记数量
 
 	//
 	HurtTimeInterval float32 //伤害时间间隔
 	HurtValue        float32 //伤害值
+
+	ExceptionParam string //特殊情况处理参数
 }
 
 //单位配置文件数据
@@ -195,10 +198,13 @@ type BuffFileData struct {
 	PhysicalHurtAddHP         string //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 	MagicHurtAddHP            string //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 	AllHurtCV                 string
+	InitTagNum                string //初始标记数量
 
 	//
 	HurtTimeInterval string //伤害时间间隔
 	HurtValue        string //伤害值
+
+	ExceptionParam string //特殊情况处理参数
 }
 
 //把等级相关的字符串 转成具体类型数据
@@ -238,10 +244,12 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 	PhysicalHurtAddHP := utils.GetFloat32FromString2(this.PhysicalHurtAddHP)
 	MagicHurtAddHP := utils.GetFloat32FromString2(this.MagicHurtAddHP)
 	AllHurtCV := utils.GetFloat32FromString2(this.AllHurtCV)
+	InitTagNum := utils.GetInt32FromString2(this.InitTagNum)
 
 	HurtTimeInterval := utils.GetFloat32FromString2(this.HurtTimeInterval)
 	HurtValue := utils.GetFloat32FromString2(this.HurtValue)
 
+	ExceptionParam := utils.GetStringFromString2(this.ExceptionParam)
 	for i := int32(0); i < this.MaxLevel; i++ {
 		ssd := BuffData{}
 		ssd.BuffBaseData = this.BuffBaseData
@@ -402,6 +410,11 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 		} else {
 			ssd.AllHurtCV = AllHurtCV[i]
 		}
+		if int32(len(InitTagNum)) <= i {
+			ssd.InitTagNum = InitTagNum[len(InitTagNum)-1]
+		} else {
+			ssd.InitTagNum = InitTagNum[i]
+		}
 
 		if int32(len(HurtTimeInterval)) <= i {
 			ssd.HurtTimeInterval = HurtTimeInterval[len(HurtTimeInterval)-1]
@@ -412,6 +425,11 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 			ssd.HurtValue = HurtValue[len(HurtValue)-1]
 		} else {
 			ssd.HurtValue = HurtValue[i]
+		}
+		if int32(len(ExceptionParam)) <= i {
+			ssd.ExceptionParam = ExceptionParam[len(ExceptionParam)-1]
+		} else {
+			ssd.ExceptionParam = ExceptionParam[i]
 		}
 
 		//log.Info("111-:%v--%d", ssd)

@@ -73,7 +73,7 @@ func NewBuff(typeid int32, level int32, parent *Unit) *Buff {
 	buff.BuffData = *buffdata
 	buff.Level = level
 	buff.RemainTime = buffdata.Time
-	buff.TagNum = 0
+	buff.TagNum = buffdata.InitTagNum
 	buff.IsEnd = false
 
 	if buffdata.ActiveTime <= 0 {
