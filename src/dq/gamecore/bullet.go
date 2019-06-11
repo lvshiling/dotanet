@@ -275,6 +275,7 @@ func (this *Bullet) OnCreate() {
 
 	//如果为瞬间移动则直接计算伤害
 	if this.MoveType == 1 {
+		this.Position = this.DestPos
 		this.NextState = 3
 	} else {
 		this.NextState = 2
