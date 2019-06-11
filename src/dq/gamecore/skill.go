@@ -137,6 +137,21 @@ func (this *Skill) ToDBString() string {
 	return strconv.Itoa(int(this.TypeID)) + "," + strconv.Itoa(int(this.Level)) + "," + strconv.FormatFloat(float64(this.RemainCDTime), 'f', 4, 32)
 }
 
+func NewOneSkill(skillid int32, skilllevel int32) *Skill {
+	sk := &Skill{}
+	skdata := conf.GetSkillData(skillid, skilllevel)
+	if skdata == nil {
+		log.Error("NewUnitSkills %d  %d", skillid, skilllevel)
+		return nil
+	}
+	sk.SkillData = *skdata
+	sk.Level = skilllevel
+	sk.RemainCDTime = 0
+	sk.AttackAutoActive = 1
+
+	return sk
+}
+
 //通过数据库数据和单位基本数据创建技能 (1,2,0) ID,LEVEL,CD剩余时间
 func NewUnitSkills(dbdata []string, unitskilldata string) map[int32]*Skill {
 	re := make(map[int32]*Skill)

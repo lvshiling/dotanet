@@ -99,7 +99,10 @@ type BuffBaseData struct {
 	AnimotorPause int32 //是否暂停动画 1:是 2:非
 	IsCollisoin   int32 //是否碰撞检测 1:是 2:非
 
-	Invisible int32 //隐身 1:是 2:否  可以躲避攻击弹道 并且从显示屏上消失
+	Invisible       int32 //隐身 1:是 2:否  可以躲避攻击弹道 并且从显示屏上消失
+	InvisibleBeSee  int32 //隐身可以被看见 1:是 2:否
+	CanSeeInvisible int32 //可以看见隐身 1:是 2:否
+	MasterInvisible int32 //大师级隐身 不会被看见 (分身的无敌和其他的blink躲弹道) 1:是 2:否
 
 	ActiveTime float32 //开始生效的时间 1.2表示 1.2秒后生效
 
@@ -147,6 +150,7 @@ type BuffData struct {
 	AttackTargetAttackSpeedCV float32 //攻击指定目标攻击速度变化值 -10表示降低10点攻击速度
 	PhysicalHurtAddHP         float32 //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 	MagicHurtAddHP            float32 //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
+	AllHurtCV                 float32 //总伤害变化率 0.1表示 增加10%的总伤害 -0.1表示减少10%总伤害
 
 	//
 	HurtTimeInterval float32 //伤害时间间隔
@@ -190,6 +194,7 @@ type BuffFileData struct {
 	AttackTargetAttackSpeedCV string //攻击指定目标攻击速度变化值 -10表示降低10点攻击速度
 	PhysicalHurtAddHP         string //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 	MagicHurtAddHP            string //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
+	AllHurtCV                 string
 
 	//
 	HurtTimeInterval string //伤害时间间隔
@@ -232,6 +237,7 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 	AttackTargetAttackSpeedCV := utils.GetFloat32FromString2(this.AttackTargetAttackSpeedCV)
 	PhysicalHurtAddHP := utils.GetFloat32FromString2(this.PhysicalHurtAddHP)
 	MagicHurtAddHP := utils.GetFloat32FromString2(this.MagicHurtAddHP)
+	AllHurtCV := utils.GetFloat32FromString2(this.AllHurtCV)
 
 	HurtTimeInterval := utils.GetFloat32FromString2(this.HurtTimeInterval)
 	HurtValue := utils.GetFloat32FromString2(this.HurtValue)
@@ -390,6 +396,11 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 			ssd.MagicHurtAddHP = MagicHurtAddHP[len(MagicHurtAddHP)-1]
 		} else {
 			ssd.MagicHurtAddHP = MagicHurtAddHP[i]
+		}
+		if int32(len(AllHurtCV)) <= i {
+			ssd.AllHurtCV = AllHurtCV[len(AllHurtCV)-1]
+		} else {
+			ssd.AllHurtCV = AllHurtCV[i]
 		}
 
 		if int32(len(HurtTimeInterval)) <= i {

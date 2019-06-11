@@ -100,11 +100,18 @@ func (this *Unit) CanSeeTarget(target *Unit) bool {
 	//目标隐身
 	if target.Invisible == 1 {
 		//目标是敌人
-		if this.CheckIsEnemy(target) == true {
+		if this.CheckIsEnemy(target) == true && this.CanSeeInvisible != 1 && target.InvisibleBeSee != 1 {
 			//log.Info("----no see")
 			return false
 		}
+
 		//log.Info("----Invisible")
+	}
+	//大师级隐身 不会被看见 (分身的无敌和其他的blink躲弹道) 1:是 2:否
+	if target.MasterInvisible == 1 {
+		if this.CheckIsEnemy(target) == true {
+			return false
+		}
 	}
 	return true
 }
@@ -337,6 +344,20 @@ func (this *Unit) DoSkillException(skilldata *Skill, data *protomsg.CS_PlayerSki
 			if dis.Length() <= float64(param[0]) {
 				targetunit.Body.BlinkToPos(this.Body.Position, 0)
 				this.Body.BlinkToPos(targetunit.Body.Position, 0)
+
+				if this.MyPlayer != nil {
+					otherunit := this.MyPlayer.OtherUnit.Items()
+					for _, v := range otherunit {
+						if v != nil && v.(*Unit).Body != nil {
+							v.(*Unit).Body.BlinkToPos(targetunit.Body.Position, float64(utils.GetRandomFloat(float32(180))))
+							acd := &protomsg.CS_PlayerAttack{}
+							acd.TargetUnitID = targetunit.ID
+							v.(*Unit).AttackCmd(acd)
+						}
+
+					}
+				}
+
 			} else {
 				dis.Normalize()
 				dis.MulToFloat64(float64(param[0]))
@@ -344,6 +365,19 @@ func (this *Unit) DoSkillException(skilldata *Skill, data *protomsg.CS_PlayerSki
 
 				targetunit.Body.BlinkToPos(dis, 0)
 				this.Body.BlinkToPos(dis, 0)
+
+				if this.MyPlayer != nil {
+					otherunit := this.MyPlayer.OtherUnit.Items()
+					for _, v := range otherunit {
+						if v != nil && v.(*Unit).Body != nil {
+							v.(*Unit).Body.BlinkToPos(dis, float64(utils.GetRandomFloat(float32(180))))
+							acd := &protomsg.CS_PlayerAttack{}
+							acd.TargetUnitID = targetunit.ID
+							v.(*Unit).AttackCmd(acd)
+						}
+
+					}
+				}
 			}
 		}
 	default:
@@ -367,6 +401,18 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 	//MyHalo
 	this.AddHaloFromStr(skilldata.MyHalo, skilldata.Level, nil)
 
+	//BlinkToTarget
+	if skilldata.BlinkToTarget == 1 {
+		if skilldata.CastTargetType == 1 {
+			//对自己施法
+			this.Body.BlinkToPos(vec2d.Vec2{this.Body.Position.X + float64(utils.GetRandomFloat(2)),
+				this.Body.Position.Y + float64(utils.GetRandomFloat(2))}, 0)
+		} else {
+			this.Body.BlinkToPos(targetpos, 0)
+		}
+
+	}
+
 	//创建子弹
 	bullets := skilldata.CreateBullet(this, data)
 	if len(bullets) > 0 {
@@ -378,10 +424,7 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 		}
 
 	}
-	//BlinkToTarget
-	if skilldata.BlinkToTarget == 1 {
-		this.Body.BlinkToPos(targetpos, 0)
-	}
+
 	//自己强制移动到指定位置
 	if skilldata.ForceMoveType == 2 { //自己强制移动到指定位置
 		dir := vec2d.Sub(targetpos, this.Body.Position)
@@ -777,6 +820,8 @@ type UnitBaseProperty struct {
 
 	PhysicalHurtAddHP float32 //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 	MagicHurtAddHP    float32 //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
+
+	AllHurtCV float32 //总伤害变化率 0.1表示 增加10%的总伤害 -0.1表示减少10%总伤害
 }
 
 //------------------单位本体------------------
@@ -816,7 +861,10 @@ type UnitProperty struct {
 	MagicCDStop   int32 //技能冷却停止 1:是 2:非
 	AnimotorPause int32 //是否暂停动画 1:是 2:非
 
-	Invisible int32 //隐身 1:是 2:否
+	Invisible       int32 //隐身 1:是 2:否
+	InvisibleBeSee  int32 //隐身可以被看见 1:是 2:否
+	CanSeeInvisible int32 //可以看见隐身 1:是 2:否
+	MasterInvisible int32 //大师级隐身 不会被看见 (分身的无敌和其他的blink躲弹道) 1:是 2:否
 
 	//强制移动相关
 	ForceMoveRemainTime float32    //强制移动剩余时间
@@ -952,6 +1000,49 @@ func CreateUnit(scene *Scene, typeid int32) *Unit {
 	unitre.ControlID = -1
 
 	return unitre
+}
+func CreateUnitByCopyUnit(unit *Unit, controlplayer *Player) *Unit {
+	if unit == nil || unit.InScene == nil {
+		return nil
+	}
+
+	unitre := &Unit{}
+	unitre.ID = UnitID
+	UnitID++
+	unitre.InScene = unit.InScene
+	unitre.MyPlayer = controlplayer
+
+	//	文件数据
+	unitre.UnitFileData = *(conf.GetUnitFileData(unit.TypeID))
+	unitre.InitHPandMP(float32(unit.HP)/float32(unit.MAX_HP), float32(unit.MP)/float32(unit.MAX_MP))
+
+	//名字 等级 经验 创建时的位置
+	unitre.Name = unit.Name
+	unitre.Level = unit.Level
+	unitre.Experience = unit.Experience
+
+	//继承被动技能
+	unitre.Skills = make(map[int32]*Skill) //所有技能
+	for _, v := range unit.Skills {
+		if v.CastType == 2 {
+			skill := NewOneSkill(v.TypeID, v.Level)
+			if skill != nil {
+				unitre.Skills[v.TypeID] = skill
+			}
+		}
+	}
+	//初始化技能被动光环
+	unitre.HaloInSkills = make(map[int32][]int32)
+	unitre.FreshHaloInSkills()
+
+	//初始化
+	unitre.Init()
+	unitre.IsMain = 0
+
+	controlplayer.AddOtherUnit(unitre)
+
+	return unitre
+
 }
 
 func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
@@ -1398,9 +1489,14 @@ func (this *Unit) CalControlState() {
 	this.ManaCost = 0        //魔法消耗降低
 	this.MagicCD = 0         //技能CD降低
 	this.Invisible = 2       //隐身   否
+	this.InvisibleBeSee = 2
+	this.CanSeeInvisible = 2
+	this.MasterInvisible = 2
 
 	this.PhysicalHurtAddHP = 0
 	this.MagicHurtAddHP = 0
+
+	this.AllHurtCV = 0
 
 	this.Body.IsCollisoin = true
 	this.Body.TurnDirection = true
@@ -1519,6 +1615,7 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 	add.AddedMagicRange += v1.AddedMagicRangeCV
 	add.PhysicalHurtAddHP += v1.PhysicalHurtAddHP
 	add.MagicHurtAddHP += v1.MagicHurtAddHP
+	add.AllHurtCV += v1.AllHurtCV
 
 	this.MagicScale = utils.NoLinerAdd(this.MagicScale, v1.MagicScaleCV)
 	this.MagicAmaor = utils.NoLinerAdd(this.MagicAmaor, v1.MagicAmaorCV)
@@ -1548,6 +1645,16 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 	if v1.Invisible == 1 {
 		this.Invisible = 1
 	}
+	if v1.InvisibleBeSee == 1 {
+		this.InvisibleBeSee = 1
+	}
+	if v1.CanSeeInvisible == 1 {
+		this.CanSeeInvisible = 1
+	}
+	if v1.MasterInvisible == 1 {
+		this.MasterInvisible = 1
+	}
+
 	if v1.PhisicImmune == 1 {
 		this.PhisicImmune = 1
 	}
@@ -1576,6 +1683,7 @@ func (this *Unit) AddBuffProperty(add *UnitBaseProperty) {
 	this.AddedMagicRange += add.AddedMagicRange
 	this.PhysicalHurtAddHP += add.PhysicalHurtAddHP
 	this.MagicHurtAddHP += add.MagicHurtAddHP
+	this.AllHurtCV += add.AllHurtCV
 
 }
 
@@ -1842,12 +1950,19 @@ func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 	//magicAttack = utils.SetValueGreaterE(magicAttack,0)
 
 	//-----扣血--
-	hurtvalue := -(physicAttack + magicAttack + pureAttack)
-	this.ChangeHP(hurtvalue)
+	hurtvalue := (physicAttack + magicAttack + pureAttack)
 
-	this.SaveTimeAndHurt(hurtvalue)
+	//伤害加深或者减免
+	hurtvalue += int32(float32(hurtvalue) * this.AllHurtCV)
+	if hurtvalue < 0 {
+		hurtvalue = 0
+	}
+
+	this.ChangeHP(-hurtvalue)
+
+	this.SaveTimeAndHurt(-hurtvalue)
 	//log.Info("---hurtvalue---%d   %f", hurtvalue, this.PhysicalResist)
-	return false, hurtvalue, -physicAttack, -magicAttack
+	return false, -hurtvalue, -physicAttack, -magicAttack
 }
 
 //创建子弹

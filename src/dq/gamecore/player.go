@@ -4,6 +4,7 @@ import (
 	"dq/datamsg"
 	"dq/db"
 	"dq/protobuf"
+	"dq/utils"
 
 	"github.com/golang/protobuf/proto"
 )
@@ -15,8 +16,9 @@ type Server interface {
 type Player struct {
 	Uid         int32
 	ConnectId   int32
-	Characterid int32 //角色id
-	MainUnit    *Unit //主单位
+	Characterid int32         //角色id
+	MainUnit    *Unit         //主单位
+	OtherUnit   *utils.BeeMap //其他单位
 	CurScene    *Scene
 	ServerAgent Server
 
@@ -43,8 +45,29 @@ func CreatePlayer(uid int32, connectid int32, characterid int32) *Player {
 	re.CurShowBullet = make(map[int32]*Bullet)
 	re.LastShowHalo = make(map[int32]*Halo)
 	re.CurShowHalo = make(map[int32]*Halo)
+	re.OtherUnit = utils.NewBeeMap()
 	re.Msg = &protomsg.SC_Update{}
 	return re
+}
+
+func (this *Player) AddOtherUnit(unit *Unit) {
+	if unit == nil {
+		return
+	}
+	unit.ControlID = this.Uid
+	this.OtherUnit.Set(unit.ID, unit)
+}
+
+//遍历删除无效的
+func (this *Player) CheckOtherUnit() {
+
+	items := this.OtherUnit.Items()
+	for k, v := range items {
+		if v == nil || v.(*Unit).IsDisappear() {
+			this.OtherUnit.Delete(k)
+		}
+	}
+
 }
 
 //type DB_CharacterInfo struct {
@@ -254,16 +277,24 @@ func (this *Player) GoInScene(scene *Scene, datas []byte) {
 
 //玩家移动操作
 func (this *Player) MoveCmd(data *protomsg.CS_PlayerMove) {
+	this.CheckOtherUnit()
 	for _, v := range data.IDs {
 		if this.MainUnit.ID == v {
 			this.MainUnit.MoveCmd(data)
+
+			this.CheckOtherUnit()
+			items := this.OtherUnit.Items()
+			for _, v1 := range items {
+				v1.(*Unit).MoveCmd(data)
+			}
 		}
+
 	}
 }
 
 //SkillCmd
 func (this *Player) SkillCmd(data *protomsg.CS_PlayerSkill) {
-
+	this.CheckOtherUnit()
 	if this.MainUnit.ID == data.ID {
 		this.MainUnit.SkillCmd(data)
 	}
@@ -271,9 +302,16 @@ func (this *Player) SkillCmd(data *protomsg.CS_PlayerSkill) {
 
 //玩家攻击操作
 func (this *Player) AttackCmd(data *protomsg.CS_PlayerAttack) {
+	this.CheckOtherUnit()
 	for _, v := range data.IDs {
 		if this.MainUnit.ID == v {
 			this.MainUnit.AttackCmd(data)
+
+			this.CheckOtherUnit()
+			items := this.OtherUnit.Items()
+			for _, v1 := range items {
+				v1.(*Unit).AttackCmd(data)
+			}
 		}
 	}
 }

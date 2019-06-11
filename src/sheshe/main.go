@@ -10,17 +10,6 @@ import (
 
 func main() {
 
-	//	count := 20.0
-	//	for i := 1.0; i <= count; i++ {
-	//		dir := vec2d.Vec2{0, 1}
-	//		dir.Rotate(float64(i * (180.0 / count)))
-	//		log.Info("111=====%f %f", dir.X, dir.Y)
-
-	//		dir2 := vec2d.Vec2{0, 1}
-	//		dir2.Rotate(0.0 - float64(i*(180.0/count)))
-	//		log.Info("222=====%f %f", dir2.X, dir2.Y)
-	//	}
-
 	app := new(app.DefaultApp)
 	app.Run()
 	log.Info("dq over!")

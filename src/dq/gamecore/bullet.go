@@ -338,31 +338,33 @@ func (this *Bullet) DoCallUnit() {
 	}
 	scene := this.SrcUnit.InScene
 	for i := int32(0); i < this.CallUnitCount; i++ {
-
+		var unit *Unit = nil
 		if this.CallUnitTypeID > 0 {
-			unit := CreateUnit(this.SrcUnit.InScene, this.CallUnitTypeID)
-			if unit == nil {
-				continue
+			unit = CreateUnit(this.SrcUnit.InScene, this.CallUnitTypeID)
+
+		} else if this.CallUnitTypeID == -1 {
+			if this.SrcUnit != nil && this.SrcUnit.IsDisappear() == false {
+				unit = CreateUnitByCopyUnit(this.SrcUnit, this.SrcUnit.MyPlayer)
 			}
-			//设置移动核心body
-			//pos := vec2d.Vec2{float64(0), float64(0)}
-			//r := vec2d.Vec2{unit.CollisionR, unit.CollisionR}
-			//unit.Body = scene.MoveCore.CreateBody(pos, r, 0, 1)
-			p1 := vec2d.Vec2{this.DestPos.X + float64(utils.GetRandomFloat(this.CallUnitOffsetPos)),
-				this.DestPos.Z + float64(utils.GetRandomFloat(this.CallUnitOffsetPos))}
 
-			log.Info("------------pos:%v", p1)
-			unit.InitPosition = p1
-			//unit.Body.BlinkToPos(p1)
-			//
-			unit.Camp = this.SrcUnit.Camp
-
-			//buff
-			unit.AddBuffFromStr(this.CallUnitBuff, this.CallUnitInfoSkillLevel, unit)
-			unit.AddHaloFromStr(this.CallUnitHalo, this.CallUnitInfoSkillLevel, nil)
-
-			scene.NextAddUnit.Set(unit.ID, unit)
 		}
+		if unit == nil {
+			continue
+		}
+
+		p1 := vec2d.Vec2{this.DestPos.X + float64(utils.GetRandomFloat(this.CallUnitOffsetPos)),
+			this.DestPos.Y + float64(utils.GetRandomFloat(this.CallUnitOffsetPos))}
+
+		log.Info("------------pos:%v", p1)
+		unit.InitPosition = p1
+		//
+		unit.Camp = this.SrcUnit.Camp
+
+		//buff
+		unit.AddBuffFromStr(this.CallUnitBuff, this.CallUnitInfoSkillLevel, unit)
+		unit.AddHaloFromStr(this.CallUnitHalo, this.CallUnitInfoSkillLevel, nil)
+
+		scene.NextAddUnit.Set(unit.ID, unit)
 	}
 }
 func (this *Bullet) GetPosition2D() vec2d.Vec2 {
