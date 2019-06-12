@@ -113,6 +113,9 @@ type BuffBaseData struct {
 	SubTagNumRule    int32 //标记减少规则 减少为0会自动删除buff 0:表示不减少 1:表示攻击时减少
 	//伤害相关  剧毒类buff
 	HurtType int32 //伤害类型(1:物理伤害 2:魔法伤害 3:纯粹伤害 4:不造成伤害)
+
+	//特殊情况处理
+	Exception int32 // 特殊情况处理  0表示没有特殊情况 1:血魔的血怒buff死亡后加血
 }
 
 //技能数据 (会根据等级变化的数据)
@@ -150,7 +153,8 @@ type BuffData struct {
 	AttackTargetAttackSpeedCV float32 //攻击指定目标攻击速度变化值 -10表示降低10点攻击速度
 	PhysicalHurtAddHP         float32 //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 	MagicHurtAddHP            float32 //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
-	AllHurtCV                 float32 //总伤害变化率 0.1表示 增加10%的总伤害 -0.1表示减少10%总伤害
+	AllHurtCV                 float32 //受到总伤害变化率 0.1表示 增加10%的总伤害 -0.1表示减少10%总伤害
+	DoAllHurtCV               float32 //造成总伤害变化率 0.1表示 增加10%的总伤害 -0.1表示减少10%总伤害
 	InitTagNum                int32   //初始标记数量
 
 	//
@@ -198,6 +202,7 @@ type BuffFileData struct {
 	PhysicalHurtAddHP         string //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 	MagicHurtAddHP            string //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 	AllHurtCV                 string
+	DoAllHurtCV               string
 	InitTagNum                string //初始标记数量
 
 	//
@@ -244,6 +249,8 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 	PhysicalHurtAddHP := utils.GetFloat32FromString2(this.PhysicalHurtAddHP)
 	MagicHurtAddHP := utils.GetFloat32FromString2(this.MagicHurtAddHP)
 	AllHurtCV := utils.GetFloat32FromString2(this.AllHurtCV)
+	DoAllHurtCV := utils.GetFloat32FromString2(this.DoAllHurtCV)
+
 	InitTagNum := utils.GetInt32FromString2(this.InitTagNum)
 
 	HurtTimeInterval := utils.GetFloat32FromString2(this.HurtTimeInterval)
@@ -410,6 +417,12 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 		} else {
 			ssd.AllHurtCV = AllHurtCV[i]
 		}
+		if int32(len(DoAllHurtCV)) <= i {
+			ssd.DoAllHurtCV = DoAllHurtCV[len(DoAllHurtCV)-1]
+		} else {
+			ssd.DoAllHurtCV = DoAllHurtCV[i]
+		}
+
 		if int32(len(InitTagNum)) <= i {
 			ssd.InitTagNum = InitTagNum[len(InitTagNum)-1]
 		} else {

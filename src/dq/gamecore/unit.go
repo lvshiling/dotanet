@@ -856,7 +856,8 @@ type UnitBaseProperty struct {
 	PhysicalHurtAddHP float32 //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 	MagicHurtAddHP    float32 //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 
-	AllHurtCV float32 //总伤害变化率 0.1表示 增加10%的总伤害 -0.1表示减少10%总伤害
+	AllHurtCV   float32 //受到总伤害变化率 0.1表示 增加10%的总伤害 -0.1表示减少10%总伤害
+	DoAllHurtCV float32 //造成总伤害变化率 0.1表示 增加10%的总伤害 -0.1表示减少10%总伤害
 }
 
 //------------------单位本体------------------
@@ -1532,6 +1533,7 @@ func (this *Unit) CalControlState() {
 	this.MagicHurtAddHP = 0
 
 	this.AllHurtCV = 0
+	this.DoAllHurtCV = 0
 
 	this.Body.IsCollisoin = true
 	this.Body.TurnDirection = true
@@ -1651,6 +1653,7 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 	add.PhysicalHurtAddHP += v1.PhysicalHurtAddHP
 	add.MagicHurtAddHP += v1.MagicHurtAddHP
 	add.AllHurtCV += v1.AllHurtCV
+	add.DoAllHurtCV += v1.DoAllHurtCV
 
 	this.MagicScale = utils.NoLinerAdd(this.MagicScale, v1.MagicScaleCV)
 	this.MagicAmaor = utils.NoLinerAdd(this.MagicAmaor, v1.MagicAmaorCV)
@@ -1719,6 +1722,7 @@ func (this *Unit) AddBuffProperty(add *UnitBaseProperty) {
 	this.PhysicalHurtAddHP += add.PhysicalHurtAddHP
 	this.MagicHurtAddHP += add.MagicHurtAddHP
 	this.AllHurtCV += add.AllHurtCV
+	this.DoAllHurtCV += add.DoAllHurtCV
 
 }
 
@@ -2012,16 +2016,87 @@ func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 	hurtvalue := (physicAttack + magicAttack + pureAttack)
 
 	//伤害加深或者减免
-	hurtvalue += int32(float32(hurtvalue) * this.AllHurtCV)
+	doallhurtcv := float32(0)
+	if bullet.SrcUnit != nil && bullet.SrcUnit.IsDisappear() == false {
+		doallhurtcv = bullet.SrcUnit.DoAllHurtCV
+	}
+	hurtvalue += int32(float32(hurtvalue) * (this.AllHurtCV + doallhurtcv))
 	if hurtvalue < 0 {
 		hurtvalue = 0
 	}
-
+	lasthp := this.HP
 	this.ChangeHP(-hurtvalue)
+	//被攻击死亡
+	if this.HP <= 0 && lasthp > 0 {
+		this.CheckTriggerDie(bullet.SrcUnit)
+	}
 
 	this.SaveTimeAndHurt(-hurtvalue)
 	//log.Info("---hurtvalue---%d   %f", hurtvalue, this.PhysicalResist)
 	return false, -hurtvalue, -physicAttack, -magicAttack
+}
+
+//被杀死处理
+func (this *Unit) CheckTriggerDie(killer *Unit) {
+	if killer == nil || killer.IsDisappear() {
+		return
+	}
+	//遍历 可以优化  本体的buff
+	for _, v := range this.Buffs {
+		for _, v1 := range v {
+			//攻击时减少标记
+			if v1.Exception <= 0 {
+				continue
+			}
+			switch v1.Exception {
+			case 1: //血魔的血怒 死亡后加血
+				{
+					param := utils.GetFloat32FromString3(v1.ExceptionParam, ":")
+					if len(param) <= 0 {
+						return
+					}
+					addhp := float32(this.MAX_HP) * param[0]
+					if addhp > 0 {
+						killer.ChangeHP(int32(addhp))
+					}
+				}
+			default:
+				{
+
+				}
+			}
+
+		}
+
+	}
+	//遍历 可以优化  killer的buff
+	for _, v := range killer.Buffs {
+		for _, v1 := range v {
+			//攻击时减少标记
+			if v1.Exception <= 0 {
+				continue
+			}
+			switch v1.Exception {
+			case 1: //血魔的血怒 死亡后加血
+				{
+					param := utils.GetFloat32FromString3(v1.ExceptionParam, ":")
+					if len(param) <= 0 {
+						return
+					}
+					addhp := float32(this.MAX_HP) * param[0]
+					if addhp > 0 {
+						killer.ChangeHP(int32(addhp))
+					}
+				}
+			default:
+				{
+
+				}
+			}
+
+		}
+
+	}
 }
 
 //创建子弹
