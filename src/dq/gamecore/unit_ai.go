@@ -60,7 +60,7 @@ func (this *NormalAI) Update(dt float64) {
 	//		return
 	//	}
 	//获取最近的敌人
-	nearestEnemies := this.GetNearestEnemies()
+	nearestEnemies := this.GetNearestEnemies(this.AttackTarget)
 	if nearestEnemies != nil {
 		//		if this.Parent.AttackMode == 3 {
 		//			log.Info("------:%d", nearestEnemies.ID)
@@ -135,7 +135,7 @@ func (this *NormalAI) GetBigEnemies() *Enemies {
 }
 
 //获取最近的敌人
-func (this *NormalAI) GetNearestEnemies() *Unit {
+func (this *NormalAI) GetNearestEnemies(unit *Unit) *Unit {
 	//通过自动攻击范围来攻击目标
 	if this.Parent.InScene != nil {
 		units := this.Parent.InScene.FindVisibleUnits(this.Parent)
@@ -145,6 +145,10 @@ func (this *NormalAI) GetNearestEnemies() *Unit {
 		my := this.Parent
 
 		mindis := 10.0
+		if unit != nil && unit.IsDisappear() == false {
+			mindis = my.GetDistanseOfAutoAttackRange(unit)
+		}
+
 		var minUnit *Unit = nil
 		for _, v := range units {
 			//判断阵营 攻击模式 是否死亡  和 是否能被攻击

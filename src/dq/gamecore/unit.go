@@ -9,6 +9,7 @@ import (
 	"dq/utils"
 	"dq/vec2d"
 	"math"
+	"strconv"
 	"strings"
 )
 
@@ -1183,8 +1184,6 @@ func (this *Unit) EveryTimeDo(dt float64) {
 		return
 	}
 
-	this.AutoRemoveTimeAndHurt()
-
 	this.EveryTimeDoRemainTime -= float32(dt)
 	if this.EveryTimeDoRemainTime <= 0 {
 		//do
@@ -1193,6 +1192,21 @@ func (this *Unit) EveryTimeDo(dt float64) {
 		//每秒回血
 		this.ChangeHP(int32(this.HPRegain))
 		this.ChangeMP(int32(this.MPRegain))
+
+		//------
+		//技能携带的buf
+		for _, v := range this.Skills {
+			if v.Level <= 0 {
+				continue
+			}
+			buffs := this.AddBuffFromStr(v.InitBuff, v.Level, this)
+			for _, v := range buffs {
+				v.RemainTime = 1
+			}
+
+		}
+
+		this.AutoRemoveTimeAndHurt()
 	}
 }
 
@@ -1729,20 +1743,20 @@ func (this *Unit) AddBuffProperty(add *UnitBaseProperty) {
 //计算所有buff对属性的影响
 func (this *Unit) CalPropertyByBuffs() {
 	add := &UnitBaseProperty{}
-	//技能携带的buf
-	for _, v := range this.Skills {
-		if v.Level <= 0 {
-			continue
-		}
+	//	//技能携带的buf
+	//	for _, v := range this.Skills {
+	//		if v.Level <= 0 {
+	//			continue
+	//		}
 
-		buffs := utils.GetInt32FromString2(v.InitBuff)
-		for _, v1 := range buffs {
-			buff := NewBuff(v1, v.Level, this)
-			if buff != nil {
-				this.CalPropertyByBuff(buff, add)
-			}
-		}
-	}
+	//		buffs := utils.GetInt32FromString2(v.InitBuff)
+	//		for _, v1 := range buffs {
+	//			buff := NewBuff(v1, v.Level, this)
+	//			if buff != nil {
+	//				this.CalPropertyByBuff(buff, add)
+	//			}
+	//		}
+	//	}
 	//buff
 	for _, v := range this.Buffs {
 		for _, v1 := range v {
@@ -1911,12 +1925,22 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 
 		} else if buff.OverlyingType == 2 {
 			bf = append(bf, buff)
+			///log.Info("--111111133")
+			this.CheckTriggerCreateBuff(buff)
+			return buff
+		} else if buff.OverlyingType == 3 {
+			bf[0] = buff
+			//log.Info("--111111122")
+			this.CheckTriggerCreateBuff(buff)
 			return buff
 		}
 	} else {
 		bfs := make([]*Buff, 0)
 		bfs = append(bfs, buff)
 		this.Buffs[buff.TypeID] = bfs
+		//log.Info("--111111144")
+		this.CheckTriggerCreateBuff(buff)
+
 		//给单位计算buff效果
 		//this.CalPropertyByBuffCV(buff)
 
@@ -2035,8 +2059,71 @@ func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 	//log.Info("---hurtvalue---%d   %f", hurtvalue, this.PhysicalResist)
 	return false, -hurtvalue, -physicAttack, -magicAttack
 }
+func (this *Unit) CheckTriggerCreateBuff(v1 *Buff) {
+	if v1 == nil {
+		return
+	}
+	//
+	if v1.Exception <= 0 {
+		return
+	}
+	switch v1.Exception {
+	case 2: //血魔的焦渴
+		{
+			//log.Info("血魔的焦渴")
+			v1.MoveSpeedCR = 0
+			v1.AttackSpeedCV = 0
+			if this.Body == nil {
+				return
+			}
+			param := utils.GetFloat32FromString3(v1.ExceptionParam, ":")
+			if len(param) < 6 {
+				return
+			}
+			maxdis := param[0]
+			maxhp := param[1]
+			movespeed := param[2]
+			attackspeed := param[3]
+			minhp := param[4]
 
-//被杀死处理
+			buffstr := strconv.Itoa(int(param[5]))
+			//获取范围内的目标单位
+			allunit := this.InScene.FindVisibleUnits(this)
+			for _, v := range allunit {
+
+				if v.IsDisappear() || this.CheckIsEnemy(v) == false || v.UnitType != 1 || v.Body == nil {
+					continue
+				}
+				//检测是否在范围内
+				dis := float32(vec2d.Distanse(this.Body.Position, v.Body.Position))
+				if dis > maxdis {
+					continue
+				}
+
+				hp := float32(v.HP) / float32(v.MAX_HP)
+				if hp <= maxhp {
+					t1 := 1 - (hp-minhp)/(maxhp-minhp)
+					if t1 > 1 { //hp小于最低值
+						t1 = 1
+						v.AddBuffFromStr(buffstr, 1, this)
+					}
+					v1.MoveSpeedCR += movespeed * t1
+					v1.AttackSpeedCV += attackspeed * t1
+				}
+
+			}
+
+			log.Info("move:%f    attackspeed:%f", v1.MoveSpeedCR, v1.AttackSpeedCV)
+
+		}
+	default:
+		{
+
+		}
+	}
+}
+
+//被杀死时 buff异常处理
 func (this *Unit) CheckTriggerDie(killer *Unit) {
 	if killer == nil || killer.IsDisappear() {
 		return
