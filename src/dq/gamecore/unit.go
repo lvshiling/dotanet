@@ -1902,6 +1902,7 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 	if buff.BuffType == 2 && this.MagicImmune == 1 && buff.NoCareMagicImmuneAddBuff == 2 {
 		return nil
 	}
+	buff.CastUnit = castunit
 
 	bf, ok := this.Buffs[buff.TypeID]
 	//叠加机制
@@ -2113,7 +2114,7 @@ func (this *Unit) CheckTriggerCreateBuff(v1 *Buff) {
 
 			}
 
-			log.Info("move:%f    attackspeed:%f", v1.MoveSpeedCR, v1.AttackSpeedCV)
+			//log.Info("move:%f    attackspeed:%f", v1.MoveSpeedCR, v1.AttackSpeedCV)
 
 		}
 	default:

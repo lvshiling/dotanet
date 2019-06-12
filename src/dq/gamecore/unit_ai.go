@@ -78,6 +78,7 @@ func (this *NormalAI) Update(dt float64) {
 	if this.Parent.IsOutAutoAttackTraceOutRange(this.AttackTarget) == true {
 
 		this.Parent.StopAttackCmd()
+		this.AttackTarget = nil
 	}
 
 }
