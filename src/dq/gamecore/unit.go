@@ -261,6 +261,8 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 					//触发
 					//添加自己的buff
 					this.AddBuffFromStr(v.MyBuff, v.Level, this)
+					//添加自己的halo
+					this.AddHaloFromStr(v.MyHalo, v.Level, nil)
 					//暴击
 					b.SetCrit(v.TriggerCrit)
 					b.AddNoCareDodge(v.NoCareDodge)
@@ -653,6 +655,7 @@ func (this *Unit) CheckAttackEnable2Target(target *Unit) bool {
 
 	//不能攻击
 	if this.AttackEnable == 2 {
+		//log.Info("------AttackEnable---")
 		return false
 	}
 	//检查是否是敌人

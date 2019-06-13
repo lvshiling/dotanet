@@ -206,7 +206,7 @@ func (this *MoveState) Update(dt float64) {
 		//有目标单位
 		if this.Parent.SkillCmdData.TargetUnitID > 0 {
 			targetunit := this.Parent.InScene.FindUnitByID(this.Parent.SkillCmdData.TargetUnitID)
-			if targetunit != nil {
+			if targetunit != nil && this.Parent.GetCanMove() {
 				this.Parent.Body.SetTarget(targetunit.Body.Position)
 				this.LastFindPathTarget = targetunit
 				this.LastFindPathTargetTime = utils.GetCurTimeOfSecond()
@@ -227,7 +227,7 @@ func (this *MoveState) Update(dt float64) {
 			}
 		}
 		//
-		if this.Parent.AttackCmdDataTarget.Body != nil {
+		if this.Parent.AttackCmdDataTarget.Body != nil && this.Parent.GetCanMove() {
 			this.Parent.Body.SetTarget(this.Parent.AttackCmdDataTarget.Body.Position)
 			this.LastFindPathTarget = this.Parent.AttackCmdDataTarget
 			this.LastFindPathTargetTime = utils.GetCurTimeOfSecond()
@@ -236,7 +236,7 @@ func (this *MoveState) Update(dt float64) {
 	}
 
 	//再检查移动命令
-	if this.Parent.HaveMoveCmd() {
+	if this.Parent.HaveMoveCmd() && this.Parent.GetCanMove() {
 		this.Parent.Body.SetMoveDir(vec2d.Vec2{X: float64(this.Parent.MoveCmdData.X), Y: float64(this.Parent.MoveCmdData.Y)})
 	}
 

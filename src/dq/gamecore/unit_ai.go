@@ -62,18 +62,12 @@ func (this *NormalAI) Update(dt float64) {
 	//获取最近的敌人
 	nearestEnemies := this.GetNearestEnemies(this.AttackTarget)
 	if nearestEnemies != nil {
-		//		if this.Parent.AttackMode == 3 {
-		//			log.Info("------:%d", nearestEnemies.ID)
-		//		}
-		//		if this.Parent.AttackMode == 1 {
-		//			log.Info("1111------:%d", nearestEnemies.ID)
-		//		}
 
 		this.AttackTarget = nearestEnemies
-		this.CreateAttackCmd(nearestEnemies)
-		return
+		//this.CreateAttackCmd(nearestEnemies)
+		//return
 	}
-
+	this.CreateAttackCmd(this.AttackTarget)
 	//脱离 自动攻击取消追击范围
 	if this.Parent.IsOutAutoAttackTraceOutRange(this.AttackTarget) == true {
 
@@ -94,6 +88,9 @@ func (this *NormalAI) OnStart() {
 
 //创建攻击命令
 func (this *NormalAI) CreateAttackCmd(target *Unit) {
+	if target == nil {
+		return
+	}
 	//创建攻击仇人的命令
 	data := &protomsg.CS_PlayerAttack{}
 	data.IDs = make([]int32, 0)
@@ -147,7 +144,9 @@ func (this *NormalAI) GetNearestEnemies(unit *Unit) *Unit {
 
 		mindis := 10.0
 		if unit != nil && unit.IsDisappear() == false {
-			mindis = my.GetDistanseOfAutoAttackRange(unit)
+			if my.CheckAttackEnable2Target(unit) {
+				mindis = my.GetDistanseOfAutoAttackRange(unit)
+			}
 		}
 
 		var minUnit *Unit = nil
