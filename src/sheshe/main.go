@@ -10,6 +10,8 @@ import (
 
 func main() {
 
+	//	t1 := vec2d.Angle(vec2d.Vec2{0, 1}, vec2d.Vec2{1, 0})
+	//	log.Info("angle:%f", t1)
 	app := new(app.DefaultApp)
 	app.Run()
 	log.Info("dq over!")

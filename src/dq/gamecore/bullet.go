@@ -19,11 +19,19 @@ func GetBulletID() int32 {
 	return BulletID
 }
 
-//子弹的影响范围
+//子弹的影响范围 范围内的单位和目标单位受到一样的效果
 type BulletRange struct {
 	RangeType int32   //范围类型 1:单体 2:圆  3:扇形 4:矩形
 	Radius    float32 //半径(圆和扇形)
 	Radian    float32 //弧度(扇形)
+}
+
+//溅射  溅射范围内的单位受到目标单位伤害效果的一定百分比
+type BulletSputtering struct {
+	HurtRatio         float32 //伤害百分比
+	Radius            float32 //半径(圆和扇形)
+	Radian            float32 //弧度(扇形) 360度为圆形
+	NoCareMagicImmune int32   //是否无视单位魔法免疫 1:是 2:非
 }
 
 //伤害信息
@@ -75,6 +83,8 @@ type Bullet struct {
 
 	NormalHurt HurtInfo   //攻击伤害(以英雄攻击力计算伤害) 值为计算暴击后的值
 	OtherHurt  []HurtInfo //其他伤害也就是额外伤害
+
+	Sputterings []BulletSputtering //溅射
 
 	HurtRange BulletRange //范围
 
@@ -158,6 +168,7 @@ func (this *Bullet) Init() {
 	this.NormalHurt.HurtValue = 0
 
 	this.OtherHurt = make([]HurtInfo, 0)
+	this.Sputterings = make([]BulletSputtering, 0)
 	this.TargetBuff = make([]BuffInfo, 0)
 	this.TargetHalo = make([]HaloInfo, 0)
 	this.HurtUnits = make(map[int32]*Unit)
@@ -372,14 +383,91 @@ func (this *Bullet) GetPosition2D() vec2d.Vec2 {
 	return vec2d.Vec2{this.Position.X, this.Position.Y}
 }
 
-//对单位造成伤害 只计算一次
-func (this *Bullet) HurtUnit(unit *Unit) {
+//处理溅射伤害
+func (this *Bullet) DoSpurting(hurtvalue int32) {
+	if this.DestUnit == nil || len(this.Sputterings) <= 0 {
+		return
+	}
+	startpos := this.SrcUnit.Body.Position
+	//瞬间到达以srcunit坐标为中心点 其他的以子弹当前点为中心点
+	if this.MoveType == 1 {
+		if this.SrcUnit == nil || this.SrcUnit.Body == nil {
+			return
+		}
+
+	} else {
+		startpos = vec2d.Vec2{this.Position.X, this.Position.Y}
+	}
+
+	allunit := this.SrcUnit.InScene.FindVisibleUnitsByPos(startpos)
+
+	fangxiang := vec2d.Sub(vec2d.Vec2{this.Position.X, this.Position.Y}, startpos)
+	if fangxiang.Length() <= 0 {
+		fangxiang = vec2d.Sub(vec2d.Vec2{this.Position.X, this.Position.Y},
+			vec2d.Vec2{this.StartPosition.X, this.StartPosition.Y})
+		if fangxiang.Length() <= 0 {
+			fangxiang = this.SrcUnit.Body.Direction
+		}
+	}
+	for _, v := range allunit {
+		//不能对目标造成溅射
+		if v.IsDisappear() || v.Body == nil || v == this.DestUnit {
+			continue
+		}
+		if this.SrcUnit.CheckIsEnemy(v) == false {
+			continue
+		}
+		for _, v1 := range this.Sputterings {
+			//技能免疫检测
+			if v1.NoCareMagicImmune != 1 && v.MagicImmune == 1 {
+				continue
+			}
+			dir := vec2d.Sub(v.Body.Position, startpos)
+			if float32(dir.Length()) > v1.Radius {
+				continue
+			}
+			if float32(vec2d.Angle(fangxiang, dir)) > v1.Radian {
+				continue
+			}
+			log.Info("---DoSpurting--tt--:%d  :%f", hurtvalue, v1.HurtRatio)
+			//造成溅射伤害
+			this.SpurtingHurtUnit(v, int32(float32(hurtvalue)*v1.HurtRatio))
+		}
+
+	}
+}
+
+//溅射伤害 狂战斧 60%
+func (this *Bullet) SpurtingHurtUnit(unit *Unit, value int32) {
 	//log.Info("222222222")
 	if unit == nil {
 		return
 	}
-	if _, ok := this.HurtUnits[unit.ID]; ok {
+	//伤害 不会miss
+	unit.BeAttackedFromValue(value, this.SrcUnit)
+
+	//小于0 表示被miss 显示相关
+	if this.SrcUnit == nil || this.SrcUnit.IsDisappear() {
 		return
+	}
+	if this.SrcUnit.MyPlayer == nil {
+		return
+	}
+	//为了显示 玩家造成的伤害
+	mph := &protomsg.MsgPlayerHurt{HurtUnitID: unit.ID, HurtAllValue: value}
+	this.SrcUnit.MyPlayer.AddHurtValue(mph)
+}
+
+//
+
+//对单位造成伤害 只计算一次 hurtratio 伤害系数 狂战斧 60%
+func (this *Bullet) HurtUnit(unit *Unit) int32 {
+	//log.Info("222222222")
+	if unit == nil {
+		return 0
+	}
+	if _, ok := this.HurtUnits[unit.ID]; ok {
+		return 0
 	}
 	//log.Info("33333333")
 
@@ -427,7 +515,7 @@ func (this *Bullet) HurtUnit(unit *Unit) {
 			unit.AddBuffFromStr(v.Buff, v.BuffLevel, this.SrcUnit)
 		}
 		if this.SrcUnit == nil || this.SrcUnit.IsDisappear() {
-			return
+			return hurtvalue
 		}
 		//吸血
 		addhp := float32(0)
@@ -442,7 +530,7 @@ func (this *Bullet) HurtUnit(unit *Unit) {
 		}
 
 		if this.SrcUnit.MyPlayer == nil {
-			return
+			return hurtvalue
 		}
 		//为了显示 玩家造成的伤害
 		mph := &protomsg.MsgPlayerHurt{HurtUnitID: unit.ID, HurtAllValue: hurtvalue}
@@ -451,6 +539,7 @@ func (this *Bullet) HurtUnit(unit *Unit) {
 		}
 		this.SrcUnit.MyPlayer.AddHurtValue(mph)
 	}
+	return hurtvalue
 
 }
 func (this *Bullet) DoHalo() {
@@ -482,7 +571,8 @@ func (this *Bullet) DoHurt() {
 		if this.DestUnit == nil {
 			return
 		}
-		this.HurtUnit(this.DestUnit)
+		hurtvalue := this.HurtUnit(this.DestUnit)
+		this.DoSpurting(hurtvalue)
 	} else if this.HurtRange.RangeType == 2 {
 		if this.SrcUnit == nil || this.SrcUnit.IsDisappear() {
 			return
@@ -517,6 +607,9 @@ func (this *Bullet) DoHurt() {
 func (this *Bullet) AddOtherHurt(hurtinfo HurtInfo) {
 
 	this.OtherHurt = append(this.OtherHurt, hurtinfo)
+}
+func (this *Bullet) AddSputtering(sp BulletSputtering) {
+	this.Sputterings = append(this.Sputterings, sp)
 }
 
 //伤害类型 (1:物理伤害 2:魔法伤害 3:纯粹伤害)

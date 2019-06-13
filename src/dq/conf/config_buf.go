@@ -116,6 +116,11 @@ type BuffBaseData struct {
 
 	//特殊情况处理
 	Exception int32 // 特殊情况处理  0表示没有特殊情况 1:血魔的血怒buff死亡后加血
+
+	//溅射相关
+	SpurtingRadius            float32 //溅射半径
+	SpurtingRadian            float32 //弧度(扇形) π度为圆形
+	SpurtingNoCareMagicImmune int32   //溅射是否无视魔免 1:是 2:否
 }
 
 //技能数据 (会根据等级变化的数据)
@@ -161,7 +166,10 @@ type BuffData struct {
 	HurtTimeInterval float32 //伤害时间间隔
 	HurtValue        float32 //伤害值
 
+	SpurtingHurtRatio float32 //溅射伤害百分比
+
 	ExceptionParam string //特殊情况处理参数
+
 }
 
 //单位配置文件数据
@@ -209,6 +217,8 @@ type BuffFileData struct {
 	HurtTimeInterval string //伤害时间间隔
 	HurtValue        string //伤害值
 
+	SpurtingHurtRatio string //溅射伤害百分比
+
 	ExceptionParam string //特殊情况处理参数
 }
 
@@ -255,6 +265,7 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 
 	HurtTimeInterval := utils.GetFloat32FromString2(this.HurtTimeInterval)
 	HurtValue := utils.GetFloat32FromString2(this.HurtValue)
+	SpurtingHurtRatio := utils.GetFloat32FromString2(this.SpurtingHurtRatio)
 
 	ExceptionParam := utils.GetStringFromString2(this.ExceptionParam)
 	for i := int32(0); i < this.MaxLevel; i++ {
@@ -439,6 +450,12 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 		} else {
 			ssd.HurtValue = HurtValue[i]
 		}
+		if int32(len(SpurtingHurtRatio)) <= i {
+			ssd.SpurtingHurtRatio = SpurtingHurtRatio[len(SpurtingHurtRatio)-1]
+		} else {
+			ssd.SpurtingHurtRatio = SpurtingHurtRatio[i]
+		}
+
 		if int32(len(ExceptionParam)) <= i {
 			ssd.ExceptionParam = ExceptionParam[len(ExceptionParam)-1]
 		} else {

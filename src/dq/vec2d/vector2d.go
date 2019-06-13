@@ -172,6 +172,8 @@ func Distanse(v1 Vec2, v2 Vec2) float64 {
 func Dot(v1 Vec2, v2 Vec2) float64 {
 	return (v1.X*v2.X + v1.Y*v2.Y)
 }
+
+//2个向量的夹角  弧度 >= 0
 func Angle(v1 Vec2, v2 Vec2) float64 {
 	dz := v1.X*v2.Y - v1.Y*v2.X
 

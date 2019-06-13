@@ -249,6 +249,23 @@ func (this *Unit) CheckCastSkillTarget(target *Unit, skilldata *Skill) bool {
 
 //检查攻击 触发攻击特效
 func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
+	//溅射buff
+	for _, v := range this.Buffs {
+		if len(v) > 0 {
+			if v[0].SpurtingRadius > 0 {
+				//溅射相关
+				log.Info("--SpurtingRadius---:%f:%f:%f:%d",
+					v[0].SpurtingHurtRatio, v[0].SpurtingRadius, v[0].SpurtingRadian, v[0].SpurtingNoCareMagicImmune)
+				b.AddSputtering(BulletSputtering{
+					HurtRatio:         v[0].SpurtingHurtRatio,
+					Radius:            v[0].SpurtingRadius,
+					Radian:            v[0].SpurtingRadian,
+					NoCareMagicImmune: v[0].SpurtingNoCareMagicImmune})
+
+			}
+		}
+	}
+
 	for _, v := range this.Skills {
 		//CastType              int32   // 施法类型:  1:主动技能  2:被动技能
 		//TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
@@ -1734,6 +1751,7 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 	add.AttributeAgility += v1.AttributeAgilityCV
 	add.AttackSpeed += v1.AttackSpeedCV
 	add.Attack += int32(v1.AttackCV)
+	add.Attack += int32(float32(this.Attack) * v1.AttackCR)
 	add.MoveSpeed += float64(v1.MoveSpeedCV)
 	add.MPRegain += v1.MPRegainCV
 	add.PhysicalAmaor += v1.PhysicalAmaorCV
@@ -1744,6 +1762,7 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 	add.MagicHurtAddHP += v1.MagicHurtAddHP
 	add.AllHurtCV += v1.AllHurtCV
 	add.DoAllHurtCV += v1.DoAllHurtCV
+	add.AttackRange += v1.AttackRangeCV
 
 	this.MagicScale = utils.NoLinerAdd(this.MagicScale, v1.MagicScaleCV)
 	this.MagicAmaor = utils.NoLinerAdd(this.MagicAmaor, v1.MagicAmaorCV)
@@ -1813,6 +1832,7 @@ func (this *Unit) AddBuffProperty(add *UnitBaseProperty) {
 	this.MagicHurtAddHP += add.MagicHurtAddHP
 	this.AllHurtCV += add.AllHurtCV
 	this.DoAllHurtCV += add.DoAllHurtCV
+	this.AttackRange += add.AttackRange
 
 }
 
@@ -2007,7 +2027,7 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 			return buff
 		} else if buff.OverlyingType == 3 {
 			bf[0] = buff
-			//log.Info("--111111122")
+			log.Info("--111111122:%d", buff.TypeID)
 			this.CheckTriggerCreateBuff(buff)
 			return buff
 		}
@@ -2016,6 +2036,7 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 		bfs = append(bfs, buff)
 		this.Buffs[buff.TypeID] = bfs
 		//log.Info("--111111144")
+		log.Info("aa--111111122:%d", buff.TypeID)
 		this.CheckTriggerCreateBuff(buff)
 
 		//给单位计算buff效果
@@ -2038,10 +2059,12 @@ func (this *Unit) GetBuff(typeid int32) *Buff {
 
 //通过bufftypeid string 添加buff  castunit给我添加
 func (this *Unit) AddBuffFromStr(buffsstr string, level int32, castunit *Unit) []*Buff {
+	//log.Info("---------------------:%s", buffsstr)
 	buffs := utils.GetInt32FromString2(buffsstr)
 	re := make([]*Buff, 0)
 	for _, v := range buffs {
 		buff := NewBuff(v, level, this)
+		//log.Info("----------buff:", buff.TypeID)
 		if buff != nil {
 			buff = this.AddBuffFromBuff(buff, castunit)
 			re = append(re, buff)
@@ -2068,7 +2091,24 @@ func (this *Unit) AddHaloFromStr(halosstr string, level int32, pos *vec2d.Vec2) 
 	return re
 }
 
-//受到来自子弹的伤害
+//溅射伤害
+func (this *Unit) BeAttackedFromValue(value int32, attackunit *Unit) {
+
+	if value >= 0 {
+		return
+	}
+
+	lasthp := this.HP
+	this.ChangeHP(value)
+	//被攻击死亡
+	if this.HP <= 0 && lasthp > 0 {
+		this.CheckTriggerDie(attackunit)
+	}
+
+	this.SaveTimeAndHurt(value)
+}
+
+//受到来自子弹的伤害 calcmiss是否计算miss 溅射不会miss
 func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 	//计算闪避
 	if bullet.SkillID == -1 {
@@ -2125,6 +2165,10 @@ func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 	if hurtvalue < 0 {
 		hurtvalue = 0
 	}
+
+	//乘以伤害系数
+	//hurtvalue *= hurtratio
+
 	lasthp := this.HP
 	this.ChangeHP(-hurtvalue)
 	//被攻击死亡
