@@ -400,12 +400,12 @@ func (this *Bullet) HurtUnit(unit *Unit) {
 			dir := vec2d.Sub(unit.Body.Position, vec2d.Vec2{this.StartPosition.X, this.StartPosition.Y})
 			dir.Normalize()
 			dir.MulToFloat64(float64(this.ForceMoveSpeedSize))
-			unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel)
+			unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel, float32(0))
 		} else {
 			dir := vec2d.Sub(unit.Body.Position, this.GetPosition2D())
 			dir.Normalize()
 			dir.MulToFloat64(float64(this.ForceMoveSpeedSize))
-			unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel)
+			unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel, float32(0))
 		}
 		//更改buff时间
 		if len(this.ForceMoveBuff) > 0 {

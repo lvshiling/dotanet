@@ -93,6 +93,9 @@ type HaloBaseData struct {
 	FollowParent        int32   //跟随主角  1:是 2:否
 	HaloModeType        string  //光环模型
 	BlinkToTarget       int32   //是否瞬间移动到目的地 1:是 2:否
+
+	//特殊情况处理
+	Exception int32 //特殊情况处理 1 小小的山崩 对投掷状态的单位造成3倍伤害
 }
 
 //技能数据 (会根据等级变化的数据)
@@ -104,6 +107,7 @@ type HaloData struct {
 	HurtValue          int32   //技能伤害
 	HaloRange          float32 //光环范围 小于等于0表示单体
 	NormalHurt         float32 //附带普通攻击百分比 (0.5 为 50%的普通攻击伤害) 一般为0
+	ExceptionParam     string  //特殊情况处理参数
 
 }
 
@@ -118,6 +122,7 @@ type HaloFileData struct {
 	HurtValue          string //技能伤害
 	HaloRange          string //光环范围 小于等于0表示单体
 	NormalHurt         string //附带普通攻击百分比 (0.5 为 50%的普通攻击伤害) 一般为0
+	ExceptionParam     string //特殊情况处理参数
 
 }
 
@@ -132,6 +137,7 @@ func (this *HaloFileData) Trans2HaloData(re *[]HaloData) {
 	HurtValue := utils.GetInt32FromString2(this.HurtValue)
 	HaloRange := utils.GetFloat32FromString2(this.HaloRange)
 	NormalHurt := utils.GetFloat32FromString2(this.NormalHurt)
+	ExceptionParam := utils.GetStringFromString2(this.ExceptionParam)
 
 	for i := int32(0); i < this.MaxLevel; i++ {
 		ssd := HaloData{}
@@ -165,6 +171,11 @@ func (this *HaloFileData) Trans2HaloData(re *[]HaloData) {
 			ssd.NormalHurt = NormalHurt[len(NormalHurt)-1]
 		} else {
 			ssd.NormalHurt = NormalHurt[i]
+		}
+		if int32(len(ExceptionParam)) <= i {
+			ssd.ExceptionParam = ExceptionParam[len(ExceptionParam)-1]
+		} else {
+			ssd.ExceptionParam = ExceptionParam[i]
 		}
 
 		//log.Info("111-:%v--%d", ssd)

@@ -121,8 +121,9 @@ message UnitDatas{
     int32   AnimotorPause = 26; //动画暂停 1表示是 2表示否
     int32   SkillEnable = 27;//能否使用主动技能 (比如 被眩晕和沉默不能使用主动技能) 1:可以 2:不可以
     int32   ItemEnable = 28;//能否使用主动道具 (比如 被眩晕和禁用道具不能使用主动道具) 1:可以 2:不可以
-    repeated SkillDatas SD = 29;//技能数据
-    repeated BuffDatas BD = 30;//buff数据
+    float   Z = 29;//z坐标
+    repeated SkillDatas SD = 30;//技能数据
+    repeated BuffDatas BD = 31;//buff数据
 
     //单位状态(idle walk attack skill die)
     //各种buff状态(单位身上的buff 包括剩余时间)

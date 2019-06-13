@@ -421,12 +421,83 @@ func (this *Unit) DoSkillException(skilldata *Skill, targetunit *Unit, b *Bullet
 	}
 }
 
+func (this *Unit) DoForceMove(skilldata *Skill, targetpos vec2d.Vec2) bool {
+	//自己强制移动到指定位置
+	if skilldata.ForceMoveType == 2 { //自己强制移动到指定位置
+		dir := vec2d.Sub(targetpos, this.Body.Position)
+		time := float32(dir.Length()) / skilldata.ForceMoveSpeedSize
+		dir.Normalize()
+		dir.MulToFloat64(float64(skilldata.ForceMoveSpeedSize))
+		this.SetForceMove(time, dir, skilldata.ForceMoveLevel, float32(0))
+		//更改buff时间
+		if len(skilldata.ForceMoveBuff) > 0 {
+			buffs := this.AddBuffFromStr(skilldata.ForceMoveBuff, skilldata.Level, this)
+			for _, v := range buffs {
+				v.RemainTime = time
+				v.Time = time
+			}
+		}
+	} else if skilldata.ForceMoveType == 3 { //小小的投掷
+		//查找3米内的随机一个单位 如果找不到则失败
+		var touzhiunit *Unit = nil
+		allunit := this.InScene.FindVisibleUnits(this)
+		for _, v := range allunit {
+			//魔免
+			if v.MagicImmune == 1 || v.IsDisappear() || v == this {
+				continue
+			}
+			dis := float32(vec2d.Distanse(this.Body.Position, v.Body.Position))
+			if dis <= 3 {
+				touzhiunit = v
+				break
+			}
+		}
+		if touzhiunit == nil {
+			return false
+		}
+
+		dir := vec2d.Sub(targetpos, touzhiunit.Body.Position)
+		if dir.Length() <= 0 {
+			dir.X = dir.X + 0.1
+		}
+		speedsize := float32(dir.Length()) / skilldata.ForceMoveTime
+		dir.Normalize()
+		dir.MulToFloat64(float64(speedsize))
+		touzhiunit.SetForceMove(skilldata.ForceMoveTime, dir, skilldata.ForceMoveLevel, float32(10))
+		//更改buff时间  添加投掷期间buff
+		if len(skilldata.ForceMoveBuff) > 0 {
+			buffs := touzhiunit.AddBuffFromStr(skilldata.ForceMoveBuff, skilldata.Level, this)
+			for _, v := range buffs {
+				v.RemainTime = skilldata.ForceMoveTime
+				v.Time = skilldata.ForceMoveTime
+			}
+		}
+		//添加额外buff和halo
+		param := utils.GetStringFromString3(skilldata.ExceptionParam, ":")
+		if len(param) >= 2 {
+			touzhiunit.AddBuffFromStr(param[0], skilldata.Level, this)
+			halos := touzhiunit.AddHaloFromStr(param[1], skilldata.Level, nil)
+			for _, v := range halos {
+				v.CastUnit = this
+			}
+		}
+
+	}
+
+	return true
+}
+
 //使用技能 创建子弹
 func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 
 	//检查本单位是否有这个技能
 	skilldata, ok := this.Skills[data.SkillID]
 	if ok == false {
+		return
+	}
+	if this.DoForceMove(skilldata, targetpos) == false {
+		//删除技能命令
+		this.StopSkillCmd()
 		return
 	}
 
@@ -462,22 +533,6 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 
 	}
 
-	//自己强制移动到指定位置
-	if skilldata.ForceMoveType == 2 { //自己强制移动到指定位置
-		dir := vec2d.Sub(targetpos, this.Body.Position)
-		time := float32(dir.Length()) / skilldata.ForceMoveSpeedSize
-		dir.Normalize()
-		dir.MulToFloat64(float64(skilldata.ForceMoveSpeedSize))
-		this.SetForceMove(time, dir, skilldata.ForceMoveLevel)
-		//更改buff时间
-		if len(skilldata.ForceMoveBuff) > 0 {
-			buffs := this.AddBuffFromStr(skilldata.ForceMoveBuff, skilldata.Level, this)
-			for _, v := range buffs {
-				v.RemainTime = time
-				v.Time = time
-			}
-		}
-	}
 	//加血
 	if skilldata.AddHPTarget == 1 {
 		this.DoAddHP(skilldata.AddHPType, skilldata.AddHPValue)
@@ -907,9 +962,12 @@ type UnitProperty struct {
 	MasterInvisible int32 //大师级隐身 不会被看见 (分身的无敌和其他的blink躲弹道) 1:是 2:否
 
 	//强制移动相关
+	ForceMoveTime       float32    //强制移动总时间
+	ForceMoveMaxHeight  float32    //强制移动最大高度
 	ForceMoveRemainTime float32    //强制移动剩余时间
 	ForceMoveSpeed      vec2d.Vec2 //强制移动速度 包括方向和大小
 	ForceMoveLevel      int32      //强制移动等级
+	Z                   float32    //z坐标
 
 }
 
@@ -1150,7 +1208,7 @@ func (this *Unit) Init() {
 }
 
 //设置强制移动相关
-func (this *Unit) SetForceMove(time float32, speed vec2d.Vec2, level int32) {
+func (this *Unit) SetForceMove(time float32, speed vec2d.Vec2, level int32, height float32) {
 
 	//direction.Normalize()
 
@@ -1158,11 +1216,15 @@ func (this *Unit) SetForceMove(time float32, speed vec2d.Vec2, level int32) {
 		this.ForceMoveRemainTime = time
 		this.ForceMoveSpeed = speed
 		this.ForceMoveLevel = level
+		this.ForceMoveTime = time
+		this.ForceMoveMaxHeight = height
 	} else {
 		if level >= this.ForceMoveLevel {
 			this.ForceMoveRemainTime = time
 			this.ForceMoveSpeed = speed
 			this.ForceMoveLevel = level
+			this.ForceMoveTime = time
+			this.ForceMoveMaxHeight = height
 		}
 	}
 }
@@ -1177,6 +1239,17 @@ func (this *Unit) UpdateForceMove(dt float64) {
 		this.Body.TurnDirection = false
 		this.Body.CollisoinLevel = 2
 		this.Body.SetMoveDir(this.ForceMoveSpeed)
+
+		//设置高度
+		bilv := this.ForceMoveRemainTime / this.ForceMoveTime
+		if bilv <= 0.5 {
+			this.Z = this.ForceMoveMaxHeight * bilv
+		} else {
+			this.Z = this.ForceMoveMaxHeight * (1 - bilv)
+		}
+
+	} else {
+		//this.Z = 0
 	}
 }
 
@@ -2234,6 +2307,7 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.AnimotorPause = this.AnimotorPause
 	this.ClientData.SkillEnable = this.SkillEnable
 	this.ClientData.ItemEnable = this.ItemEnable
+	this.ClientData.Z = this.Z
 
 	//技能
 	this.ClientData.SD = make([]*protomsg.SkillDatas, 0)
@@ -2337,6 +2411,7 @@ func (this *Unit) FreshClientDataSub() {
 	this.ClientDataSub.AnimotorPause = this.AnimotorPause - this.ClientData.AnimotorPause
 	this.ClientDataSub.SkillEnable = this.SkillEnable - this.ClientData.SkillEnable
 	this.ClientDataSub.ItemEnable = this.ItemEnable - this.ClientData.ItemEnable
+	this.ClientDataSub.Z = this.Z - this.ClientData.Z
 
 	//技能
 	this.ClientDataSub.SD = make([]*protomsg.SkillDatas, 0)

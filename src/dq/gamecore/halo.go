@@ -23,6 +23,7 @@ type Halo struct {
 	conf.HaloData                //技能数据
 	ID                int32      //光环ID
 	Parent            *Unit      //载体
+	CastUnit          *Unit      //施加buff的单位
 	Position          vec2d.Vec2 //位置
 	PositionZ         float32    //z
 	Level             int32      //当前等级
@@ -34,6 +35,41 @@ type Halo struct {
 	//发送数据部分
 	ClientData    *protomsg.HaloDatas //客户端显示数据
 	ClientDataSub *protomsg.HaloDatas //客户端显示差异数据
+}
+
+func (this *Halo) DoHurtException(b *Bullet) {
+	if this.Exception <= 0 {
+		return
+	}
+	switch this.Exception {
+	case 1: //小小山崩对投掷状态的单位造成3倍伤害
+		{
+			param := utils.GetFloat32FromString3(this.ExceptionParam, ":")
+			if len(param) < 2 || b.DestUnit == nil || b.DestUnit.IsDisappear() {
+				return
+			}
+			//投掷buff
+			buff := b.DestUnit.GetBuff(int32(param[0]))
+			if buff == nil {
+				return
+			}
+			if len(b.OtherHurt) > 0 {
+				b.OtherHurt[0].HurtValue = int32(float32(b.OtherHurt[0].HurtValue) * param[1])
+			}
+
+		}
+	default:
+		{
+
+		}
+	}
+}
+
+func (this *Halo) GetCastUnit() *Unit {
+	if this.CastUnit != nil {
+		return this.CastUnit
+	}
+	return this.Parent
 }
 
 //更新
@@ -52,12 +88,12 @@ func (this *Halo) Update(dt float32) {
 			//重置触发时间
 			this.TriggerRemainTime = this.Cooldown + this.TriggerRemainTime
 
-			if this.Parent != nil && this.Parent.InScene != nil && this.Parent.IsDisappear() == false {
+			if this.Parent != nil && this.Parent.InScene != nil && this.Parent.IsDisappear() == false && this.GetCastUnit().IsDisappear() == false {
 				//创建触发子弹 //伤害类型(1:物理伤害 2:魔法伤害 3:纯粹伤害 4:不造成伤害)
 				//创建buff
 				if this.HurtType != 4 || len(this.InitBuff) > 0 {
 					//获取范围内的目标单位
-					allunit := this.Parent.InScene.FindVisibleUnits(this.Parent)
+					allunit := this.GetCastUnit().InScene.FindVisibleUnitsByPos(this.Position)
 					count := int32(0)
 					//log.Info("------------------len:%d", len(allunit))
 					for _, v := range allunit {
@@ -69,16 +105,16 @@ func (this *Halo) Update(dt float32) {
 							}
 							//UnitTargetTeam      int32   //目标单位关系 1:友方  2:敌方 3:友方敌方都行 5:自己 10:除自己外的其他
 
-							if this.UnitTargetTeam == 1 && this.Parent.CheckIsEnemy(v) == true {
+							if this.UnitTargetTeam == 1 && this.GetCastUnit().CheckIsEnemy(v) == true {
 								continue
 							}
-							if this.UnitTargetTeam == 2 && this.Parent.CheckIsEnemy(v) == false {
+							if this.UnitTargetTeam == 2 && this.GetCastUnit().CheckIsEnemy(v) == false {
 								continue
 							}
-							if this.UnitTargetTeam == 5 && this.Parent != v {
+							if this.UnitTargetTeam == 5 && this.GetCastUnit() != v {
 								continue
 							}
-							if this.UnitTargetTeam == 10 && this.Parent == v {
+							if this.UnitTargetTeam == 10 && this.GetCastUnit() == v {
 								continue
 							}
 							//检测是否在范围内
@@ -92,13 +128,13 @@ func (this *Halo) Update(dt float32) {
 								count++
 
 								//增加buff
-								v.AddBuffFromStr(this.InitBuff, this.Level, this.Parent)
+								v.AddBuffFromStr(this.InitBuff, this.Level, this.GetCastUnit())
 								//log.Info("-----------------InitBuff:%s", this.InitBuff)
 								//BlinkToTarget
 								if this.BlinkToTarget == 1 {
 
-									this.Parent.Body.BlinkToPos(v.Body.Position, float64(utils.GetRandomFloat(180)))
-									this.Parent.SetDirection(vec2d.Sub(v.Body.Position, this.Parent.Body.Position))
+									this.GetCastUnit().Body.BlinkToPos(v.Body.Position, float64(utils.GetRandomFloat(180)))
+									this.GetCastUnit().SetDirection(vec2d.Sub(v.Body.Position, this.GetCastUnit().Body.Position))
 								}
 
 								//技能免疫检测
@@ -110,23 +146,25 @@ func (this *Halo) Update(dt float32) {
 									continue
 								}
 
-								b := NewBullet1(this.Parent, v)
+								b := NewBullet1(this.GetCastUnit(), v)
 								b.SetNormalHurtRatio(this.NormalHurt)
 								b.SetProjectileMode(this.BulletModeType, this.BulletSpeed)
 								//技能增强
 								if this.HurtType == 2 {
-									hurtvalue := (this.HurtValue + int32(float32(this.HurtValue)*this.Parent.MagicScale))
+									hurtvalue := (this.HurtValue + int32(float32(this.HurtValue)*this.GetCastUnit().MagicScale))
 									b.AddOtherHurt(HurtInfo{HurtType: this.HurtType, HurtValue: hurtvalue})
 								} else {
 									b.AddOtherHurt(HurtInfo{HurtType: this.HurtType, HurtValue: this.HurtValue})
 								}
+								//特殊情况处理
+								this.DoHurtException(b)
 								b.AddTargetBuff(this.TargetBuff, this.Level)
 								if b != nil {
 									if this.TriggerAttackEffect == 1 {
-										this.Parent.CheckTriggerAttackSkill(b)
+										this.GetCastUnit().CheckTriggerAttackSkill(b)
 									}
 									//log.Info("----------------add bullet")
-									this.Parent.AddBullet(b)
+									this.GetCastUnit().AddBullet(b)
 
 								}
 							}

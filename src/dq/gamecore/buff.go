@@ -123,7 +123,7 @@ func NewBuff(typeid int32, level int32, parent *Unit) *Buff {
 	if parent != nil && parent.Body != nil {
 		buff.LastPos = parent.Body.Position
 	}
-	buff.TriggerRemainTime = 0
+	buff.TriggerRemainTime = buffdata.HurtTimeInterval
 
 	return buff
 
