@@ -47,6 +47,7 @@ func (this *Skill) SetBulletProperty(b *Bullet, unit *Unit) {
 	b.SkillLevel = this.Level
 	b.Exception = this.Exception
 	b.ExceptionParam = this.ExceptionParam
+	b.EveryDoHurtChangeHurtCR = this.EveryDoHurtChangeHurtCR
 	//召唤信息
 	b.BulletCallUnitInfo = BulletCallUnitInfo{this.CallUnitInfo, this.Level}
 	if this.AwaysHurt == 1 {

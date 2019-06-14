@@ -506,7 +506,9 @@ func (this *Unit) DoForceMove(skilldata *Skill, targetpos vec2d.Vec2) bool {
 
 //使用技能 创建子弹
 func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
-
+	if data == nil {
+		return
+	}
 	//检查本单位是否有这个技能
 	skilldata, ok := this.Skills[data.SkillID]
 	if ok == false {
@@ -522,7 +524,10 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 	this.ClearBuffForTarget(this, skilldata.MyClearLevel)
 
 	//MyBuff
-	this.AddBuffFromStr(skilldata.MyBuff, skilldata.Level, this)
+	buffs := this.AddBuffFromStr(skilldata.MyBuff, skilldata.Level, this)
+	for _, v := range buffs {
+		v.UseableUnitID = data.TargetUnitID
+	}
 	//MyHalo
 	this.AddHaloFromStr(skilldata.MyHalo, skilldata.Level, nil)
 
@@ -1736,7 +1741,7 @@ func (this *Unit) CalControlState() {
 
 //计算单个buff对属性的影响
 func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
-	if v1 == nil || v1.IsActive == false {
+	if v1 == nil || v1.IsActive == false || v1.IsUseable == false {
 		return
 	}
 
@@ -1836,23 +1841,20 @@ func (this *Unit) AddBuffProperty(add *UnitBaseProperty) {
 
 }
 
+//刷新攻击时对特定目标起作用的buff useable
+func (this *Unit) FreshBuffsUseable(target *Unit) {
+	for _, v := range this.Buffs {
+		for _, v1 := range v {
+			v1.FreshUseable(target)
+		}
+
+	}
+}
+
 //计算所有buff对属性的影响
 func (this *Unit) CalPropertyByBuffs() {
 	add := &UnitBaseProperty{}
-	//	//技能携带的buf
-	//	for _, v := range this.Skills {
-	//		if v.Level <= 0 {
-	//			continue
-	//		}
 
-	//		buffs := utils.GetInt32FromString2(v.InitBuff)
-	//		for _, v1 := range buffs {
-	//			buff := NewBuff(v1, v.Level, this)
-	//			if buff != nil {
-	//				this.CalPropertyByBuff(buff, add)
-	//			}
-	//		}
-	//	}
 	//buff
 	for _, v := range this.Buffs {
 		for _, v1 := range v {

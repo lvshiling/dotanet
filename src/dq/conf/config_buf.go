@@ -99,6 +99,8 @@ type BuffBaseData struct {
 	AnimotorPause int32 //是否暂停动画 1:是 2:非
 	IsCollisoin   int32 //是否碰撞检测 1:是 2:非
 
+	IsUseableAllocateAttackUnit int32 //是否只对指定攻击目标生效 1:是 2:非
+
 	Invisible       int32 //隐身 1:是 2:否  可以躲避攻击弹道 并且从显示屏上消失
 	InvisibleBeSee  int32 //隐身可以被看见 1:是 2:否
 	CanSeeInvisible int32 //可以看见隐身 1:是 2:否

@@ -21,7 +21,36 @@ type Buff struct {
 
 	IsActive bool //是否生效
 
+	IsUseable     bool  //是否起作用
+	UseableUnitID int32 //起作用的单位ID
+
 	LastPos vec2d.Vec2 //载体上次计算的位置
+}
+
+//检查对特定攻击对象起作用
+func (this *Buff) FreshUseable(unit *Unit) {
+
+	if this.IsUseableAllocateAttackUnit == 2 {
+		this.IsUseable = true
+		return
+	}
+
+	lastuseable := this.IsUseable
+	if this.UseableUnitID <= 0 {
+		this.IsUseable = true
+	} else {
+		if unit == nil || unit.ID != this.UseableUnitID {
+			this.IsUseable = false
+		} else {
+			this.IsUseable = true
+		}
+	}
+	//从不起作用到起作用
+	if lastuseable == false && this.IsUseable == true {
+		add := &UnitBaseProperty{}
+		this.Parent.CalPropertyByBuff(this, add)
+		this.Parent.AddBuffProperty(add)
+	}
 }
 
 func (this *Buff) HurtTrigger() {
@@ -124,6 +153,12 @@ func NewBuff(typeid int32, level int32, parent *Unit) *Buff {
 		buff.LastPos = parent.Body.Position
 	}
 	buff.TriggerRemainTime = buffdata.HurtTimeInterval
+	if buff.IsUseableAllocateAttackUnit == 1 {
+		buff.IsUseable = false //是否起作用
+	} else {
+		buff.IsUseable = true //是否起作用
+	}
+	buff.UseableUnitID = 0 //起作用的单位ID
 
 	return buff
 

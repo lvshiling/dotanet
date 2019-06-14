@@ -381,10 +381,12 @@ func (this *AttackState) Update(dt float64) {
 }
 func (this *AttackState) OnEnd() {
 	//log.Info(" AttackState end%f", utils.GetCurTimeOfSecond())
+	this.Parent.FreshBuffsUseable(nil)
 }
 func (this *AttackState) OnStart() {
 	this.Parent.SetAnimotorState(3)
 	this.AttackTarget = this.Parent.AttackCmdDataTarget
+	this.Parent.FreshBuffsUseable(this.Parent.AttackCmdDataTarget)
 
 	if this.AttackTarget != nil {
 		this.Parent.SetDirection(vec2d.Sub(this.AttackTarget.Body.Position, this.Parent.Body.Position))

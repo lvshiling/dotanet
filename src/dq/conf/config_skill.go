@@ -158,6 +158,8 @@ type SkillData struct {
 	PhysicalHurtAddHP float32 //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 	MagicHurtAddHP    float32 //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 
+	EveryDoHurtChangeHurtCR float32 //每对一个目标造成伤害后 伤害变化率 1表示没有变化 0.8表示递减20%
+
 	ExceptionParam string //特殊情况处理参数
 
 }
@@ -189,6 +191,8 @@ type SkillFileData struct {
 	PhysicalHurtAddHP string //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 	MagicHurtAddHP    string //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 
+	EveryDoHurtChangeHurtCR string //每对一个目标造成伤害后 伤害变化率 1表示没有变化 0.8表示递减20%
+
 	ExceptionParam string //特殊情况处理参数
 }
 
@@ -219,6 +223,8 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 	AddHPValue := utils.GetFloat32FromString2(this.AddHPValue)
 	PhysicalHurtAddHP := utils.GetFloat32FromString2(this.PhysicalHurtAddHP)
 	MagicHurtAddHP := utils.GetFloat32FromString2(this.MagicHurtAddHP)
+
+	EveryDoHurtChangeHurtCR := utils.GetFloat32FromString2(this.EveryDoHurtChangeHurtCR)
 
 	ExceptionParam := utils.GetStringFromString2(this.ExceptionParam)
 
@@ -307,6 +313,11 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 			ssd.MagicHurtAddHP = MagicHurtAddHP[len(MagicHurtAddHP)-1]
 		} else {
 			ssd.MagicHurtAddHP = MagicHurtAddHP[i]
+		}
+		if int32(len(EveryDoHurtChangeHurtCR)) <= i {
+			ssd.EveryDoHurtChangeHurtCR = EveryDoHurtChangeHurtCR[len(EveryDoHurtChangeHurtCR)-1]
+		} else {
+			ssd.EveryDoHurtChangeHurtCR = EveryDoHurtChangeHurtCR[i]
 		}
 
 		if int32(len(ExceptionParam)) <= i {

@@ -98,8 +98,9 @@ type Bullet struct {
 	BulletCallUnitInfo
 
 	//保存计算伤害后的单位
-	HurtUnits      map[int32]*Unit //保存计算伤害后的单位
-	IsDoHurtOnMove int32           //在移动的时候也要计算伤害 1:要计算 2:否
+	HurtUnits               map[int32]*Unit //保存计算伤害后的单位
+	IsDoHurtOnMove          int32           //在移动的时候也要计算伤害 1:要计算 2:否
+	EveryDoHurtChangeHurtCR float32         //每对一个目标造成伤害后 伤害变化率 1表示没有变化 0.8表示递减20%
 
 	//对目标造成强制移动相关
 	ForceMoveTime      float32 //强制移动时间
@@ -179,6 +180,7 @@ func (this *Bullet) Init() {
 	this.HurtUnits = make(map[int32]*Unit)
 	this.IsDoHurtOnMove = 2
 	this.UnitTargetTeam = 2
+	this.EveryDoHurtChangeHurtCR = 1
 
 	this.HurtRange.RangeType = 1 //单体攻击范围
 	this.MoveType = 1            //瞬间移动
@@ -708,10 +710,14 @@ func (this *Bullet) GetAttackOfType(hurttype int32) int32 {
 	val := int32(0)
 	if this.NormalHurt.HurtType == hurttype {
 		val += this.NormalHurt.HurtValue
+		//每造成一次伤害 伤害递减
+		this.NormalHurt.HurtValue = int32(float32(this.NormalHurt.HurtValue) * this.EveryDoHurtChangeHurtCR)
 	}
-	for _, v := range this.OtherHurt {
+	for k, v := range this.OtherHurt {
 		if v.HurtType == hurttype {
 			val += v.HurtValue
+			//每造成一次伤害 伤害递减
+			this.OtherHurt[k].HurtValue = int32(float32(v.HurtValue) * this.EveryDoHurtChangeHurtCR)
 		}
 	}
 	//计算暴击
