@@ -31,6 +31,7 @@ func (this *Skill) SetBulletProperty(b *Bullet, unit *Unit) {
 	if b == nil {
 		return
 	}
+
 	b.SetNormalHurtRatio(this.NormalHurt)
 	b.SetProjectileMode(this.BulletModeType, this.BulletSpeed)
 	//技能增强
@@ -44,6 +45,8 @@ func (this *Skill) SetBulletProperty(b *Bullet, unit *Unit) {
 	b.AddTargetHalo(this.TargetHalo, this.Level)
 	b.SkillID = this.TypeID
 	b.SkillLevel = this.Level
+	b.Exception = this.Exception
+	b.ExceptionParam = this.ExceptionParam
 	//召唤信息
 	b.BulletCallUnitInfo = BulletCallUnitInfo{this.CallUnitInfo, this.Level}
 	if this.AwaysHurt == 1 {

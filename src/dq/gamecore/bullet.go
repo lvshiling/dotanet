@@ -6,6 +6,7 @@ import (
 	"dq/protobuf"
 	"dq/utils"
 	"dq/vec2d"
+	"strconv"
 	"strings"
 )
 
@@ -113,6 +114,10 @@ type Bullet struct {
 	PhysicalHurtAddHP float32 //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 	MagicHurtAddHP    float32 //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 
+	//特殊情况处理 //3:风行束缚击
+	Exception      int32  //0表示没有特殊情况
+	ExceptionParam string //特殊情况处理参数
+
 	//--------附加攻击特效------
 
 	//发送数据部分
@@ -185,6 +190,9 @@ func (this *Bullet) Init() {
 
 	this.AddHPType = 0
 	this.AddHPValue = 0
+
+	this.Exception = 0
+	this.ExceptionParam = ""
 
 	this.SetForceMove(0, 0, 0, "")
 }
@@ -422,13 +430,19 @@ func (this *Bullet) DoSpurting(hurtvalue int32) {
 			if v1.NoCareMagicImmune != 1 && v.MagicImmune == 1 {
 				continue
 			}
-			dir := vec2d.Sub(v.Body.Position, startpos)
-			if float32(dir.Length()) > v1.Radius {
+			t1 := fangxiang.GetNormalized()
+			t1.MulToFloat64(float64(v1.Radius))
+			if vec2d.CheckSector(startpos, t1, v1.Radian, v.Body.Position) == false {
 				continue
 			}
-			if float32(vec2d.Angle(fangxiang, dir)) > v1.Radian {
-				continue
-			}
+
+			//			dir := vec2d.Sub(v.Body.Position, startpos)
+			//			if float32(dir.Length()) > v1.Radius {
+			//				continue
+			//			}
+			//			if float32(vec2d.Angle(fangxiang, dir)) > v1.Radian {
+			//				continue
+			//			}
 			log.Info("---DoSpurting--tt--:%d  :%f", hurtvalue, v1.HurtRatio)
 			//造成溅射伤害
 			this.SpurtingHurtUnit(v, int32(float32(hurtvalue)*v1.HurtRatio))
@@ -459,6 +473,80 @@ func (this *Bullet) SpurtingHurtUnit(unit *Unit, value int32) {
 }
 
 //
+func (this *Bullet) DoException(unit *Unit) {
+	if this.Exception <= 0 || unit == nil || unit.IsDisappear() {
+		return
+	}
+	//this.Exception = 0
+	//this.ExceptionParam = ""
+
+	switch this.Exception {
+	case 3: //3:风行束缚击
+		{
+			//log.Info("1111111111111111111")
+			if unit == nil || this.SrcUnit == nil || unit.IsDisappear() {
+				return
+			}
+			//log.Info("222222222222222222:%s", this.ExceptionParam)
+			param := utils.GetFloat32FromString3(this.ExceptionParam, ":")
+			if len(param) < 5 {
+				return
+			}
+			//log.Info("33333333333")
+			little := param[0]
+			big := param[1]
+			distanse := param[2]
+			buff := int(param[3])
+			radian := float32(param[4])
+
+			startpos := vec2d.Vec2{this.Position.X, this.Position.Y}
+			allunit := this.SrcUnit.InScene.FindVisibleUnitsByPos(startpos)
+			fangxiang := vec2d.Sub(startpos, vec2d.Vec2{this.StartPosition.X, this.StartPosition.Y})
+			fangxiang.Normalize()
+			fangxiang.MulToFloat64(float64(distanse))
+			var nextunit *Unit = nil
+			for _, v := range allunit {
+				//不能对目标造成牵连
+				if v.IsDisappear() || v.Body == nil || v == unit {
+					continue
+				}
+				if this.SrcUnit.CheckIsEnemy(v) == false {
+					continue
+				}
+
+				if vec2d.CheckSector(startpos, fangxiang, radian, v.Body.Position) == false {
+					continue
+				}
+				nextunit = v
+				break
+			}
+			if nextunit == nil {
+				buffs := unit.AddBuffFromStr(strconv.Itoa(buff), this.SkillLevel, this.SrcUnit)
+				if len(buffs) > 0 {
+					buffs[0].RemainTime = little
+					buffs[0].Time = little
+				}
+				//log.Info("4444444444")
+			} else {
+				buffs := unit.AddBuffFromStr(strconv.Itoa(buff), this.SkillLevel, this.SrcUnit)
+				if len(buffs) > 0 {
+					buffs[0].RemainTime = big
+					buffs[0].Time = big
+				}
+
+				buffs2 := nextunit.AddBuffFromStr(strconv.Itoa(buff), this.SkillLevel, this.SrcUnit)
+				if len(buffs2) > 0 {
+					buffs2[0].RemainTime = big
+					buffs2[0].Time = big
+				}
+				//log.Info("5555555555")
+			}
+
+			//
+		}
+	default:
+	}
+}
 
 //对单位造成伤害 只计算一次 hurtratio 伤害系数 狂战斧 60%
 func (this *Bullet) HurtUnit(unit *Unit) int32 {
@@ -470,6 +558,7 @@ func (this *Bullet) HurtUnit(unit *Unit) int32 {
 		return 0
 	}
 	//log.Info("33333333")
+	this.DoException(unit)
 
 	this.HurtUnits[unit.ID] = unit
 

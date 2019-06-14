@@ -180,6 +180,20 @@ func Angle(v1 Vec2, v2 Vec2) float64 {
 	return math.Atan2(math.Abs(dz)+math.SmallestNonzeroFloat32, Dot(v1, v2))
 }
 
+//检查目标点是否在扇形内 direction
+func CheckSector(centerpos Vec2, direction Vec2, radian float32, target Vec2) bool {
+
+	dir := Sub(target, centerpos)
+	if float32(dir.Length()) > float32(direction.Length()) {
+		return false
+	}
+	if float32(Angle(direction, dir)) > radian {
+		return false
+	}
+
+	return true
+}
+
 func CrossProduct2Vector(A Vec2, B Vec2, C Vec2, D Vec2) float64 {
 	return (D.Y-C.Y)*(B.X-A.X) - (D.X-C.X)*(B.Y-A.Y)
 }

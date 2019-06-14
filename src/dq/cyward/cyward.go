@@ -376,9 +376,12 @@ func (this *Body) SetTarget(pos vec2d.Vec2) {
 
 //如果已经在碰撞区域内  就可以直接走出来，不需要再检查碰撞
 func (this *Body) CheckPositionCollisoin(dt float64) *Body {
-
-	if this.Core.GetCurPositionCollision(this) == nil {
+	b := this.Core.GetCurPositionCollision(this)
+	if b == nil {
 		return this.Core.GetNextPositionCollision(this)
+	} else {
+		//		this.BlinkToPos(this.NextPosition, 0)
+		//		return b
 	}
 
 	return nil
