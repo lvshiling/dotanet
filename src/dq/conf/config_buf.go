@@ -110,6 +110,7 @@ type BuffBaseData struct {
 
 	AttackedInvalid  int32 //攻击后失效 1:是 2:否
 	DoSkilledInvalid int32 //使用技能后失效 1:是 2:否
+	MoveInvalid      int32 //移动后失效 1:是 2:否
 	BuffType         int32 //buff类型 1:表示良性 2:表示恶性  队友只能驱散我的恶性buff 敌人只能驱散我的良性buff 3:中性
 	ClearLevel       int32 //驱散等级 1 表示需要驱散等级大于等于1的 驱散效果才能驱散此buff pa的标为1 眩晕为2 小鱼偷属性和光环buff为3
 	SubTagNumRule    int32 //标记减少规则 减少为0会自动删除buff 0:表示不减少 1:表示攻击时减少

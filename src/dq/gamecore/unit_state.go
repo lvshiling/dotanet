@@ -214,6 +214,7 @@ func (this *MoveState) Update(dt float64) {
 		} else {
 			targetpos := vec2d.Vec2{X: float64(this.Parent.SkillCmdData.X), Y: float64(this.Parent.SkillCmdData.Y)}
 			this.Parent.Body.SetTarget(targetpos)
+			this.Parent.RemoveBuffForMoved()
 		}
 		return
 	}
@@ -229,6 +230,7 @@ func (this *MoveState) Update(dt float64) {
 		//
 		if this.Parent.AttackCmdDataTarget.Body != nil && this.Parent.GetCanMove() {
 			this.Parent.Body.SetTarget(this.Parent.AttackCmdDataTarget.Body.Position)
+			this.Parent.RemoveBuffForMoved()
 			this.LastFindPathTarget = this.Parent.AttackCmdDataTarget
 			this.LastFindPathTargetTime = utils.GetCurTimeOfSecond()
 		}
@@ -238,6 +240,7 @@ func (this *MoveState) Update(dt float64) {
 	//再检查移动命令
 	if this.Parent.HaveMoveCmd() && this.Parent.GetCanMove() {
 		this.Parent.Body.SetMoveDir(vec2d.Vec2{X: float64(this.Parent.MoveCmdData.X), Y: float64(this.Parent.MoveCmdData.Y)})
+		this.Parent.RemoveBuffForMoved()
 	}
 
 }

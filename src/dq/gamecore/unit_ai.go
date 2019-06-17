@@ -61,13 +61,20 @@ func (this *NormalAI) Update(dt float64) {
 	//	}
 	//获取最近的敌人
 	nearestEnemies := this.GetNearestEnemies(this.AttackTarget)
-	if nearestEnemies != nil {
-
+	if nearestEnemies != this.AttackTarget {
+		
 		this.AttackTarget = nearestEnemies
+		if this.AttackTarget == nil {
+			this.Parent.StopAttackCmd()
+			this.AttackTarget = nil
+			return
+		} else {
+			this.CreateAttackCmd(this.AttackTarget)
+		}
 		//this.CreateAttackCmd(nearestEnemies)
 		//return
 	}
-	this.CreateAttackCmd(this.AttackTarget)
+
 	//脱离 自动攻击取消追击范围
 	if this.Parent.IsOutAutoAttackTraceOutRange(this.AttackTarget) == true {
 
@@ -143,13 +150,17 @@ func (this *NormalAI) GetNearestEnemies(unit *Unit) *Unit {
 		my := this.Parent
 
 		mindis := 10.0
+		var minUnit *Unit = nil
 		if unit != nil && unit.IsDisappear() == false {
 			if my.CheckAttackEnable2Target(unit) {
 				mindis = my.GetDistanseOfAutoAttackRange(unit)
+				if mindis <= 0 {
+					minUnit = unit
+				}
+
 			}
 		}
 
-		var minUnit *Unit = nil
 		for _, v := range units {
 			//判断阵营 攻击模式 是否死亡  和 是否能被攻击
 			if my.CheckAttackEnable2Target(v) {

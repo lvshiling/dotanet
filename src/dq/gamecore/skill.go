@@ -15,6 +15,10 @@ type Skill struct {
 	Level            int32   //技能当前等级
 	RemainCDTime     float32 //技能cd 剩余时间
 	AttackAutoActive int32   //攻击时自动释放 是否激活 1:激活 2:否
+
+	Parent *Unit //载体
+
+	Param1 int32 //参数1
 }
 
 //激活与不激活
@@ -122,6 +126,34 @@ func (this *Skill) CreateBullet(unit *Unit, data *protomsg.CS_PlayerSkill) []*Bu
 	return bullets
 }
 
+func (this *Skill) UpdateException() {
+	if this.Exception == 0 {
+		return
+	}
+	switch this.Exception {
+	case 5: //帕克幻象发球
+		{
+			if this.Parent == nil || this.Parent.IsDisappear() {
+				return
+			}
+			bullet := this.Parent.InScene.GetBulletByID(this.Param1)
+			if bullet == nil {
+
+				//检查关联
+				if this.VisibleRelationSkillID > 0 {
+					skilldata1, ok1 := this.Parent.Skills[this.VisibleRelationSkillID]
+					if ok1 {
+						this.Visible = 2
+						skilldata1.Visible = 1
+					}
+				}
+			}
+
+		}
+	default:
+	}
+}
+
 //更新
 func (this *Skill) Update(dt float64) {
 	//CD时间减少
@@ -129,6 +161,7 @@ func (this *Skill) Update(dt float64) {
 	if this.RemainCDTime <= 0 {
 		this.RemainCDTime = 0
 	}
+	this.UpdateException()
 }
 
 //刷新CD
@@ -141,7 +174,7 @@ func (this *Skill) ToDBString() string {
 	return strconv.Itoa(int(this.TypeID)) + "," + strconv.Itoa(int(this.Level)) + "," + strconv.FormatFloat(float64(this.RemainCDTime), 'f', 4, 32)
 }
 
-func NewOneSkill(skillid int32, skilllevel int32) *Skill {
+func NewOneSkill(skillid int32, skilllevel int32, unit *Unit) *Skill {
 	sk := &Skill{}
 	skdata := conf.GetSkillData(skillid, skilllevel)
 	if skdata == nil {
@@ -152,17 +185,18 @@ func NewOneSkill(skillid int32, skilllevel int32) *Skill {
 	sk.Level = skilllevel
 	sk.RemainCDTime = 0
 	sk.AttackAutoActive = 1
+	sk.Parent = unit
 
 	return sk
 }
 
 //通过数据库数据和单位基本数据创建技能 (1,2,0) ID,LEVEL,CD剩余时间
-func NewUnitSkills(dbdata []string, unitskilldata string) map[int32]*Skill {
+func NewUnitSkills(dbdata []string, unitskilldata string, unit *Unit) map[int32]*Skill {
 	re := make(map[int32]*Skill)
 
 	//单位基本技能
 	skillids := utils.GetInt32FromString2(unitskilldata)
-	for k, v := range skillids {
+	for _, v := range skillids {
 		sk := &Skill{}
 		skdata := conf.GetSkillData(v, 1)
 		if skdata == nil {
@@ -170,11 +204,12 @@ func NewUnitSkills(dbdata []string, unitskilldata string) map[int32]*Skill {
 			continue
 		}
 		sk.SkillData = *skdata
-		sk.SkillData.Index = int32(k)
+		//sk.SkillData.Index = int32(k)
 
 		log.Info("skill index:%d", sk.SkillData.Index)
-		sk.Level = 0
+		sk.Level = sk.InitLevel
 		sk.RemainCDTime = 0
+		sk.Parent = unit
 		re[sk.TypeID] = sk
 	}
 	//数据库技能
@@ -202,6 +237,7 @@ func NewUnitSkills(dbdata []string, unitskilldata string) map[int32]*Skill {
 		//sk.RemainCDTime = 10.0
 		if initskill, ok := re[sk.TypeID]; ok {
 			sk.Index = initskill.Index
+			sk.Parent = unit
 			re[sk.TypeID] = sk
 		}
 

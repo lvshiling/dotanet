@@ -434,6 +434,20 @@ func (this *Unit) DoSkillException(skilldata *Skill, targetunit *Unit, b *Bullet
 
 			}
 		}
+	case 4: //帕克幻象发球
+		{
+			//把子弹ID记录到指定技能里
+			param := utils.GetInt32FromString3(skilldata.ExceptionParam, ":")
+			if len(param) <= 0 {
+				return
+			}
+			skilldata1, ok := this.Skills[param[0]]
+			if ok == false {
+				return
+			}
+			skilldata1.Param1 = b.ID
+
+		}
 	default:
 	}
 }
@@ -541,6 +555,14 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 			this.Body.BlinkToPos(targetpos, 0)
 		}
 
+	} else if skilldata.BlinkToTarget == 3 { //blink到子弹参数位置
+		if skilldata.Param1 > 0 {
+			oldbullet := this.InScene.GetBulletByID(skilldata.Param1)
+			if oldbullet != nil {
+				this.Body.BlinkToPos(vec2d.Vec2{X: oldbullet.Position.X, Y: oldbullet.Position.Y}, 0)
+				oldbullet.DestPos = oldbullet.Position
+			}
+		}
 	}
 
 	//创建子弹
@@ -561,7 +583,16 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 	}
 	//特殊处理
 	targetunit := this.InScene.FindUnitByID(data.TargetUnitID)
-	this.DoSkillException(skilldata, targetunit, nil)
+	this.DoSkillException(skilldata, targetunit, bullets[0])
+
+	//检查关联
+	if skilldata.VisibleRelationSkillID > 0 {
+		skilldata1, ok1 := this.Skills[skilldata.VisibleRelationSkillID]
+		if ok1 {
+			skilldata.Visible = 2
+			skilldata1.Visible = 1
+		}
+	}
 
 	//消耗 CD
 	namacost := skilldata.ManaCost - int32(this.ManaCost*float32(skilldata.ManaCost))
@@ -784,7 +815,7 @@ func (this *Unit) StopAttackCmd() {
 	this.AttackCmdData = nil
 	this.AttackCmdDataTarget = nil
 	if this.UnitType == 1 {
-		log.Info("---------StopAttackCmd")
+		//log.Info("---------StopAttackCmd")
 	}
 
 }
@@ -1145,7 +1176,7 @@ func CreateUnitByCopyUnit(unit *Unit, controlplayer *Player) *Unit {
 	unitre.Skills = make(map[int32]*Skill) //所有技能
 	for _, v := range unit.Skills {
 		if v.CastType == 2 {
-			skill := NewOneSkill(v.TypeID, v.Level)
+			skill := NewOneSkill(v.TypeID, v.Level, unitre)
 			if skill != nil {
 				unitre.Skills[v.TypeID] = skill
 			}
@@ -1193,7 +1224,7 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 
 	//创建技能
 	skilldbdata := strings.Split(characterinfo.Skill, ";")
-	unitre.Skills = NewUnitSkills(skilldbdata, unitre.InitSkillsInfo) //所有技能
+	unitre.Skills = NewUnitSkills(skilldbdata, unitre.InitSkillsInfo, unitre) //所有技能
 	for _, v := range unitre.Skills {
 		log.Info("-------new skill:%v", v)
 	}
@@ -1927,6 +1958,18 @@ func (this *Unit) RemoveBuffForDoSkilled() {
 	}
 }
 
+//移动后失效
+func (this *Unit) RemoveBuffForMoved() {
+	//buff
+	for k, v := range this.Buffs {
+		for k1, v1 := range v {
+			if v1.MoveInvalid == 1 {
+				this.Buffs[k] = append(this.Buffs[k][:k1], this.Buffs[k][k1+1:]...)
+			}
+		}
+	}
+}
+
 //删除buff 删除攻击后失效的buff
 func (this *Unit) RemoveBuffForAttacked() {
 	//buff
@@ -2374,6 +2417,7 @@ func (this *Unit) FreshClientData() {
 		skdata.HurtRange = v.HurtRange
 		skdata.ManaCost = v.ManaCost
 		skdata.AttackAutoActive = v.AttackAutoActive
+		skdata.Visible = v.Visible
 		this.ClientData.SD = append(this.ClientData.SD, skdata)
 	}
 	//Buffs  map[int32][]*Buff //所有buff 同typeID下可能有多个buff
@@ -2487,6 +2531,7 @@ func (this *Unit) FreshClientDataSub() {
 		skdata.HurtRange = v.HurtRange - lastdata.HurtRange
 		skdata.ManaCost = v.ManaCost - lastdata.ManaCost
 		skdata.AttackAutoActive = v.AttackAutoActive - lastdata.AttackAutoActive
+		skdata.Visible = v.Visible - lastdata.Visible
 		this.ClientDataSub.SD = append(this.ClientDataSub.SD, skdata)
 	}
 

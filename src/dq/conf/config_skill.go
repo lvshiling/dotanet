@@ -89,34 +89,37 @@ type CallUnitInfo struct {
 
 //技能基本数据
 type SkillBaseData struct {
-	TypeID                int32   //类型ID
-	CastType              int32   // 施法类型:  1:主动技能  2:被动技能
-	CastTargetType        int32   //施法目标类型 1:自身为目标 2:以单位为目标 3:以地面1点为目标 4:攻击时自动释放(攻击特效) 5:以地面一点为方向
-	CastTargetRange       float32 //施法目标范围 小于等于0表示单体 以施法目标点为中心的范围内的多个目标为 最终弹道目标
-	UnitTargetTeam        int32   //目标单位关系 1:友方  2:敌方 3:友方敌方都行包括自己  4:友方敌方都行不包括自己
-	UnitTargetCamp        int32   //目标单位阵营 (1:玩家 2:NPC) 3:玩家NPC都行
-	NoCareMagicImmune     int32   //无视技能免疫 (1:无视技能免疫 2:非)
-	BulletModeType        string  //子弹模型
-	BulletSpeed           float32 //子弹速度
-	HurtType              int32   //伤害类型(1:物理伤害 2:魔法伤害 3:纯粹伤害)
-	TriggerAttackEffect   int32   //能否触发普通攻击特效 (1:触发 2:不触发)
-	CastPoint             float32 //施法前摇(以施法时间为比列 0.5表示 施法的中间时间点触发)
-	CastTime              float32 //施法时间(以秒为单位的时间 比如1秒)
-	RequiredLevel         int32   //初始等级需求 1级 需要玩家多少级才能学习
-	LevelsBetweenUpgrades int32   //等级需求步长 2
-	MaxLevel              int32   //最高升级到的等级 5 表示能升级到5级
-	Index                 int32   //技能索引 按升序排列  在屏幕右下角的显示位置
-	TargetBuff            string  //释放时 对目标造成的buff 比如 1,2 表示对目标造成typeid为 1和2的buff
-	BlinkToTarget         int32   //是否瞬间移动到目的地 1:是 2:否
-	MyBuff                string  //释放时 对自己造成的buff 比如 1,2 表示对目标造成typeid为 1和2的buff
-	InitBuff              string  //拥有技能技能时的buff (技能携带的buff)
-	TargetHalo            string  //释放时 对目标造成的halo
-	MyHalo                string  //释放时 对自己造成的halo 比如 1,2 表示对目标造成typeid为 1和2的halo
-	InitHalo              string  //拥有技能技能时的halo (技能携带的halo)
-	MyClearLevel          int32   //释放时 对自己的驱散等级  能驱散 驱散等级 小于等于该值的buff
-	TargetClearLevel      int32   //释放时 对目标的驱散等级  能驱散 驱散等级 小于等于该值的buff
-	AwaysHurt             int32   //总是造成伤害 1:是 2:否
-	CallUnitInfo                  //召唤信息
+	TypeID                 int32   //类型ID
+	CastType               int32   // 施法类型:  1:主动技能  2:被动技能
+	CastTargetType         int32   //施法目标类型 1:自身为目标 2:以单位为目标 3:以地面1点为目标 4:攻击时自动释放(攻击特效) 5:以地面一点为方向
+	CastTargetRange        float32 //施法目标范围 小于等于0表示单体 以施法目标点为中心的范围内的多个目标为 最终弹道目标
+	UnitTargetTeam         int32   //目标单位关系 1:友方  2:敌方 3:友方敌方都行包括自己  4:友方敌方都行不包括自己
+	UnitTargetCamp         int32   //目标单位阵营 (1:玩家 2:NPC) 3:玩家NPC都行
+	NoCareMagicImmune      int32   //无视技能免疫 (1:无视技能免疫 2:非)
+	BulletModeType         string  //子弹模型
+	BulletSpeed            float32 //子弹速度
+	HurtType               int32   //伤害类型(1:物理伤害 2:魔法伤害 3:纯粹伤害)
+	TriggerAttackEffect    int32   //能否触发普通攻击特效 (1:触发 2:不触发)
+	CastPoint              float32 //施法前摇(以施法时间为比列 0.5表示 施法的中间时间点触发)
+	CastTime               float32 //施法时间(以秒为单位的时间 比如1秒)
+	RequiredLevel          int32   //初始等级需求 1级 需要玩家多少级才能学习
+	LevelsBetweenUpgrades  int32   //等级需求步长 2
+	MaxLevel               int32   //最高升级到的等级 5 表示能升级到5级
+	InitLevel              int32   //技能初始等级
+	Index                  int32   //技能索引 按升序排列  在屏幕右下角的显示位置
+	Visible                int32   //技能是否显示 1:是 2:否
+	VisibleRelationSkillID int32   //技能显示关联id 当使用本技能的时候 显示关联id的技能隐身本技能 0表示没有关联
+	TargetBuff             string  //释放时 对目标造成的buff 比如 1,2 表示对目标造成typeid为 1和2的buff
+	BlinkToTarget          int32   //是否瞬间移动到目的地 1:是 2:否
+	MyBuff                 string  //释放时 对自己造成的buff 比如 1,2 表示对目标造成typeid为 1和2的buff
+	InitBuff               string  //拥有技能技能时的buff (技能携带的buff)
+	TargetHalo             string  //释放时 对目标造成的halo
+	MyHalo                 string  //释放时 对自己造成的halo 比如 1,2 表示对目标造成typeid为 1和2的halo
+	InitHalo               string  //拥有技能技能时的halo (技能携带的halo)
+	MyClearLevel           int32   //释放时 对自己的驱散等级  能驱散 驱散等级 小于等于该值的buff
+	TargetClearLevel       int32   //释放时 对目标的驱散等级  能驱散 驱散等级 小于等于该值的buff
+	AwaysHurt              int32   //总是造成伤害 1:是 2:否
+	CallUnitInfo                   //召唤信息
 
 	//被动技能相关参数
 	TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
@@ -130,6 +133,8 @@ type SkillBaseData struct {
 
 	//特殊情况处理 //1:混沌间隙的目标和自己的瞬移
 	Exception int32 //0表示没有特殊情况
+
+	//
 
 }
 

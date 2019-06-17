@@ -366,6 +366,12 @@ func (this *Scene) AddBullet(bullet *Bullet) {
 	this.Bullets[bullet.ID] = bullet
 }
 
+//获取子弹
+func (this *Scene) GetBulletByID(id int32) *Bullet {
+	re := this.Bullets[id]
+	return re
+}
+
 //删除子弹
 func (this *Scene) DoRemoveBullet() {
 	//ZoneBullets
