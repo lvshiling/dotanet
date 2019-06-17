@@ -62,7 +62,7 @@ func (this *NormalAI) Update(dt float64) {
 	//获取最近的敌人
 	nearestEnemies := this.GetNearestEnemies(this.AttackTarget)
 	if nearestEnemies != this.AttackTarget {
-		
+
 		this.AttackTarget = nearestEnemies
 		if this.AttackTarget == nil {
 			this.Parent.StopAttackCmd()
@@ -153,8 +153,9 @@ func (this *NormalAI) GetNearestEnemies(unit *Unit) *Unit {
 		var minUnit *Unit = nil
 		if unit != nil && unit.IsDisappear() == false {
 			if my.CheckAttackEnable2Target(unit) {
-				mindis = my.GetDistanseOfAutoAttackRange(unit)
-				if mindis <= 0 {
+				if my.IsOutAutoAttackTraceOutRange(unit) == false {
+					mindis = my.GetDistanseOfAutoAttackRange(unit)
+
 					minUnit = unit
 				}
 

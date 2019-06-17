@@ -474,6 +474,25 @@ func (this *Bullet) SpurtingHurtUnit(unit *Unit, value int32) {
 	this.SrcUnit.MyPlayer.AddHurtValue(mph)
 }
 
+func (this *Bullet) DoBuffException(buff *Buff) {
+	if buff.Exception <= 0 {
+		return
+	}
+
+	switch buff.Exception {
+	case 4: //4:帕克大招
+		{
+			param := utils.GetFloat32FromString3(buff.ExceptionParam, ":")
+			if len(param) < 3 {
+				return
+			}
+			buff.SetConnectionPoint(vec2d.Vec2{X: this.Position.X, Y: this.Position.Y})
+			//
+		}
+	default:
+	}
+}
+
 //
 func (this *Bullet) DoException(unit *Unit) {
 	if this.Exception <= 0 || unit == nil || unit.IsDisappear() {
@@ -603,7 +622,11 @@ func (this *Bullet) HurtUnit(unit *Unit) int32 {
 		unit.ClearBuffForTarget(this.SrcUnit, this.ClearLevel)
 		//buff
 		for _, v := range this.TargetBuff {
-			unit.AddBuffFromStr(v.Buff, v.BuffLevel, this.SrcUnit)
+			buffs := unit.AddBuffFromStr(v.Buff, v.BuffLevel, this.SrcUnit)
+			//DoBuffException
+			for _, v1 := range buffs {
+				this.DoBuffException(v1)
+			}
 		}
 		if this.SrcUnit == nil || this.SrcUnit.IsDisappear() {
 			return hurtvalue

@@ -5,6 +5,7 @@ import (
 	"dq/log"
 	"dq/utils"
 	"dq/vec2d"
+	"strconv"
 )
 
 type Buff struct {
@@ -25,6 +26,16 @@ type Buff struct {
 	UseableUnitID int32 //起作用的单位ID
 
 	LastPos vec2d.Vec2 //载体上次计算的位置
+
+	ConnectionType  int32      //是否有连接 0表示没有 1表示有连接点 2表示有连接单位
+	ConnectionPoint vec2d.Vec2 //连接点
+	ConnectionUnit  *Unit      //连接单位
+}
+
+//设置牵连
+func (this *Buff) SetConnectionPoint(p vec2d.Vec2) {
+	this.ConnectionType = 1
+	this.ConnectionPoint = p
 }
 
 //检查对特定攻击对象起作用
@@ -53,7 +64,7 @@ func (this *Buff) FreshUseable(unit *Unit) {
 	}
 }
 
-func (this *Buff) HurtTrigger() {
+func (this *Buff) ExceptionTrigger() {
 	if this.Exception <= 0 {
 		return
 	}
@@ -73,6 +84,44 @@ func (this *Buff) HurtTrigger() {
 			this.HurtValue = param[0] * float32(dis.Length())
 			log.Info("----hurt:%f", this.HurtValue)
 			this.LastPos = this.Parent.Body.Position
+		}
+	case 4: //帕克大招
+		{
+			//log.Info("----1111111111aaaaaaaaa")
+			if this.Parent == nil || this.Parent.Body == nil {
+				return
+			}
+			param := utils.GetFloat32FromString3(this.ExceptionParam, ":")
+			if len(param) < 4 {
+				return
+			}
+			hurt := param[1]
+			hurttype := param[0]
+			distanse := param[2]
+			buffid := strconv.Itoa(int(param[3]))
+
+			dis := vec2d.Sub(this.Parent.Body.Position, this.ConnectionPoint)
+			if distanse < float32(dis.Length()) {
+				//触发
+				castunit := this.Parent
+				if this.CastUnit != nil {
+					castunit = this.CastUnit
+				}
+				b := NewBullet1(castunit, this.Parent)
+				b.SetProjectileMode("", 0)
+				b.AddOtherHurt(HurtInfo{HurtType: int32(hurttype), HurtValue: int32(hurt)})
+				b.AddTargetBuff(buffid, this.Level)
+				if b != nil {
+					this.Parent.AddBullet(b)
+				}
+
+				//log.Info("----22222222aaaaaaaaa")
+
+				//删除自己
+				this.RemainTime = 0
+				this.IsEnd = true
+			}
+
 		}
 	default:
 		{
@@ -107,11 +156,13 @@ func (this *Buff) Update(dt float64) {
 					}
 					b := NewBullet1(castunit, this.Parent)
 					b.SetProjectileMode("", 0)
-					this.HurtTrigger()
+					this.ExceptionTrigger()
 					b.AddOtherHurt(HurtInfo{HurtType: this.HurtType, HurtValue: int32(this.HurtValue)})
 					if b != nil {
 						this.Parent.AddBullet(b)
 					}
+				} else {
+					this.ExceptionTrigger()
 				}
 			}
 		}
