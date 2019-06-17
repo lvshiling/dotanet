@@ -2019,28 +2019,34 @@ func (this *Unit) ClearBuffForTarget(target *Unit, clearlevel int32) {
 func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 
 	if castunit == nil || castunit.IsDisappear() || this.IsDisappear() {
+		log.Info("aaaaaaaaaaaaaa")
 		return nil
 	}
 	//攻击距离类型
 	if buff.ActiveUnitAcpabilities == 1 && this.AttackAcpabilities != 1 {
+		log.Info("eeeeeeeeeee")
 		return nil
 	}
 	if buff.ActiveUnitAcpabilities == 2 && this.AttackAcpabilities != 2 {
+		log.Info("fffffffffffff")
 		return nil
 	}
 	//BuffType         int32 //buff类型 1:表示良性 2:表示恶性  队友只能驱散我的恶性buff 敌人只能驱散我的良性buff
 	isenemy := castunit.CheckIsEnemy(this)
 	//如果是敌人 且 是良性buff 就不添加
 	if isenemy == true && buff.BuffType == 1 {
+		log.Info("bbbbbbbbbb")
 		return nil
 	}
 	//如果不是敌人 且 是恶性buff 就不添加
 	if isenemy == false && buff.BuffType == 2 {
+		log.Info("ccccccccccc")
 		return nil
 	}
 
 	//如果恶性buff 单位魔法免疫 buff没有无视技能免疫
 	if buff.BuffType == 2 && this.MagicImmune == 1 && buff.NoCareMagicImmuneAddBuff == 2 {
+		log.Info("dddddddddddddd")
 		return nil
 	}
 	buff.CastUnit = castunit
@@ -2089,6 +2095,7 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 
 		return buff
 	}
+	log.Info("ggggggggggggg")
 	return nil
 }
 

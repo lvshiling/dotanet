@@ -475,7 +475,7 @@ func (this *Bullet) SpurtingHurtUnit(unit *Unit, value int32) {
 }
 
 func (this *Bullet) DoBuffException(buff *Buff) {
-	if buff.Exception <= 0 {
+	if buff == nil || buff.Exception <= 0 {
 		return
 	}
 
@@ -564,6 +564,33 @@ func (this *Bullet) DoException(unit *Unit) {
 			}
 
 			//
+		}
+	case 6: //影魔影牙伤害叠加
+		{
+			if unit == nil || this.SrcUnit == nil || unit.IsDisappear() {
+				return
+			}
+			//log.Info("222222222222222222:%s", this.ExceptionParam)
+			param := utils.GetInt32FromString3(this.ExceptionParam, ":")
+			if len(param) < 3 {
+				return
+			}
+			//log.Info("33333333333")
+			tagnum := int32(0)
+			buff := unit.GetBuff(param[0])
+			if buff != nil {
+				tagnum = buff.TagNum
+			}
+			hurtvalue := tagnum * param[1]
+			if hurtvalue > 0 {
+				b := NewBullet1(this.SrcUnit, unit)
+				b.SetProjectileMode("", 0)
+				b.AddOtherHurt(HurtInfo{HurtType: param[2], HurtValue: int32(hurtvalue)})
+				if b != nil {
+					unit.AddBullet(b)
+				}
+			}
+
 		}
 	default:
 	}
