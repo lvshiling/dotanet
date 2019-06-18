@@ -115,6 +115,10 @@ type Bullet struct {
 	PhysicalHurtAddHP float32 //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 	MagicHurtAddHP    float32 //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 
+	PathHalo         string  //路径光环 在路径上创建光环
+	PathHaloMinTime  float32 //路径光环的最短时间 1表示 相差1秒才创建光环
+	PathHaloLastTime float64 //上次的路径光环时间
+
 	//特殊情况处理 //3:风行束缚击
 	Exception      int32  //0表示没有特殊情况
 	ExceptionParam string //特殊情况处理参数
@@ -193,10 +197,39 @@ func (this *Bullet) Init() {
 	this.AddHPType = 0
 	this.AddHPValue = 0
 
+	this.SetPathHalo("", 10)
+
 	this.Exception = 0
 	this.ExceptionParam = ""
 
 	this.SetForceMove(0, 0, 0, "")
+}
+
+//设置路径光环
+func (this *Bullet) SetPathHalo(ph string, mintime float32) {
+	this.PathHalo = ph
+	this.PathHaloMinTime = mintime
+	this.PathHaloLastTime = 0
+}
+
+//创建路径光环
+func (this *Bullet) DoCreatePathHalo() {
+	if this.SrcUnit == nil || len(this.PathHalo) <= 0 {
+		return
+	}
+
+	curtime := (utils.GetCurTimeOfSecond())
+	//log.Info("-DoCreatePathHalo-:%f  :%f  :%f", curtime, this.PathHaloLastTime, this.PathHaloMinTime)
+	if curtime-this.PathHaloLastTime > float64(this.PathHaloMinTime) {
+		pos := vec2d.Vec2{X: this.Position.X, Y: this.Position.Y}
+
+		this.SrcUnit.AddHaloFromStr(this.PathHalo, this.SkillLevel, &pos)
+
+		this.PathHaloLastTime = curtime
+		log.Info("DoCreatePathHalo succ :%f", curtime)
+
+	}
+
 }
 
 //设置加血信息
@@ -283,10 +316,16 @@ func (this *Bullet) OnCreate() {
 			this.Done()
 			return
 		}
+		if this.SkillID <= 0 {
+			this.Position = this.SrcUnit.GetProjectileStartPos()
+			//开始位置
+			this.StartPosition = this.Position.Clone()
+		} else {
 
-		this.Position = this.SrcUnit.GetProjectileStartPos()
-		//开始位置
-		this.StartPosition = this.Position.Clone()
+			this.Position = vec2d.NewVector3(this.SrcUnit.Body.Position.X, this.SrcUnit.Body.Position.Y, 0.5)
+			//开始位置
+			this.StartPosition = this.Position.Clone()
+		}
 
 		//		if this.DestUnit != nil {
 		//			this.DestPos = this.DestUnit.GetProjectileEndPos()
@@ -797,13 +836,16 @@ func (this *Bullet) Update(dt float32) {
 
 	if this.State == 1 {
 		this.OnCreate()
+		this.DoCreatePathHalo()
 	} else if this.State == 2 {
 		this.DoMove(dt)
 		if this.IsDoHurtOnMove == 1 {
 			this.DoHurt()
 		}
+		this.DoCreatePathHalo()
 	} else if this.State == 3 {
 		this.CalResult()
+		this.DoCreatePathHalo()
 	} else if this.State == 4 {
 		//log.Info("---Bullet update---%d", this.State)
 	}

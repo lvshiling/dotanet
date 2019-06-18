@@ -71,6 +71,8 @@ func (this *Skill) SetBulletProperty(b *Bullet, unit *Unit) {
 	b.PhysicalHurtAddHP += this.PhysicalHurtAddHP
 	b.MagicHurtAddHP += this.MagicHurtAddHP
 
+	b.SetPathHalo(this.PathHalo, this.PathHaloMinTime)
+
 	b.ClearLevel = this.TargetClearLevel //设置驱散等级
 
 }
@@ -85,7 +87,9 @@ func (this *Skill) CreateBullet(unit *Unit, data *protomsg.CS_PlayerSkill) []*Bu
 	//自身
 	var b *Bullet = nil
 	if this.CastTargetType == 1 {
+
 		b = NewBullet1(unit, unit)
+
 	} else if this.CastTargetType == 2 { //目标单位
 
 		targetunit := unit.InScene.FindUnitByID(data.TargetUnitID)
@@ -120,8 +124,25 @@ func (this *Skill) CreateBullet(unit *Unit, data *protomsg.CS_PlayerSkill) []*Bu
 			}
 		}
 	} else {
-		this.SetBulletProperty(b, unit)
-		bullets = append(bullets, b)
+
+		if this.BulletCount > 1 && this.CastTargetType == 1 {
+
+			for i := int32(0); i < this.BulletCount; i++ {
+				dir := vec2d.Vec2{float64(0), float64(1)}
+				dir.Normalize()
+				dir.MulToFloat64(float64(this.CastRange))
+				dir.Rotate(float64(int32(360) / this.BulletCount * i))
+				dir.Collect(&unit.Body.Position)
+				b = NewBullet2(unit, vec2d.Vec2{float64(dir.X), float64(dir.Y)})
+				this.SetBulletProperty(b, unit)
+				bullets = append(bullets, b)
+			}
+
+		} else {
+			this.SetBulletProperty(b, unit)
+			bullets = append(bullets, b)
+		}
+
 	}
 	return bullets
 }

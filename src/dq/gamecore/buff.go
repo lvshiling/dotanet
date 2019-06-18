@@ -25,7 +25,8 @@ type Buff struct {
 	IsUseable     bool  //是否起作用
 	UseableUnitID int32 //起作用的单位ID
 
-	LastPos vec2d.Vec2 //载体上次计算的位置
+	LastPos          vec2d.Vec2 //载体上次计算的位置 血魔大招
+	PathHaloLastTime float64    //上次的路径光环时间
 
 	ConnectionType  int32      //是否有连接 0表示没有 1表示有连接点 2表示有连接单位
 	ConnectionPoint vec2d.Vec2 //连接点
@@ -130,6 +131,30 @@ func (this *Buff) ExceptionTrigger() {
 	}
 }
 
+//创建路径光环
+func (this *Buff) DoCreatePathHalo() {
+	castunit := this.Parent
+	if this.CastUnit != nil {
+		castunit = this.CastUnit
+	}
+	if castunit == nil || castunit.Body == nil || this.Parent == nil || this.Parent.Body == nil || len(this.PathHalo) <= 0 {
+		return
+	}
+
+	curtime := utils.GetCurTimeOfSecond()
+	//log.Info("-DoCreatePathHalo-:%f  :%f  :%f", curtime, this.PathHaloLastTime, this.PathHaloMinTime)
+	if curtime-this.PathHaloLastTime > float64(this.PathHaloMinTime) {
+		pos := this.Parent.Body.Position
+
+		castunit.AddHaloFromStr(this.PathHalo, this.Level, &pos)
+
+		this.PathHaloLastTime = curtime
+		log.Info("buff DoCreatePathHalo succ :%f", curtime)
+
+	}
+
+}
+
 //更新
 func (this *Buff) Update(dt float64) {
 	//CD时间减少
@@ -139,6 +164,7 @@ func (this *Buff) Update(dt float64) {
 			this.RemainTime = 0
 			this.IsEnd = true
 		}
+		this.DoCreatePathHalo()
 
 		this.TriggerRemainTime -= float32(dt)
 		//检查是否触发

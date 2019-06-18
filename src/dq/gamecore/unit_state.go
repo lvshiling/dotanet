@@ -520,6 +520,9 @@ func (this *ChantState) OnTransform() {
 		}
 	} else {
 		//没有攻击命令 不能移动
+		if this.IsDoBullet == true {
+			return
+		}
 		this.OnEnd()
 		this.Parent.SetState(NewIdleState(this.Parent))
 		return
@@ -557,7 +560,6 @@ func (this *ChantState) OnEnd() {
 	//log.Info(" ChantState end%f", utils.GetCurTimeOfSecond())
 }
 func (this *ChantState) OnStart() {
-	this.Parent.SetAnimotorState(10)
 
 	this.ChantData = this.Parent.SkillCmdData
 
@@ -566,6 +568,8 @@ func (this *ChantState) OnStart() {
 		this.IsDone = true
 		return
 	}
+	//AnimotorState
+	this.Parent.SetAnimotorState(skilldata.AnimotorState)
 	//--转向处理--
 	if skilldata.CastTargetType == 2 {
 		target := this.Parent.InScene.FindUnitByID(this.Parent.SkillCmdData.TargetUnitID)

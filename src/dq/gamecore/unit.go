@@ -1850,6 +1850,9 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 	if v1.IsCollisoin == 2 {
 		this.Body.IsCollisoin = false
 	}
+	if v1.CollisoinLevel > this.Body.CollisoinLevel {
+		this.Body.CollisoinLevel = v1.CollisoinLevel
+	}
 
 }
 

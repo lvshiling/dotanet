@@ -88,16 +88,17 @@ type BuffBaseData struct {
 	ActiveUnitAcpabilities   int32 //生效的单位攻击类型(1:近程攻击 2:远程攻击 3:都生效)
 	NoCareMagicImmuneAddBuff int32 //添加此buff时 是否无视单位魔法免疫 1:是 2:非
 
-	NoMove        int32 //禁止移动 1:是 2:非
-	NoTurn        int32 //禁止转向 1:是 2:非
-	NoAttack      int32 //禁止攻击 1:是 2:非
-	NoSkill       int32 //禁止使用技能 1:是 2:非
-	NoItem        int32 //禁止使用道具 1:是 2:非
-	MagicImmune   int32 //是否魔法免疫 1:是 2:非
-	PhisicImmune  int32 //物理攻击免疫 1:是 2:非
-	MagicCDStop   int32 //技能冷却停止 1:是 2:非
-	AnimotorPause int32 //是否暂停动画 1:是 2:非
-	IsCollisoin   int32 //是否碰撞检测 1:是 2:非
+	NoMove         int32 //禁止移动 1:是 2:非
+	NoTurn         int32 //禁止转向 1:是 2:非
+	NoAttack       int32 //禁止攻击 1:是 2:非
+	NoSkill        int32 //禁止使用技能 1:是 2:非
+	NoItem         int32 //禁止使用道具 1:是 2:非
+	MagicImmune    int32 //是否魔法免疫 1:是 2:非
+	PhisicImmune   int32 //物理攻击免疫 1:是 2:非
+	MagicCDStop    int32 //技能冷却停止 1:是 2:非
+	AnimotorPause  int32 //是否暂停动画 1:是 2:非
+	IsCollisoin    int32 //是否碰撞检测 1:是 2:非
+	CollisoinLevel int32 //碰撞等级 1 普通单位 2 障碍地形
 
 	IsUseableAllocateAttackUnit int32 //是否只对指定攻击目标生效 1:是 2:非
 
@@ -116,6 +117,9 @@ type BuffBaseData struct {
 	SubTagNumRule    int32 //标记减少规则 减少为0会自动删除buff 0:表示不减少 1:表示攻击时减少
 	//伤害相关  剧毒类buff
 	HurtType int32 //伤害类型(1:物理伤害 2:魔法伤害 3:纯粹伤害 4:不造成伤害)
+
+	PathHalo        string  //路径光环 在路径上创建光环
+	PathHaloMinTime float32 //路径光环的最短时间 1表示 相差1秒才创建光环
 
 	//特殊情况处理
 	Exception int32 // 特殊情况处理  0表示没有特殊情况 1:血魔的血怒buff死亡后加血

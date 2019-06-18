@@ -102,6 +102,7 @@ type SkillBaseData struct {
 	TriggerAttackEffect    int32   //能否触发普通攻击特效 (1:触发 2:不触发)
 	CastPoint              float32 //施法前摇(以施法时间为比列 0.5表示 施法的中间时间点触发)
 	CastTime               float32 //施法时间(以秒为单位的时间 比如1秒)
+	AnimotorState          int32   //动画
 	RequiredLevel          int32   //初始等级需求 1级 需要玩家多少级才能学习
 	LevelsBetweenUpgrades  int32   //等级需求步长 2
 	MaxLevel               int32   //最高升级到的等级 5 表示能升级到5级
@@ -116,6 +117,8 @@ type SkillBaseData struct {
 	TargetHalo             string  //释放时 对目标造成的halo
 	MyHalo                 string  //释放时 对自己造成的halo 比如 1,2 表示对目标造成typeid为 1和2的halo
 	InitHalo               string  //拥有技能技能时的halo (技能携带的halo)
+	PathHalo               string  //路径光环 在路径上创建光环
+	PathHaloMinTime        float32 //路径光环的最短时间 1表示 相差1秒才创建光环
 	MyClearLevel           int32   //释放时 对自己的驱散等级  能驱散 驱散等级 小于等于该值的buff
 	TargetClearLevel       int32   //释放时 对目标的驱散等级  能驱散 驱散等级 小于等于该值的buff
 	AwaysHurt              int32   //总是造成伤害 1:是 2:否
@@ -141,12 +144,13 @@ type SkillBaseData struct {
 //技能数据 (会根据等级变化的数据)
 type SkillData struct {
 	SkillBaseData
-	CastRange  float32 //施法距离
-	Cooldown   float32 //技能冷却时间
-	HurtValue  int32   //技能伤害
-	HurtRange  float32 //伤害范围 小于等于0表示单体
-	NormalHurt float32 //附带普通攻击百分比 (0.5 为 50%的普通攻击伤害) 一般为0
-	ManaCost   int32   //技能魔法消耗
+	CastRange   float32 //施法距离
+	Cooldown    float32 //技能冷却时间
+	HurtValue   int32   //技能伤害
+	HurtRange   float32 //伤害范围 小于等于0表示单体
+	NormalHurt  float32 //附带普通攻击百分比 (0.5 为 50%的普通攻击伤害) 一般为0
+	ManaCost    int32   //技能魔法消耗
+	BulletCount int32   //子弹数量 仅对 对自己施法有效 在自己周围创造多个弹道
 
 	//被动技能相关参数
 	TriggerProbability float32 //触发几率 0.5表示50%
@@ -181,6 +185,8 @@ type SkillFileData struct {
 	NormalHurt string //附带普通攻击百分比 (0.5 为 50%的普通攻击伤害) 一般为0
 	ManaCost   string //技能魔法消耗
 
+	BulletCount string //子弹数量 仅对 对自己施法有效 在自己周围创造多个弹道
+
 	//被动技能相关参数
 	TriggerProbability string //触发几率 0.5表示50%
 	TriggerCrit        string //触发的暴击 倍数 2.5表示2.5倍攻击
@@ -213,6 +219,8 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 	HurtRange := utils.GetFloat32FromString2(this.HurtRange)
 	NormalHurt := utils.GetFloat32FromString2(this.NormalHurt)
 	ManaCost := utils.GetInt32FromString2(this.ManaCost)
+
+	BulletCount := utils.GetInt32FromString2(this.BulletCount)
 
 	//被动技能相关参数
 	TriggerProbability := utils.GetFloat32FromString2(this.TriggerProbability)
@@ -265,6 +273,11 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 			ssd.ManaCost = ManaCost[len(ManaCost)-1]
 		} else {
 			ssd.ManaCost = ManaCost[i]
+		}
+		if int32(len(BulletCount)) <= i {
+			ssd.BulletCount = BulletCount[len(BulletCount)-1]
+		} else {
+			ssd.BulletCount = BulletCount[i]
 		}
 
 		if int32(len(TriggerProbability)) <= i {

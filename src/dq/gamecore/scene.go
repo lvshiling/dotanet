@@ -348,7 +348,7 @@ func (this *Scene) DoRemoveHalo() {
 	//ZoneBullets
 	for k, v := range this.Halos {
 		if v.IsDone() {
-			log.Info("------DoRemoveHalo----%d", v.TypeID)
+			//log.Info("------DoRemoveHalo----%d", v.TypeID)
 			delete(this.Halos, k)
 		}
 	}
