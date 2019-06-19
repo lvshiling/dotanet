@@ -105,18 +105,23 @@ func (this *Halo) Update(dt float32) {
 							}
 							//UnitTargetTeam      int32   //目标单位关系 1:友方  2:敌方 3:友方敌方都行 5:自己 10:除自己外的其他
 
-							if this.UnitTargetTeam == 1 && this.GetCastUnit().CheckIsEnemy(v) == true {
+							//							if this.UnitTargetTeam == 1 && this.GetCastUnit().CheckIsEnemy(v) == true {
+							//								continue
+							//							}
+							//							if this.UnitTargetTeam == 2 && this.GetCastUnit().CheckIsEnemy(v) == false {
+							//								continue
+							//							}
+							//							if this.UnitTargetTeam == 5 && this.GetCastUnit() != v {
+							//								continue
+							//							}
+							//							if this.UnitTargetTeam == 10 && this.GetCastUnit() == v {
+							//								continue
+							//							}
+
+							if this.GetCastUnit().CheckUnitTargetTeam(v, this.UnitTargetTeam) == false {
 								continue
 							}
-							if this.UnitTargetTeam == 2 && this.GetCastUnit().CheckIsEnemy(v) == false {
-								continue
-							}
-							if this.UnitTargetTeam == 5 && this.GetCastUnit() != v {
-								continue
-							}
-							if this.UnitTargetTeam == 10 && this.GetCastUnit() == v {
-								continue
-							}
+
 							//检测是否在范围内
 							if v.Body == nil || this.HaloRange <= 0 {
 								continue

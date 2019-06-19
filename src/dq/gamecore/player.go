@@ -285,7 +285,7 @@ func (this *Player) MoveCmd(data *protomsg.CS_PlayerMove) {
 			this.CheckOtherUnit()
 			items := this.OtherUnit.Items()
 			for _, v1 := range items {
-				v1.(*Unit).MoveCmd(data)
+				v1.(*Unit).PlayerControl_MoveCmd(data)
 			}
 		}
 
@@ -296,7 +296,7 @@ func (this *Player) MoveCmd(data *protomsg.CS_PlayerMove) {
 func (this *Player) SkillCmd(data *protomsg.CS_PlayerSkill) {
 	this.CheckOtherUnit()
 	if this.MainUnit.ID == data.ID {
-		this.MainUnit.SkillCmd(data)
+		this.MainUnit.PlayerControl_SkillCmd(data)
 	}
 }
 
@@ -310,7 +310,7 @@ func (this *Player) AttackCmd(data *protomsg.CS_PlayerAttack) {
 			this.CheckOtherUnit()
 			items := this.OtherUnit.Items()
 			for _, v1 := range items {
-				v1.(*Unit).AttackCmd(data)
+				v1.(*Unit).PlayerControl_AttackCmd(data)
 			}
 		}
 	}

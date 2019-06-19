@@ -88,17 +88,18 @@ type BuffBaseData struct {
 	ActiveUnitAcpabilities   int32 //生效的单位攻击类型(1:近程攻击 2:远程攻击 3:都生效)
 	NoCareMagicImmuneAddBuff int32 //添加此buff时 是否无视单位魔法免疫 1:是 2:非
 
-	NoMove         int32 //禁止移动 1:是 2:非
-	NoTurn         int32 //禁止转向 1:是 2:非
-	NoAttack       int32 //禁止攻击 1:是 2:非
-	NoSkill        int32 //禁止使用技能 1:是 2:非
-	NoItem         int32 //禁止使用道具 1:是 2:非
-	MagicImmune    int32 //是否魔法免疫 1:是 2:非
-	PhisicImmune   int32 //物理攻击免疫 1:是 2:非
-	MagicCDStop    int32 //技能冷却停止 1:是 2:非
-	AnimotorPause  int32 //是否暂停动画 1:是 2:非
-	IsCollisoin    int32 //是否碰撞检测 1:是 2:非
-	CollisoinLevel int32 //碰撞等级 1 普通单位 2 障碍地形
+	NoMove          int32 //禁止移动 1:是 2:非
+	NoTurn          int32 //禁止转向 1:是 2:非
+	NoAttack        int32 //禁止攻击 1:是 2:非
+	NoSkill         int32 //禁止使用技能 1:是 2:非
+	NoItem          int32 //禁止使用道具 1:是 2:非
+	MagicImmune     int32 //是否魔法免疫 1:是 2:非
+	PhisicImmune    int32 //物理攻击免疫 1:是 2:非
+	MagicCDStop     int32 //技能冷却停止 1:是 2:非
+	AnimotorPause   int32 //是否暂停动画 1:是 2:非
+	IsCollisoin     int32 //是否碰撞检测 1:是 2:非
+	CollisoinLevel  int32 //碰撞等级 1 普通单位 2 障碍地形
+	NoPlayerControl int32 //禁止玩家操作 1:是 2:否
 
 	IsUseableAllocateAttackUnit int32 //是否只对指定攻击目标生效 1:是 2:非
 
@@ -106,8 +107,6 @@ type BuffBaseData struct {
 	InvisibleBeSee  int32 //隐身可以被看见 1:是 2:否
 	CanSeeInvisible int32 //可以看见隐身 1:是 2:否
 	MasterInvisible int32 //大师级隐身 不会被看见 (分身的无敌和其他的blink躲弹道) 1:是 2:否
-
-	ActiveTime float32 //开始生效的时间 1.2表示 1.2秒后生效
 
 	AttackedInvalid  int32 //攻击后失效 1:是 2:否
 	DoSkilledInvalid int32 //使用技能后失效 1:是 2:否
@@ -168,6 +167,7 @@ type BuffData struct {
 	AllHurtCV                 float32 //受到总伤害变化率 0.1表示 增加10%的总伤害 -0.1表示减少10%总伤害
 	DoAllHurtCV               float32 //造成总伤害变化率 0.1表示 增加10%的总伤害 -0.1表示减少10%总伤害
 	InitTagNum                int32   //初始标记数量
+	ActiveTime                float32 //开始生效的时间 1.2表示 1.2秒后生效
 
 	//
 	HurtTimeInterval float32 //伤害时间间隔
@@ -219,6 +219,7 @@ type BuffFileData struct {
 	AllHurtCV                 string
 	DoAllHurtCV               string
 	InitTagNum                string //初始标记数量
+	ActiveTime                string //开始生效的时间 1.2表示 1.2秒后生效
 
 	//
 	HurtTimeInterval string //伤害时间间隔
@@ -269,6 +270,7 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 	DoAllHurtCV := utils.GetFloat32FromString2(this.DoAllHurtCV)
 
 	InitTagNum := utils.GetInt32FromString2(this.InitTagNum)
+	ActiveTime := utils.GetFloat32FromString2(this.ActiveTime)
 
 	HurtTimeInterval := utils.GetFloat32FromString2(this.HurtTimeInterval)
 	HurtValue := utils.GetFloat32FromString2(this.HurtValue)
@@ -445,6 +447,11 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 			ssd.InitTagNum = InitTagNum[len(InitTagNum)-1]
 		} else {
 			ssd.InitTagNum = InitTagNum[i]
+		}
+		if int32(len(ActiveTime)) <= i {
+			ssd.ActiveTime = ActiveTime[len(ActiveTime)-1]
+		} else {
+			ssd.ActiveTime = ActiveTime[i]
 		}
 
 		if int32(len(HurtTimeInterval)) <= i {

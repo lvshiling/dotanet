@@ -16,6 +16,8 @@ type Skill struct {
 	RemainCDTime     float32 //技能cd 剩余时间
 	AttackAutoActive int32   //攻击时自动释放 是否激活 1:激活 2:否
 
+	RemainVisibleTime float32 //剩余显示时间
+
 	Parent *Unit //载体
 
 	Param1 int32 //参数1
@@ -27,6 +29,14 @@ func (this *Skill) DoActive() {
 		this.AttackAutoActive = 2
 	} else {
 		this.AttackAutoActive = 1
+	}
+}
+
+//设置显示
+func (this *Skill) SetVisible(visible int32) {
+	this.Visible = visible
+	if visible == 1 {
+		this.RemainVisibleTime = this.VisibleTime
 	}
 }
 
@@ -64,6 +74,7 @@ func (this *Skill) SetBulletProperty(b *Bullet, unit *Unit) {
 	if this.ForceMoveType == 1 {
 		b.SetForceMove(this.ForceMoveTime, this.ForceMoveSpeedSize, this.ForceMoveLevel, this.ForceMoveBuff)
 	}
+	b.SwitchedPlaces = this.SwitchedPlaces
 	//加血
 	if this.AddHPTarget == 2 {
 		b.SetAddHP(this.AddHPType, this.AddHPValue)
@@ -105,12 +116,21 @@ func (this *Skill) CreateBullet(unit *Unit, data *protomsg.CS_PlayerSkill) []*Bu
 			if v.IsDisappear() {
 				continue
 			}
-			if this.UnitTargetTeam == 1 && unit.CheckIsEnemy(v) == true {
+			//			if this.UnitTargetTeam == 1 && unit.CheckIsEnemy(v) == true {
+			//				continue
+			//			}
+			//			if this.UnitTargetTeam == 2 && unit.CheckIsEnemy(v) == false {
+			//				continue
+			//			}
+
+			if unit.CheckUnitTargetTeam(v, this.UnitTargetTeam) == false {
 				continue
 			}
-			if this.UnitTargetTeam == 2 && unit.CheckIsEnemy(v) == false {
+
+			if v.CheckUnitTargetCamp(this.UnitTargetCamp) == false {
 				continue
 			}
+
 			//检测是否在范围内
 			if v.Body == nil || this.CastTargetRange <= 0 {
 				continue
@@ -152,25 +172,25 @@ func (this *Skill) UpdateException() {
 		return
 	}
 	switch this.Exception {
-	case 5: //帕克幻象发球
-		{
-			if this.Parent == nil || this.Parent.IsDisappear() {
-				return
-			}
-			bullet := this.Parent.InScene.GetBulletByID(this.Param1)
-			if bullet == nil {
+	//	case 5: //帕克幻象发球
+	//		{
+	//			if this.Parent == nil || this.Parent.IsDisappear() {
+	//				return
+	//			}
+	//			bullet := this.Parent.InScene.GetBulletByID(this.Param1)
+	//			if bullet == nil {
 
-				//检查关联
-				if this.VisibleRelationSkillID > 0 {
-					skilldata1, ok1 := this.Parent.Skills[this.VisibleRelationSkillID]
-					if ok1 {
-						this.Visible = 2
-						skilldata1.Visible = 1
-					}
-				}
-			}
+	//				//检查关联
+	//				if this.VisibleRelationSkillID > 0 {
+	//					skilldata1, ok1 := this.Parent.Skills[this.VisibleRelationSkillID]
+	//					if ok1 {
+	//						this.Visible = 2
+	//						skilldata1.Visible = 1
+	//					}
+	//				}
+	//			}
 
-		}
+	//		}
 	default:
 	}
 }
@@ -181,6 +201,23 @@ func (this *Skill) Update(dt float64) {
 	this.RemainCDTime -= float32(dt)
 	if this.RemainCDTime <= 0 {
 		this.RemainCDTime = 0
+	}
+
+	if this.Visible == 1 {
+		if this.RemainVisibleTime > 0 {
+			this.RemainVisibleTime -= float32(dt)
+			if this.RemainVisibleTime <= 0 {
+				//检查关联
+				if this.VisibleRelationSkillID > 0 {
+					skilldata1, ok1 := this.Parent.Skills[this.VisibleRelationSkillID]
+					if ok1 {
+						this.SetVisible(2)
+						skilldata1.SetVisible(1)
+					}
+				}
+			}
+		}
+
 	}
 	this.UpdateException()
 }

@@ -119,6 +119,9 @@ type Bullet struct {
 	PathHaloMinTime  float32 //路径光环的最短时间 1表示 相差1秒才创建光环
 	PathHaloLastTime float64 //上次的路径光环时间
 
+	//互换位置
+	SwitchedPlaces int32 //互换位置 1:是 2:否 只对目标为单位的情况生效
+
 	//特殊情况处理 //3:风行束缚击
 	Exception      int32  //0表示没有特殊情况
 	ExceptionParam string //特殊情况处理参数
@@ -198,6 +201,8 @@ func (this *Bullet) Init() {
 	this.AddHPValue = 0
 
 	this.SetPathHalo("", 10)
+
+	this.SwitchedPlaces = 2
 
 	this.Exception = 0
 	this.ExceptionParam = ""
@@ -424,6 +429,8 @@ func (this *Bullet) DoCallUnit() {
 		//buff
 		unit.AddBuffFromStr(this.CallUnitBuff, this.CallUnitInfoSkillLevel, unit)
 		unit.AddHaloFromStr(this.CallUnitHalo, this.CallUnitInfoSkillLevel, nil)
+
+		unit.SetAI(NewNormalAI(unit))
 
 		scene.NextAddUnit.Set(unit.ID, unit)
 	}
@@ -763,13 +770,18 @@ func (this *Bullet) DoHurt() {
 			if v.IsDisappear() {
 				continue
 			}
-			//UnitTargetTeam      int32   //目标单位关系 1:友方  2:敌方 3:友方敌方都行
-			if this.UnitTargetTeam == 1 && this.SrcUnit.CheckIsEnemy(v) == true {
+			//UnitTargetTeam      int32   //目标单位关系 1:友方  2:敌方 3:友方敌方都行 5:自己 10:除自己外的其他 20 自己控制的单位(不包括自己)
+			//			if this.UnitTargetTeam == 1 && this.SrcUnit.CheckIsEnemy(v) == true {
+			//				continue
+			//			}
+			//			if this.UnitTargetTeam == 2 && this.SrcUnit.CheckIsEnemy(v) == false {
+			//				continue
+			//			}
+
+			if this.SrcUnit.CheckUnitTargetTeam(v, this.UnitTargetTeam) == false {
 				continue
 			}
-			if this.UnitTargetTeam == 2 && this.SrcUnit.CheckIsEnemy(v) == false {
-				continue
-			}
+
 			//检测是否在范围内
 			if v.Body == nil || this.HurtRange.Radius <= 0 {
 				continue
@@ -817,11 +829,22 @@ func (this *Bullet) GetAttackOfType(hurttype int32) int32 {
 	return val
 }
 
+//处理交换位置
+func (this *Bullet) DoSwitchedPlaces() {
+	if this.SwitchedPlaces == 2 || this.DestUnit == nil || this.SrcUnit == nil || this.DestUnit.Body == nil || this.SrcUnit.Body == nil {
+		return
+	}
+	srcpos := this.SrcUnit.Body.Position
+	this.SrcUnit.Body.Position = this.DestUnit.Body.Position
+	this.DestUnit.Body.Position = srcpos
+}
+
 //计算结果
 func (this *Bullet) CalResult() {
 
 	//处理召唤
 	this.DoCallUnit()
+	this.DoSwitchedPlaces()
 	//计算伤害
 	this.DoHurt()
 

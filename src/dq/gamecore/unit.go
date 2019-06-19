@@ -210,15 +210,61 @@ func (this *Unit) IsInSkillRange(data *protomsg.CS_PlayerSkill) bool {
 
 }
 
+//检查阵营是否满足条件
+func (this *Unit) CheckUnitTargetCamp(camp int32) bool {
+	if camp != 5 {
+		if this.UnitType != camp {
+			return false
+		}
+		if camp == 1 && this.IsMirrorImage == 1 {
+			return false
+		}
+	}
+
+	return true
+}
+
+//检查目标单位关系是否满足条件
+func (this *Unit) CheckUnitTargetTeam(target *Unit, team int32) bool {
+	//与目标单位关系 1:友方  2:敌方 3:友方敌方都行包括自己  4:友方敌方都行不包括自己 5:自己 10:除自己外的其他 20 自己控制的单位(不包括自己)
+	isEnemy := this.CheckIsEnemy(target)
+	if team == 1 {
+		if isEnemy == true {
+			return false
+		}
+	} else if team == 2 {
+		if isEnemy == false {
+			return false
+		}
+	} else if team == 4 || team == 10 {
+		if this == target {
+			return false
+		}
+	} else if team == 5 {
+		if this != target {
+			return false
+		}
+	} else if team == 20 {
+		if this.MyPlayer != target.MyPlayer || this == target {
+			return false
+		}
+	}
+	return true
+}
+
 //检查技能是否可以对目标释放
 func (this *Unit) CheckCastSkillTarget(target *Unit, skilldata *Skill) bool {
 	//int32 UnitTargetTeam = 8;//目标单位关系 1:友方  2:敌方 3:友方敌方都行
-	//int32 UnitTargetCamp = 9;//目标单位阵营 (1:玩家 2:NPC) 3:玩家NPC都行
+	//int32 UnitTargetCamp = 9;//目标单位阵营 (1:英雄 2:普通单位 3:远古 4:boss) 5:都行
 	if target == nil {
 		return false
 	}
 	//目标消失
 	if target.IsDisappear() == true || this.CanSeeTarget(target) == false {
+		return false
+	}
+	//
+	if target.CheckUnitTargetCamp(skilldata.UnitTargetCamp) == false {
 		return false
 	}
 
@@ -231,20 +277,61 @@ func (this *Unit) CheckCastSkillTarget(target *Unit, skilldata *Skill) bool {
 			}
 		}
 	}
-
-	//与目标单位的关系
-	if skilldata.UnitTargetTeam == 1 {
-		if isEnemy == true {
-			return false
-		}
-	} else if skilldata.UnitTargetTeam == 2 {
-		if isEnemy == false {
-			return false
-		}
+	if this.CheckUnitTargetTeam(target, skilldata.UnitTargetTeam) == false {
+		return false
 	}
+	//	//与目标单位的关系
+	//	if skilldata.UnitTargetTeam == 1 {
+	//		if isEnemy == true {
+	//			return false
+	//		}
+	//	} else if skilldata.UnitTargetTeam == 2 {
+	//		if isEnemy == false {
+	//			return false
+	//		}
+	//	}
 
 	return true
 	//if skilldata.UnitTargetCamp
+}
+
+//检查额外触发条件
+func (this *Unit) CheckTriggerOtherRule(rule int32, param string) bool {
+	if rule <= 0 {
+		return true
+	}
+	switch rule {
+	case 1, 2: //1:表示范围内地方英雄不超过几个
+		{
+			param := utils.GetFloat32FromString3(param, ":")
+			if len(param) < 2 {
+				return false
+			}
+			allunit := this.InScene.FindVisibleUnitsByPos(this.Body.Position)
+			count := int32(0)
+			for _, v := range allunit {
+				if rule == 1 && v.UnitType != 1 {
+					continue
+				}
+				if v.IsDisappear() == false && this.CheckIsEnemy(v) == true {
+					dis := float32(vec2d.Distanse(this.Body.Position, v.Body.Position))
+					if dis <= param[0] {
+						count++
+					}
+				}
+
+				if count >= int32(param[1]) {
+					return false
+				}
+			}
+
+			return true
+
+		}
+	default:
+	}
+
+	return true
 }
 
 //检查攻击 触发攻击特效
@@ -273,8 +360,8 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 		if v.CastType == 2 && v.TriggerTime == 1 {
 			//检查cd 魔法消耗
 			if v.RemainCDTime <= 0 {
-				//检查 触发概率
-				if utils.CheckRandom(v.TriggerProbability) {
+				//检查 触发概率 和额外条件
+				if utils.CheckRandom(v.TriggerProbability) && this.CheckTriggerOtherRule(v.TriggerOtherRule, v.TriggerOtherRuleParam) {
 					//触发
 					//添加自己的buff
 					this.AddBuffFromStr(v.MyBuff, v.Level, this)
@@ -586,11 +673,11 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 	this.DoSkillException(skilldata, targetunit, bullets[0])
 
 	//检查关联
-	if skilldata.VisibleRelationSkillID > 0 {
+	if skilldata.VisibleRelationSkillID > 0 && skilldata.UseToHide == 1 {
 		skilldata1, ok1 := this.Skills[skilldata.VisibleRelationSkillID]
 		if ok1 {
-			skilldata.Visible = 2
-			skilldata1.Visible = 1
+			skilldata.SetVisible(2)
+			skilldata1.SetVisible(1)
 		}
 	}
 
@@ -660,6 +747,14 @@ func (this *Unit) UseSkillEnable(data *protomsg.CS_PlayerSkill) bool {
 	//施法距离就不判断了 如果距离不够单位自己移动过去
 
 	return true
+}
+
+//玩家操作技能行为命令
+func (this *Unit) PlayerControl_SkillCmd(data *protomsg.CS_PlayerSkill) {
+	if this.PlayerControlEnable != 1 {
+		return
+	}
+	this.SkillCmd(data)
 }
 
 //技能行为命令
@@ -775,6 +870,14 @@ func (this *Unit) CheckAttackEnable2Target(target *Unit) bool {
 
 }
 
+//玩家操作攻击行为命令
+func (this *Unit) PlayerControl_AttackCmd(data *protomsg.CS_PlayerAttack) {
+	if this.PlayerControlEnable != 1 {
+		return
+	}
+	this.AttackCmd(data)
+}
+
 //攻击行为命令
 func (this *Unit) AttackCmd(data *protomsg.CS_PlayerAttack) {
 
@@ -847,6 +950,14 @@ func (this *Unit) GetCanMove() bool {
 //设置单位朝向
 func (this *Unit) SetDirection(dir vec2d.Vec2) {
 	this.Body.Direction = dir
+}
+
+//玩家操作行为命令
+func (this *Unit) PlayerControl_MoveCmd(data *protomsg.CS_PlayerMove) {
+	if this.PlayerControlEnable != 1 {
+		return
+	}
+	this.MoveCmd(data)
 }
 
 //移动行为命令
@@ -999,20 +1110,23 @@ type UnitProperty struct {
 
 	UnitBaseProperty
 
-	MoveEnable    int32 //能否移动 (比如 被缠绕不能移动) 1:可以 2:不可以
-	TurnEnable    int32 //能否转向 (比如 被眩晕不能转向) 1:可以 2:不可以
-	AttackEnable  int32 //能否攻击 (比如 被眩晕和缴械不能攻击) 1:可以 2:不可以
-	SkillEnable   int32 //能否使用主动技能 (比如 被眩晕和沉默不能使用主动技能) 1:可以 2:不可以
-	ItemEnable    int32 //能否使用主动道具 (比如 被眩晕和禁用道具不能使用主动道具) 1:可以 2:不可以
-	MagicImmune   int32 //是否技能免疫 1：是 2:不是
-	PhisicImmune  int32 //是否物理攻击免疫 1:是 2:否
-	MagicCDStop   int32 //技能冷却停止 1:是 2:非
-	AnimotorPause int32 //是否暂停动画 1:是 2:非
+	PlayerControlEnable int32 //玩家能否操作 1:能 2:不能
+	MoveEnable          int32 //能否移动 (比如 被缠绕不能移动) 1:可以 2:不可以
+	TurnEnable          int32 //能否转向 (比如 被眩晕不能转向) 1:可以 2:不可以
+	AttackEnable        int32 //能否攻击 (比如 被眩晕和缴械不能攻击) 1:可以 2:不可以
+	SkillEnable         int32 //能否使用主动技能 (比如 被眩晕和沉默不能使用主动技能) 1:可以 2:不可以
+	ItemEnable          int32 //能否使用主动道具 (比如 被眩晕和禁用道具不能使用主动道具) 1:可以 2:不可以
+	MagicImmune         int32 //是否技能免疫 1：是 2:不是
+	PhisicImmune        int32 //是否物理攻击免疫 1:是 2:否
+	MagicCDStop         int32 //技能冷却停止 1:是 2:非
+	AnimotorPause       int32 //是否暂停动画 1:是 2:非
 
 	Invisible       int32 //隐身 1:是 2:否
 	InvisibleBeSee  int32 //隐身可以被看见 1:是 2:否
 	CanSeeInvisible int32 //可以看见隐身 1:是 2:否
 	MasterInvisible int32 //大师级隐身 不会被看见 (分身的无敌和其他的blink躲弹道) 1:是 2:否
+
+	IsMirrorImage int32 //是否是镜像 1:是 2:不是
 
 	//强制移动相关
 	ForceMoveTime       float32    //强制移动总时间
@@ -1189,6 +1303,7 @@ func CreateUnitByCopyUnit(unit *Unit, controlplayer *Player) *Unit {
 	//初始化
 	unitre.Init()
 	unitre.IsMain = 0
+	unitre.IsMirrorImage = 1
 
 	controlplayer.AddOtherUnit(unitre)
 
@@ -1248,6 +1363,7 @@ func (this *Unit) Init() {
 	this.EveryTimeDoRemainTime = 1
 
 	this.IsDeath = 2
+	this.IsMirrorImage = 2
 
 	this.ClearBuff()
 
@@ -1663,6 +1779,7 @@ func (this *Unit) CalControlState() {
 	this.PhisicImmune = 2
 	this.MagicCDStop = 2
 	this.AnimotorPause = 2
+	this.PlayerControlEnable = 1
 
 	this.AddedMagicRange = 0 //额外施法距离
 	this.ManaCost = 0        //魔法消耗降低
@@ -1853,6 +1970,9 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 	if v1.CollisoinLevel > this.Body.CollisoinLevel {
 		this.Body.CollisoinLevel = v1.CollisoinLevel
 	}
+	if v1.NoPlayerControl == 1 {
+		this.PlayerControlEnable = 2
+	}
 
 }
 
@@ -2022,34 +2142,34 @@ func (this *Unit) ClearBuffForTarget(target *Unit, clearlevel int32) {
 func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 
 	if castunit == nil || castunit.IsDisappear() || this.IsDisappear() {
-		log.Info("aaaaaaaaaaaaaa")
+		//log.Info("aaaaaaaaaaaaaa")
 		return nil
 	}
 	//攻击距离类型
 	if buff.ActiveUnitAcpabilities == 1 && this.AttackAcpabilities != 1 {
-		log.Info("eeeeeeeeeee")
+		//log.Info("eeeeeeeeeee")
 		return nil
 	}
 	if buff.ActiveUnitAcpabilities == 2 && this.AttackAcpabilities != 2 {
-		log.Info("fffffffffffff")
+		//log.Info("fffffffffffff")
 		return nil
 	}
 	//BuffType         int32 //buff类型 1:表示良性 2:表示恶性  队友只能驱散我的恶性buff 敌人只能驱散我的良性buff
 	isenemy := castunit.CheckIsEnemy(this)
 	//如果是敌人 且 是良性buff 就不添加
 	if isenemy == true && buff.BuffType == 1 {
-		log.Info("bbbbbbbbbb")
+		//log.Info("bbbbbbbbbb")
 		return nil
 	}
 	//如果不是敌人 且 是恶性buff 就不添加
 	if isenemy == false && buff.BuffType == 2 {
-		log.Info("ccccccccccc")
+		//log.Info("ccccccccccc")
 		return nil
 	}
 
 	//如果恶性buff 单位魔法免疫 buff没有无视技能免疫
 	if buff.BuffType == 2 && this.MagicImmune == 1 && buff.NoCareMagicImmuneAddBuff == 2 {
-		log.Info("dddddddddddddd")
+		//log.Info("dddddddddddddd")
 		return nil
 	}
 	buff.CastUnit = castunit
@@ -2090,7 +2210,7 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 		bfs = append(bfs, buff)
 		this.Buffs[buff.TypeID] = bfs
 		//log.Info("--111111144")
-		log.Info("aa--111111122:%d", buff.TypeID)
+		//log.Info("aa--111111122:%d", buff.TypeID)
 		this.CheckTriggerCreateBuff(buff)
 
 		//给单位计算buff效果
@@ -2098,7 +2218,7 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 
 		return buff
 	}
-	log.Info("ggggggggggggg")
+	//log.Info("ggggggggggggg")
 	return nil
 }
 
@@ -2155,6 +2275,10 @@ func (this *Unit) BeAttackedFromValue(value int32, attackunit *Unit) {
 
 	lasthp := this.HP
 	this.ChangeHP(value)
+
+	//
+	this.CheckTriggerBeAttack(attackunit, 1, value)
+
 	//被攻击死亡
 	if this.HP <= 0 && lasthp > 0 {
 		this.CheckTriggerDie(attackunit)
@@ -2226,6 +2350,16 @@ func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 
 	lasthp := this.HP
 	this.ChangeHP(-hurtvalue)
+
+	maxhurttype := int32(1)
+	if magicAttack > physicAttack && magicAttack > pureAttack {
+		maxhurttype = 2
+	}
+	if pureAttack > physicAttack && pureAttack > magicAttack {
+		maxhurttype = 3
+	}
+
+	this.CheckTriggerBeAttack(bullet.SrcUnit, maxhurttype, hurtvalue)
 	//被攻击死亡
 	if this.HP <= 0 && lasthp > 0 {
 		this.CheckTriggerDie(bullet.SrcUnit)
@@ -2296,6 +2430,68 @@ func (this *Unit) CheckTriggerCreateBuff(v1 *Buff) {
 		{
 
 		}
+	}
+}
+
+//被攻击时 buff异常处理
+func (this *Unit) CheckTriggerBeAttack(attacker *Unit, hurttype int32, hurtvalue int32) {
+	if attacker == nil || attacker.IsDisappear() {
+		return
+	}
+	//遍历 可以优化  本体的buff
+	for _, v := range this.Buffs {
+		for _, v1 := range v {
+			//攻击时减少标记
+			if v1.Exception <= 0 {
+				continue
+			}
+			switch v1.Exception {
+			case 5: //幽鬼折射
+				{
+					param := utils.GetFloat32FromString3(v1.ExceptionParam, ":")
+					if len(param) < 3 {
+						return
+					}
+					mindis := param[0]
+					maxdis := param[1]
+					maxHurt := param[2] * float32(hurtvalue)
+
+					allunit := this.InScene.FindVisibleUnitsByPos(this.Body.Position)
+					for _, v := range allunit {
+						if v.IsDisappear() {
+							continue
+						}
+						if this.CheckIsEnemy(v) == false {
+							continue
+						}
+						//检测是否在范围内
+						if v.Body == nil || maxdis <= 0 {
+							continue
+						}
+						dis := float32(vec2d.Distanse(this.Body.Position, v.Body.Position))
+						//log.Info("-----------------dis:%f", dis)
+						hv := maxHurt
+						if dis <= maxdis {
+							if dis > mindis {
+								hv = (1 - (dis-mindis)/(maxdis-mindis)) * maxHurt
+							}
+							b := NewBullet1(this, v)
+							//b.SetProjectileMode(this.BulletModeType, this.BulletSpeed)
+							b.AddOtherHurt(HurtInfo{HurtType: hurttype, HurtValue: int32(hv)})
+							//特殊情况处理
+							this.AddBullet(b)
+						}
+
+					}
+				}
+			default:
+				{
+
+				}
+			}
+
+		}
+
 	}
 }
 
@@ -2407,6 +2603,7 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.SkillEnable = this.SkillEnable
 	this.ClientData.ItemEnable = this.ItemEnable
 	this.ClientData.Z = this.Z
+	this.ClientData.IsMirrorImage = this.IsMirrorImage
 
 	//技能
 	this.ClientData.SD = make([]*protomsg.SkillDatas, 0)
@@ -2512,6 +2709,7 @@ func (this *Unit) FreshClientDataSub() {
 	this.ClientDataSub.SkillEnable = this.SkillEnable - this.ClientData.SkillEnable
 	this.ClientDataSub.ItemEnable = this.ItemEnable - this.ClientData.ItemEnable
 	this.ClientDataSub.Z = this.Z - this.ClientData.Z
+	this.ClientDataSub.IsMirrorImage = this.IsMirrorImage - this.ClientData.IsMirrorImage
 
 	//技能
 	this.ClientDataSub.SD = make([]*protomsg.SkillDatas, 0)

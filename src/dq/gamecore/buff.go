@@ -201,6 +201,7 @@ func (this *Buff) Update(dt float64) {
 		} else {
 			this.IsActive = false
 		}
+		//log.Info("-----activetime:%f", this.ActiveTime)
 	}
 
 }

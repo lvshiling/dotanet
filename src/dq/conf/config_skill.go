@@ -94,7 +94,7 @@ type SkillBaseData struct {
 	CastTargetType         int32   //施法目标类型 1:自身为目标 2:以单位为目标 3:以地面1点为目标 4:攻击时自动释放(攻击特效) 5:以地面一点为方向
 	CastTargetRange        float32 //施法目标范围 小于等于0表示单体 以施法目标点为中心的范围内的多个目标为 最终弹道目标
 	UnitTargetTeam         int32   //目标单位关系 1:友方  2:敌方 3:友方敌方都行包括自己  4:友方敌方都行不包括自己
-	UnitTargetCamp         int32   //目标单位阵营 (1:玩家 2:NPC) 3:玩家NPC都行
+	UnitTargetCamp         int32   //目标单位阵营 (1:英雄 2:普通单位 3:远古 4:boss) 5:都行
 	NoCareMagicImmune      int32   //无视技能免疫 (1:无视技能免疫 2:非)
 	BulletModeType         string  //子弹模型
 	BulletSpeed            float32 //子弹速度
@@ -109,6 +109,8 @@ type SkillBaseData struct {
 	InitLevel              int32   //技能初始等级
 	Index                  int32   //技能索引 按升序排列  在屏幕右下角的显示位置
 	Visible                int32   //技能是否显示 1:是 2:否
+	VisibleTime            float32 //技能显示时间 -1表示永久
+	UseToHide              int32   //隐藏规则  1:释放技能的时候隐藏 2:释放技能的时候不隐藏
 	VisibleRelationSkillID int32   //技能显示关联id 当使用本技能的时候 显示关联id的技能隐身本技能 0表示没有关联
 	TargetBuff             string  //释放时 对目标造成的buff 比如 1,2 表示对目标造成typeid为 1和2的buff
 	BlinkToTarget          int32   //是否瞬间移动到目的地 1:是 2:否
@@ -125,7 +127,8 @@ type SkillBaseData struct {
 	CallUnitInfo                   //召唤信息
 
 	//被动技能相关参数
-	TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
+	TriggerTime      int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
+	TriggerOtherRule int32 //触发需满足的额外条件 0:表示没有额外条件 1:表示范围内地方英雄不超过几个
 
 	ForceMoveType int32  //强制移动类型 0:表示不强制移动 1:表示用子弹向后推开目标(小黑) 2:强制移动自己到指定位置
 	ForceMoveBuff string //强制移动时的buff 随着移动结束消失
@@ -133,6 +136,9 @@ type SkillBaseData struct {
 	//加血相关
 	AddHPType   int32 //加血类型 0:不加 1:以AddHPValue为固定值 2:以AddHPValue为时间 加单位在此时间内受到的伤害值
 	AddHPTarget int32 //加血的目标 1:表示自己 2:表示目标
+
+	//互换位置
+	SwitchedPlaces int32 //互换位置 1:是 2:否 只对目标为单位的情况生效
 
 	//特殊情况处理 //1:混沌间隙的目标和自己的瞬移
 	Exception int32 //0表示没有特殊情况
@@ -171,6 +177,8 @@ type SkillData struct {
 
 	ExceptionParam string //特殊情况处理参数
 
+	TriggerOtherRuleParam string //触发需满足的额外条件参数
+
 }
 
 //单位配置文件数据
@@ -204,7 +212,8 @@ type SkillFileData struct {
 
 	EveryDoHurtChangeHurtCR string //每对一个目标造成伤害后 伤害变化率 1表示没有变化 0.8表示递减20%
 
-	ExceptionParam string //特殊情况处理参数
+	ExceptionParam        string //特殊情况处理参数
+	TriggerOtherRuleParam string //触发需满足的额外条件参数
 }
 
 //把等级相关的字符串 转成具体类型数据
@@ -240,6 +249,7 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 	EveryDoHurtChangeHurtCR := utils.GetFloat32FromString2(this.EveryDoHurtChangeHurtCR)
 
 	ExceptionParam := utils.GetStringFromString2(this.ExceptionParam)
+	TriggerOtherRuleParam := utils.GetStringFromString2(this.TriggerOtherRuleParam)
 
 	for i := int32(0); i < this.MaxLevel; i++ {
 		ssd := SkillData{}
@@ -342,6 +352,12 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 			ssd.ExceptionParam = ExceptionParam[len(ExceptionParam)-1]
 		} else {
 			ssd.ExceptionParam = ExceptionParam[i]
+		}
+
+		if int32(len(TriggerOtherRuleParam)) <= i {
+			ssd.TriggerOtherRuleParam = TriggerOtherRuleParam[len(TriggerOtherRuleParam)-1]
+		} else {
+			ssd.TriggerOtherRuleParam = TriggerOtherRuleParam[i]
 		}
 
 		//log.Info("111-:%v--%d", ssd)
