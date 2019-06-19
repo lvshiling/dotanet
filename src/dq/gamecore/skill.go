@@ -17,6 +17,7 @@ type Skill struct {
 	AttackAutoActive int32   //攻击时自动释放 是否激活 1:激活 2:否
 
 	RemainVisibleTime float32 //剩余显示时间
+	RemainSkillCount  int32   //剩余点数
 
 	Parent *Unit //载体
 
@@ -195,12 +196,24 @@ func (this *Skill) UpdateException() {
 	}
 }
 
+//
+func (this *Skill) AddSkillCount() {
+	this.RemainCDTime = this.Cooldown - this.Parent.MagicCD*this.Cooldown
+	this.RemainSkillCount++
+	if this.RemainSkillCount > this.SkillCount {
+		this.RemainSkillCount = this.SkillCount
+	}
+}
+
 //更新
 func (this *Skill) Update(dt float64) {
 	//CD时间减少
-	this.RemainCDTime -= float32(dt)
-	if this.RemainCDTime <= 0 {
-		this.RemainCDTime = 0
+	if this.RemainSkillCount < this.SkillCount {
+		this.RemainCDTime -= float32(dt)
+		if this.RemainCDTime <= 0 {
+			this.RemainCDTime = 0
+			this.AddSkillCount()
+		}
 	}
 
 	if this.Visible == 1 {
@@ -222,14 +235,26 @@ func (this *Skill) Update(dt float64) {
 	this.UpdateException()
 }
 
+//检查cd 返回true表示可以使用
+func (this *Skill) CheckCDTime() bool {
+	if this.RemainSkillCount > 0 {
+		return true
+	}
+	return false
+}
+
 //刷新CD
 func (this *Skill) FreshCDTime(time float32) {
-	this.RemainCDTime = time
+
+	if this.RemainSkillCount == this.SkillCount {
+		this.RemainCDTime = time
+	}
+	this.RemainSkillCount--
 }
 
 //返回数据库字符串
 func (this *Skill) ToDBString() string {
-	return strconv.Itoa(int(this.TypeID)) + "," + strconv.Itoa(int(this.Level)) + "," + strconv.FormatFloat(float64(this.RemainCDTime), 'f', 4, 32)
+	return strconv.Itoa(int(this.TypeID)) + "," + strconv.Itoa(int(this.Level)) + "," + strconv.FormatFloat(float64(this.RemainCDTime), 'f', 4, 32) + "," + strconv.Itoa(int(this.RemainSkillCount))
 }
 
 func NewOneSkill(skillid int32, skilllevel int32, unit *Unit) *Skill {
@@ -244,6 +269,7 @@ func NewOneSkill(skillid int32, skilllevel int32, unit *Unit) *Skill {
 	sk.RemainCDTime = 0
 	sk.AttackAutoActive = 1
 	sk.Parent = unit
+	sk.RemainSkillCount = sk.SkillCount
 
 	return sk
 }
@@ -268,13 +294,14 @@ func NewUnitSkills(dbdata []string, unitskilldata string, unit *Unit) map[int32]
 		sk.Level = sk.InitLevel
 		sk.RemainCDTime = 0
 		sk.Parent = unit
+		sk.RemainSkillCount = sk.SkillCount
 		re[sk.TypeID] = sk
 	}
 	//数据库技能
 	for _, v := range dbdata {
 
 		oneskilldbdata := utils.GetFloat32FromString2(v)
-		if len(oneskilldbdata) != 3 {
+		if len(oneskilldbdata) < 3 {
 			continue
 		}
 		skillid := int32(oneskilldbdata[0])
@@ -292,6 +319,11 @@ func NewUnitSkills(dbdata []string, unitskilldata string, unit *Unit) map[int32]
 		sk.Level = skilllevel
 		sk.RemainCDTime = skillcd
 		sk.AttackAutoActive = 1
+		sk.RemainSkillCount = sk.SkillCount
+		if len(oneskilldbdata) >= 4 {
+			sk.RemainSkillCount = int32(oneskilldbdata[3])
+		}
+
 		//sk.RemainCDTime = 10.0
 		if initskill, ok := re[sk.TypeID]; ok {
 			sk.Index = initskill.Index

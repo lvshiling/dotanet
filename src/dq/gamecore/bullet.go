@@ -322,9 +322,21 @@ func (this *Bullet) OnCreate() {
 			return
 		}
 		if this.SkillID <= 0 {
-			this.Position = this.SrcUnit.GetProjectileStartPos()
-			//开始位置
-			this.StartPosition = this.Position.Clone()
+
+			pos := this.SrcUnit.GetProjectileStartPos()
+
+			dis1 := vec2d.Distanse(this.SrcUnit.Body.Position, vec2d.Vec2{X: pos.X, Y: pos.Y})
+			dis2 := vec2d.Distanse(this.SrcUnit.Body.Position, vec2d.Vec2{X: this.DestPos.X, Y: this.DestPos.Y})
+			if dis2 <= dis1 {
+				this.Position = vec2d.Vector3{X: this.SrcUnit.Body.Position.X, Y: this.SrcUnit.Body.Position.Y, Z: pos.Z}
+				//开始位置
+				this.StartPosition = this.Position.Clone()
+			} else {
+				this.Position = pos
+				//开始位置
+				this.StartPosition = this.Position.Clone()
+			}
+
 		} else {
 
 			this.Position = vec2d.NewVector3(this.SrcUnit.Body.Position.X, this.SrcUnit.Body.Position.Y, 0.5)

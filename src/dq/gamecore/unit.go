@@ -359,7 +359,7 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 		//主动技能
 		if v.CastType == 2 && v.TriggerTime == 1 {
 			//检查cd 魔法消耗
-			if v.RemainCDTime <= 0 {
+			if v.CheckCDTime() {
 				//检查 触发概率 和额外条件
 				if utils.CheckRandom(v.TriggerProbability) && this.CheckTriggerOtherRule(v.TriggerOtherRule, v.TriggerOtherRuleParam) {
 					//触发
@@ -402,7 +402,7 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 			}
 		} else if v.CastType == 1 && v.CastTargetType == 4 && v.AttackAutoActive == 1 {
 			//主动技能 攻击时自动释放的攻击特效
-			if v.RemainCDTime > 0 {
+			if v.CheckCDTime() == false {
 				continue
 			}
 			if this.SkillEnable != 1 {
@@ -728,7 +728,7 @@ func (this *Unit) UseSkillEnable(data *protomsg.CS_PlayerSkill) bool {
 		return false
 	}
 	//cd中
-	if skilldata.RemainCDTime > 0 {
+	if skilldata.CheckCDTime() == false {
 		return false
 	}
 	//魔法不足
@@ -2625,6 +2625,7 @@ func (this *Unit) FreshClientData() {
 		skdata.ManaCost = v.ManaCost
 		skdata.AttackAutoActive = v.AttackAutoActive
 		skdata.Visible = v.Visible
+		skdata.RemainSkillCount = v.RemainSkillCount
 		this.ClientData.SD = append(this.ClientData.SD, skdata)
 	}
 	//Buffs  map[int32][]*Buff //所有buff 同typeID下可能有多个buff
@@ -2740,6 +2741,7 @@ func (this *Unit) FreshClientDataSub() {
 		skdata.ManaCost = v.ManaCost - lastdata.ManaCost
 		skdata.AttackAutoActive = v.AttackAutoActive - lastdata.AttackAutoActive
 		skdata.Visible = v.Visible - lastdata.Visible
+		skdata.RemainSkillCount = v.RemainSkillCount - lastdata.RemainSkillCount
 		this.ClientDataSub.SD = append(this.ClientDataSub.SD, skdata)
 	}
 

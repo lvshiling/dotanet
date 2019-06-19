@@ -110,7 +110,7 @@ type SkillBaseData struct {
 	Index                  int32   //技能索引 按升序排列  在屏幕右下角的显示位置
 	Visible                int32   //技能是否显示 1:是 2:否
 	VisibleTime            float32 //技能显示时间 -1表示永久
-	UseToHide              int32   //隐藏规则  1:释放技能的时候隐藏 2:释放技能的时候不隐藏
+	UseToHide              int32   //1:释放技能的时候隐藏 2:释放技能的时候不隐藏
 	VisibleRelationSkillID int32   //技能显示关联id 当使用本技能的时候 显示关联id的技能隐身本技能 0表示没有关联
 	TargetBuff             string  //释放时 对目标造成的buff 比如 1,2 表示对目标造成typeid为 1和2的buff
 	BlinkToTarget          int32   //是否瞬间移动到目的地 1:是 2:否
@@ -157,6 +157,7 @@ type SkillData struct {
 	NormalHurt  float32 //附带普通攻击百分比 (0.5 为 50%的普通攻击伤害) 一般为0
 	ManaCost    int32   //技能魔法消耗
 	BulletCount int32   //子弹数量 仅对 对自己施法有效 在自己周围创造多个弹道
+	SkillCount  int32   //技能点数
 
 	//被动技能相关参数
 	TriggerProbability float32 //触发几率 0.5表示50%
@@ -194,6 +195,7 @@ type SkillFileData struct {
 	ManaCost   string //技能魔法消耗
 
 	BulletCount string //子弹数量 仅对 对自己施法有效 在自己周围创造多个弹道
+	SkillCount  string //技能点数
 
 	//被动技能相关参数
 	TriggerProbability string //触发几率 0.5表示50%
@@ -230,6 +232,7 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 	ManaCost := utils.GetInt32FromString2(this.ManaCost)
 
 	BulletCount := utils.GetInt32FromString2(this.BulletCount)
+	SkillCount := utils.GetInt32FromString2(this.SkillCount)
 
 	//被动技能相关参数
 	TriggerProbability := utils.GetFloat32FromString2(this.TriggerProbability)
@@ -288,6 +291,11 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 			ssd.BulletCount = BulletCount[len(BulletCount)-1]
 		} else {
 			ssd.BulletCount = BulletCount[i]
+		}
+		if int32(len(SkillCount)) <= i {
+			ssd.SkillCount = SkillCount[len(SkillCount)-1]
+		} else {
+			ssd.SkillCount = SkillCount[i]
 		}
 
 		if int32(len(TriggerProbability)) <= i {
