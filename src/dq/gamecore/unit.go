@@ -2604,6 +2604,7 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.ItemEnable = this.ItemEnable
 	this.ClientData.Z = this.Z
 	this.ClientData.IsMirrorImage = this.IsMirrorImage
+	this.ClientData.AttackRange = this.AttackRange
 
 	//技能
 	this.ClientData.SD = make([]*protomsg.SkillDatas, 0)
@@ -2711,6 +2712,7 @@ func (this *Unit) FreshClientDataSub() {
 	this.ClientDataSub.ItemEnable = this.ItemEnable - this.ClientData.ItemEnable
 	this.ClientDataSub.Z = this.Z - this.ClientData.Z
 	this.ClientDataSub.IsMirrorImage = this.IsMirrorImage - this.ClientData.IsMirrorImage
+	this.ClientDataSub.AttackRange = this.AttackRange - this.ClientData.AttackRange
 
 	//技能
 	this.ClientDataSub.SD = make([]*protomsg.SkillDatas, 0)

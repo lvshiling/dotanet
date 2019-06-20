@@ -125,8 +125,9 @@ message UnitDatas{
     int32   ItemEnable = 28;//能否使用主动道具 (比如 被眩晕和禁用道具不能使用主动道具) 1:可以 2:不可以
     float   Z = 29;//z坐标
     int32   IsMirrorImage = 30; //是否是镜像
-    repeated SkillDatas SD = 31;//技能数据
-    repeated BuffDatas BD = 32;//buff数据
+    float   AttackRange = 31;//攻击距离
+    repeated SkillDatas SD = 32;//技能数据
+    repeated BuffDatas BD = 33;//buff数据
 
     //单位状态(idle walk attack skill die)
     //各种buff状态(单位身上的buff 包括剩余时间)
