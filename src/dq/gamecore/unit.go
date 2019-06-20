@@ -491,6 +491,9 @@ func (this *Unit) DoSkillException(skilldata *Skill, targetunit *Unit, b *Bullet
 		}
 	case 2: //熊战士的怒意狂击
 		{
+			if b == nil {
+				return
+			}
 			param := utils.GetInt32FromString3(skilldata.ExceptionParam, ":")
 			if len(param) <= 0 {
 				return
@@ -523,6 +526,9 @@ func (this *Unit) DoSkillException(skilldata *Skill, targetunit *Unit, b *Bullet
 		}
 	case 4: //帕克幻象发球
 		{
+			if b == nil {
+				return
+			}
 			//把子弹ID记录到指定技能里
 			param := utils.GetInt32FromString3(skilldata.ExceptionParam, ":")
 			if len(param) <= 0 {
@@ -603,6 +609,73 @@ func (this *Unit) DoForceMove(skilldata *Skill, targetpos vec2d.Vec2) bool {
 	}
 
 	return true
+}
+
+//检查攻击 触发攻击特效
+func (this *Unit) CheckTriggerBeAttackSkill(target *Unit) {
+
+	for _, v := range this.Skills {
+		//CastType              int32   // 施法类型:  1:主动技能  2:被动技能
+		//TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
+		//主动技能
+		if v.CastType == 2 && v.TriggerTime == 2 {
+			//检查cd 魔法消耗
+			if v.CheckCDTime() {
+				//检查 触发概率 和额外条件
+				if utils.CheckRandom(v.TriggerProbability) && this.CheckTriggerOtherRule(v.TriggerOtherRule, v.TriggerOtherRuleParam) {
+
+					skilldata := v
+					data := &protomsg.CS_PlayerSkill{}
+					data.TargetUnitID = target.ID
+					data.SkillID = v.TypeID
+					data.X = float32(target.Body.Position.X)
+					data.Y = float32(target.Body.Position.Y)
+					//驱散自己的buff
+					this.ClearBuffForTarget(this, skilldata.MyClearLevel)
+
+					//MyBuff
+					buffs := this.AddBuffFromStr(skilldata.MyBuff, skilldata.Level, this)
+					for _, v := range buffs {
+						v.UseableUnitID = data.TargetUnitID
+					}
+					//MyHalo
+					this.AddHaloFromStr(skilldata.MyHalo, skilldata.Level, nil)
+
+					//创建子弹
+					bullets := skilldata.CreateBullet(this, data)
+					if len(bullets) > 0 {
+						for _, v := range bullets {
+							if skilldata.TriggerAttackEffect == 1 {
+								this.CheckTriggerAttackSkill(v)
+							}
+							this.AddBullet(v)
+						}
+
+					}
+
+					//加血
+					if skilldata.AddHPTarget == 1 {
+						this.DoAddHP(skilldata.AddHPType, skilldata.AddHPValue)
+					}
+					//特殊处理
+					targetunit := this.InScene.FindUnitByID(data.TargetUnitID)
+					if len(bullets) > 0 {
+						this.DoSkillException(skilldata, targetunit, bullets[0])
+					} else {
+						this.DoSkillException(skilldata, targetunit, nil)
+					}
+
+					//消耗 CD
+					namacost := skilldata.ManaCost - int32(this.ManaCost*float32(skilldata.ManaCost))
+					this.ChangeMP(-namacost)
+
+					cdtime := skilldata.Cooldown - this.MagicCD*skilldata.Cooldown
+					skilldata.FreshCDTime(cdtime)
+
+				}
+			}
+		}
+	}
 }
 
 //使用技能 创建子弹
@@ -1490,19 +1563,22 @@ func (this *Unit) Update(dt float64) {
 	}
 
 	//更新buff
-	for k, v := range this.Buffs {
-		for k1, v1 := range v {
-			if v1.IsEnd == true {
-				//删除k1的元素
-				v = append(v[:k1], v[k1+1:]...)
-				if len(v) <= 0 {
-					delete(this.Buffs, k)
-				}
-				continue
+	for k, _ := range this.Buffs {
+		//log.Info("----buff-----id:%d", k)
+		for i := 0; i < len(this.Buffs[k]); {
+			//log.Info("----buff22-----id:%d  %d %d", k, i, len(v))
+			if this.Buffs[k][i].IsEnd == true {
+				this.Buffs[k] = append(this.Buffs[k][:i], this.Buffs[k][i+1:]...)
+			} else {
+				this.Buffs[k][i].Update(dt)
+				i++
 			}
 
-			v1.Update(dt)
 		}
+		if len(this.Buffs[k]) <= 0 {
+			delete(this.Buffs, k)
+		}
+		//log.Info("----buff11-----id:%d", k)
 
 	}
 
@@ -2093,6 +2169,24 @@ func (this *Unit) RemoveBuffForMoved() {
 	}
 }
 
+//击杀单位后失效
+func (this *Unit) RemoveBuffForKilled() {
+	//buff
+	for k, v := range this.Buffs {
+		for k1, v1 := range v {
+			if v1.KilledInvalid == 1 {
+				this.Buffs[k] = append(this.Buffs[k][:k1], this.Buffs[k][k1+1:]...)
+			}
+		}
+	}
+}
+
+//击杀单位后失效
+func (this *Unit) RemoveHaloForKilled() {
+	this.InScene.RemoveHaloForKilled(this)
+
+}
+
 //删除buff 删除攻击后失效的buff
 func (this *Unit) RemoveBuffForAttacked() {
 	//buff
@@ -2195,8 +2289,8 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 			return bf[0]
 
 		} else if buff.OverlyingType == 2 {
-			bf = append(bf, buff)
-			///log.Info("--111111133")
+			this.Buffs[buff.TypeID] = append(bf, buff)
+			log.Info("--111111133:%d", buff.TypeID)
 			this.CheckTriggerCreateBuff(buff)
 			return buff
 		} else if buff.OverlyingType == 3 {
@@ -2210,7 +2304,7 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 		bfs = append(bfs, buff)
 		this.Buffs[buff.TypeID] = bfs
 		//log.Info("--111111144")
-		//log.Info("aa--111111122:%d", buff.TypeID)
+		log.Info("aa--111111122:%d", buff.TypeID)
 		this.CheckTriggerCreateBuff(buff)
 
 		//给单位计算buff效果
@@ -2266,7 +2360,7 @@ func (this *Unit) AddHaloFromStr(halosstr string, level int32, pos *vec2d.Vec2) 
 	return re
 }
 
-//溅射伤害
+//直接造成伤害
 func (this *Unit) BeAttackedFromValue(value int32, attackunit *Unit) {
 
 	if value >= 0 {
@@ -2438,6 +2532,12 @@ func (this *Unit) CheckTriggerBeAttack(attacker *Unit, hurttype int32, hurtvalue
 	if attacker == nil || attacker.IsDisappear() {
 		return
 	}
+	//物理攻击
+	if hurttype == 1 {
+		this.CheckTriggerBeAttackSkill(attacker)
+	}
+
+	//-----------处理异常------------------
 	//遍历 可以优化  本体的buff
 	for _, v := range this.Buffs {
 		for _, v1 := range v {
@@ -2500,6 +2600,12 @@ func (this *Unit) CheckTriggerDie(killer *Unit) {
 	if killer == nil || killer.IsDisappear() {
 		return
 	}
+
+	killer.RemoveBuffForKilled()
+	killer.RemoveHaloForKilled()
+
+	//--------------处理buff Exception-------------
+
 	//遍历 可以优化  本体的buff
 	for _, v := range this.Buffs {
 		for _, v1 := range v {

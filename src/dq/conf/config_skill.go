@@ -138,7 +138,8 @@ type SkillBaseData struct {
 	AddHPTarget int32 //加血的目标 1:表示自己 2:表示目标
 
 	//互换位置
-	SwitchedPlaces int32 //互换位置 1:是 2:否 只对目标为单位的情况生效
+	SwitchedPlaces     int32 //互换位置 1:是 2:否 只对目标为单位的情况生效
+	DestForceAttackSrc int32 //目标强制攻击施法者 1:是 2:否
 
 	//特殊情况处理 //1:混沌间隙的目标和自己的瞬移
 	Exception int32 //0表示没有特殊情况

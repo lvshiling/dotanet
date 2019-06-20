@@ -24,8 +24,9 @@ type Scene struct {
 	Bullets     map[int32]*Bullet             //游戏中所有的子弹
 	ZoneBullets map[utils.SceneZone][]*Bullet //区域中的的子弹
 
-	Halos     map[int32]*Halo             //游戏中所有的光环
-	ZoneHalos map[utils.SceneZone][]*Halo //区域中的的光环
+	Halos          map[int32]*Halo             //游戏中所有的光环
+	ZoneHalos      map[utils.SceneZone][]*Halo //区域中的的光环
+	CanRemoveHalos map[int32]*Halo             //可以被删除的halo 比如击杀单位后 halo无效
 
 	NextAddUnit    *utils.BeeMap //下一帧需要增加的单位
 	NextRemoveUnit *utils.BeeMap //下一帧需要删除的单位
@@ -67,6 +68,7 @@ func (this *Scene) Init() {
 
 	this.Halos = make(map[int32]*Halo)
 	this.ZoneHalos = make(map[utils.SceneZone][]*Halo)
+	this.CanRemoveHalos = make(map[int32]*Halo)
 
 	scenedata := conf.GetSceneData(this.SceneName)
 
@@ -184,21 +186,31 @@ func (this *Scene) Update() {
 		//log.Info("Update loop")
 		//t1 := time.Now().UnixNano()
 		//log.Info("main time:%d", (t1)/1e6)
+
+		time1 := utils.GetCurTimeOfSecond()
 		this.DoRemoveBullet()
 		this.DoRemoveHalo()
-
 		this.DoAddAndRemoveUnit()
 
+		time2 := utils.GetCurTimeOfSecond()
 		this.DoLogic()
-
+		time3 := utils.GetCurTimeOfSecond()
 		this.UpdateHalo(1 / float32(this.SceneFrame))
+		time4 := utils.GetCurTimeOfSecond()
 		this.UpdateBullet(1 / float32(this.SceneFrame))
+		time5 := utils.GetCurTimeOfSecond()
 
 		this.DoMove()
-
+		time6 := utils.GetCurTimeOfSecond()
 		this.DoZone()
-
+		time7 := utils.GetCurTimeOfSecond()
 		this.DoSendData()
+		time8 := utils.GetCurTimeOfSecond()
+
+		if time8-time1 >= 10.01 {
+			log.Info("time:%f %f %f %f %f %f %f  ", time2-time1, time3-time2, time4-time3, time5-time4,
+				time6-time5, time7-time6, time8-time7)
+		}
 
 		this.CurFrame++
 
@@ -334,13 +346,33 @@ func (this *Scene) DoSleep() {
 
 //增加光环
 func (this *Scene) AddHalo(halo *Halo) {
+	if halo == nil {
+		return
+	}
 	this.Halos[halo.ID] = halo
+
+	if halo.KilledInvalid == 1 {
+		this.CanRemoveHalos[halo.ID] = halo
+	}
+
 	log.Info("------AddHalo----%d", halo.TypeID)
 }
 
 //删除光环
 func (this *Scene) RemoveHalo(id int32) {
 	delete(this.Halos, id)
+	delete(this.CanRemoveHalos, id)
+}
+
+//删除击杀单位后无效光环
+func (this *Scene) RemoveHaloForKilled(parent *Unit) {
+	for k, v := range this.CanRemoveHalos {
+		if v.Parent == parent && v.KilledInvalid == 1 {
+			delete(this.CanRemoveHalos, k)
+			delete(this.Halos, k)
+			return
+		}
+	}
 }
 
 //删除时间结束的光环
@@ -350,6 +382,7 @@ func (this *Scene) DoRemoveHalo() {
 		if v.IsDone() {
 			//log.Info("------DoRemoveHalo----%d", v.TypeID)
 			delete(this.Halos, k)
+			delete(this.CanRemoveHalos, k)
 		}
 	}
 }

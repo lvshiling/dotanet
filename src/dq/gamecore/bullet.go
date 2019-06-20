@@ -120,7 +120,8 @@ type Bullet struct {
 	PathHaloLastTime float64 //上次的路径光环时间
 
 	//互换位置
-	SwitchedPlaces int32 //互换位置 1:是 2:否 只对目标为单位的情况生效
+	SwitchedPlaces     int32 //互换位置 1:是 2:否 只对目标为单位的情况生效
+	DestForceAttackSrc int32 //目标强制攻击施法者 1:是 2:否
 
 	//特殊情况处理 //3:风行束缚击
 	Exception      int32  //0表示没有特殊情况
@@ -203,6 +204,7 @@ func (this *Bullet) Init() {
 	this.SetPathHalo("", 10)
 
 	this.SwitchedPlaces = 2
+	this.DestForceAttackSrc = 2
 
 	this.Exception = 0
 	this.ExceptionParam = ""
@@ -650,6 +652,47 @@ func (this *Bullet) DoException(unit *Unit) {
 			}
 
 		}
+	case 7: //斧王淘汰
+		{
+			if unit == nil || this.SrcUnit == nil || unit.IsDisappear() {
+				return
+			}
+			//log.Info("222222222222222222:%s", this.ExceptionParam)
+			param := utils.GetFloat32FromString3(this.ExceptionParam, ":")
+			if len(param) < 3 {
+				return
+			}
+			buffstr := strconv.Itoa(int(param[0]))
+			hp := int32(param[1])
+			castrange := param[2]
+			//秒杀
+			if unit.HP <= hp {
+				unit.BeAttackedFromValue(-(hp + 1), this.SrcUnit)
+				//buff
+				allunit := this.SrcUnit.InScene.FindVisibleUnits(this.SrcUnit)
+				for _, v := range allunit {
+					if v == nil || v.Body == nil || v.IsDisappear() {
+						continue
+					}
+					if v.UnitType != 1 || this.SrcUnit.CheckIsEnemy(v) == true {
+						continue
+					}
+					dis := float32(vec2d.Distanse(this.SrcUnit.Body.Position, v.Body.Position))
+					//log.Info("-----------------dis:%f", dis)
+					if dis <= castrange {
+						v.AddBuffFromStr(buffstr, this.SkillLevel, this.SrcUnit)
+					}
+				}
+				//技能能却
+				skilldata, ok := this.SrcUnit.Skills[this.SkillID]
+				if ok {
+					skilldata.RemainCDTime = 0
+				}
+				//
+				this.OtherHurt = make([]HurtInfo, 0)
+			}
+
+		}
 	default:
 	}
 }
@@ -711,6 +754,12 @@ func (this *Bullet) HurtUnit(unit *Unit) int32 {
 			//DoBuffException
 			for _, v1 := range buffs {
 				this.DoBuffException(v1)
+
+				//目标强制攻击施法者
+				if this.DestForceAttackSrc == 1 {
+					//创建攻击命令
+					v1.AttackTarget = this.SrcUnit
+				}
 			}
 		}
 		if this.SrcUnit == nil || this.SrcUnit.IsDisappear() {
@@ -747,7 +796,10 @@ func (this *Bullet) DoHalo() {
 		if this.DestUnit != nil {
 			if this.DestUnit.IsDisappear() == false {
 				for _, v := range this.TargetHalo {
-					this.DestUnit.AddHaloFromStr(v.Halo, v.HaloLevel, &vec2d.Vec2{this.DestPos.X, this.DestPos.Y})
+					halos := this.DestUnit.AddHaloFromStr(v.Halo, v.HaloLevel, &vec2d.Vec2{this.DestPos.X, this.DestPos.Y})
+					for _, v1 := range halos {
+						v1.CastUnit = this.SrcUnit
+					}
 				}
 			}
 		} else {

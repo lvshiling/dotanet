@@ -3,6 +3,7 @@ package gamecore
 import (
 	"dq/conf"
 	"dq/log"
+	"dq/protobuf"
 	"dq/utils"
 	"dq/vec2d"
 	"strconv"
@@ -28,9 +29,29 @@ type Buff struct {
 	LastPos          vec2d.Vec2 //载体上次计算的位置 血魔大招
 	PathHaloLastTime float64    //上次的路径光环时间
 
+	AttackTarget *Unit //攻击目标
+
 	ConnectionType  int32      //是否有连接 0表示没有 1表示有连接点 2表示有连接单位
 	ConnectionPoint vec2d.Vec2 //连接点
 	ConnectionUnit  *Unit      //连接单位
+}
+
+//处理强制攻击
+func (this *Buff) UpdateForceAttack() {
+	if this.ForceAttackTarget == 1 {
+		if this.AttackTarget == nil {
+			this.AttackTarget = this.Parent.AttackCmdDataTarget
+		}
+		//攻击目标
+		if this.AttackTarget != nil {
+			//创建攻击命令
+			data := &protomsg.CS_PlayerAttack{}
+			data.IDs = make([]int32, 0)
+			data.IDs = append(data.IDs, this.Parent.ID)
+			data.TargetUnitID = this.AttackTarget.ID
+			this.Parent.AttackCmd(data)
+		}
+	}
 }
 
 //设置牵连
@@ -164,7 +185,12 @@ func (this *Buff) Update(dt float64) {
 			this.RemainTime = 0
 			this.IsEnd = true
 		}
+		//		if this.TypeID == 70 {
+		//			log.Info("buffupdate:%f  TypeID:%d", this.RemainTime, this.TypeID)
+		//		}
+
 		this.DoCreatePathHalo()
+		this.UpdateForceAttack()
 
 		this.TriggerRemainTime -= float32(dt)
 		//检查是否触发

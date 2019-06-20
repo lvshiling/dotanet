@@ -76,6 +76,7 @@ func (this *Skill) SetBulletProperty(b *Bullet, unit *Unit) {
 		b.SetForceMove(this.ForceMoveTime, this.ForceMoveSpeedSize, this.ForceMoveLevel, this.ForceMoveBuff)
 	}
 	b.SwitchedPlaces = this.SwitchedPlaces
+	b.DestForceAttackSrc = this.DestForceAttackSrc
 	//加血
 	if this.AddHPTarget == 2 {
 		b.SetAddHP(this.AddHPType, this.AddHPValue)

@@ -88,18 +88,19 @@ type BuffBaseData struct {
 	ActiveUnitAcpabilities   int32 //生效的单位攻击类型(1:近程攻击 2:远程攻击 3:都生效)
 	NoCareMagicImmuneAddBuff int32 //添加此buff时 是否无视单位魔法免疫 1:是 2:非
 
-	NoMove          int32 //禁止移动 1:是 2:非
-	NoTurn          int32 //禁止转向 1:是 2:非
-	NoAttack        int32 //禁止攻击 1:是 2:非
-	NoSkill         int32 //禁止使用技能 1:是 2:非
-	NoItem          int32 //禁止使用道具 1:是 2:非
-	MagicImmune     int32 //是否魔法免疫 1:是 2:非
-	PhisicImmune    int32 //物理攻击免疫 1:是 2:非
-	MagicCDStop     int32 //技能冷却停止 1:是 2:非
-	AnimotorPause   int32 //是否暂停动画 1:是 2:非
-	IsCollisoin     int32 //是否碰撞检测 1:是 2:非
-	CollisoinLevel  int32 //碰撞等级 1 普通单位 2 障碍地形
-	NoPlayerControl int32 //禁止玩家操作 1:是 2:否
+	NoMove            int32 //禁止移动 1:是 2:非
+	NoTurn            int32 //禁止转向 1:是 2:非
+	NoAttack          int32 //禁止攻击 1:是 2:非
+	NoSkill           int32 //禁止使用技能 1:是 2:非
+	NoItem            int32 //禁止使用道具 1:是 2:非
+	MagicImmune       int32 //是否魔法免疫 1:是 2:非
+	PhisicImmune      int32 //物理攻击免疫 1:是 2:非
+	MagicCDStop       int32 //技能冷却停止 1:是 2:非
+	AnimotorPause     int32 //是否暂停动画 1:是 2:非
+	IsCollisoin       int32 //是否碰撞检测 1:是 2:非
+	CollisoinLevel    int32 //碰撞等级 1 普通单位 2 障碍地形
+	NoPlayerControl   int32 //禁止玩家操作 1:是 2:否
+	ForceAttackTarget int32 //强制攻击目标 1:是 2:否
 
 	IsUseableAllocateAttackUnit int32 //是否只对指定攻击目标生效 1:是 2:非
 
@@ -111,6 +112,7 @@ type BuffBaseData struct {
 	AttackedInvalid  int32 //攻击后失效 1:是 2:否
 	DoSkilledInvalid int32 //使用技能后失效 1:是 2:否
 	MoveInvalid      int32 //移动后失效 1:是 2:否
+	KilledInvalid    int32 //击杀其他单位后失效 1:是 2:否
 	BuffType         int32 //buff类型 1:表示良性 2:表示恶性  队友只能驱散我的恶性buff 敌人只能驱散我的良性buff 3:中性
 	ClearLevel       int32 //驱散等级 1 表示需要驱散等级大于等于1的 驱散效果才能驱散此buff pa的标为1 眩晕为2 小鱼偷属性和光环buff为3
 	SubTagNumRule    int32 //标记减少规则 减少为0会自动删除buff 0:表示不减少 1:表示攻击时减少
