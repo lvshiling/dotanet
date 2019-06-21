@@ -151,14 +151,17 @@ type SkillBaseData struct {
 //技能数据 (会根据等级变化的数据)
 type SkillData struct {
 	SkillBaseData
-	CastRange   float32 //施法距离
-	Cooldown    float32 //技能冷却时间
-	HurtValue   int32   //技能伤害
-	HurtRange   float32 //伤害范围 小于等于0表示单体
-	NormalHurt  float32 //附带普通攻击百分比 (0.5 为 50%的普通攻击伤害) 一般为0
-	ManaCost    int32   //技能魔法消耗
-	BulletCount int32   //子弹数量 仅对 对自己施法有效 在自己周围创造多个弹道
-	SkillCount  int32   //技能点数
+	CastRange     float32 //施法距离
+	Cooldown      float32 //技能冷却时间
+	HurtValue     int32   //技能伤害
+	HurtRange     float32 //伤害范围 小于等于0表示单体
+	NormalHurt    float32 //附带普通攻击百分比 (0.5 为 50%的普通攻击伤害) 一般为0
+	ManaCost      int32   //技能魔法消耗
+	BulletCount   int32   //子弹数量 仅对 对自己施法有效 在自己周围创造多个弹道
+	SkillCount    int32   //技能点数
+	EjectionCount int32   //弹射次数
+	EjectionRange float32 //弹射范围
+	EjectionDecay float32 //弹射衰减
 
 	//被动技能相关参数
 	TriggerProbability float32 //触发几率 0.5表示50%
@@ -195,8 +198,11 @@ type SkillFileData struct {
 	NormalHurt string //附带普通攻击百分比 (0.5 为 50%的普通攻击伤害) 一般为0
 	ManaCost   string //技能魔法消耗
 
-	BulletCount string //子弹数量 仅对 对自己施法有效 在自己周围创造多个弹道
-	SkillCount  string //技能点数
+	BulletCount   string //子弹数量 仅对 对自己施法有效 在自己周围创造多个弹道
+	SkillCount    string //技能点数
+	EjectionCount string //弹射次数
+	EjectionRange string //弹射范围
+	EjectionDecay string //弹射衰减
 
 	//被动技能相关参数
 	TriggerProbability string //触发几率 0.5表示50%
@@ -234,6 +240,9 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 
 	BulletCount := utils.GetInt32FromString2(this.BulletCount)
 	SkillCount := utils.GetInt32FromString2(this.SkillCount)
+	EjectionCount := utils.GetInt32FromString2(this.EjectionCount)
+	EjectionRange := utils.GetFloat32FromString2(this.EjectionRange)
+	EjectionDecay := utils.GetFloat32FromString2(this.EjectionDecay)
 
 	//被动技能相关参数
 	TriggerProbability := utils.GetFloat32FromString2(this.TriggerProbability)
@@ -297,6 +306,21 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 			ssd.SkillCount = SkillCount[len(SkillCount)-1]
 		} else {
 			ssd.SkillCount = SkillCount[i]
+		}
+		if int32(len(EjectionCount)) <= i {
+			ssd.EjectionCount = EjectionCount[len(EjectionCount)-1]
+		} else {
+			ssd.EjectionCount = EjectionCount[i]
+		}
+		if int32(len(EjectionRange)) <= i {
+			ssd.EjectionRange = EjectionRange[len(EjectionRange)-1]
+		} else {
+			ssd.EjectionRange = EjectionRange[i]
+		}
+		if int32(len(EjectionDecay)) <= i {
+			ssd.EjectionDecay = EjectionDecay[len(EjectionDecay)-1]
+		} else {
+			ssd.EjectionDecay = EjectionDecay[i]
 		}
 
 		if int32(len(TriggerProbability)) <= i {

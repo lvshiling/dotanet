@@ -35,6 +35,13 @@ type BulletSputtering struct {
 	NoCareMagicImmune int32   //是否无视单位魔法免疫 1:是 2:非
 }
 
+type BulletEjection struct {
+	EjectionCount    int32           //弹射次数
+	EjectionRange    float32         //弹射范围
+	EjectionDecay    float32         //弹射衰减
+	EjectionedTarget map[int32]*Unit //弹射过的目标 不能重复弹射
+}
+
 //伤害信息
 type HurtInfo struct {
 	HurtType  int32 //伤害类型 (1:物理伤害 2:魔法伤害 3:纯粹伤害)
@@ -87,6 +94,8 @@ type Bullet struct {
 
 	Sputterings []BulletSputtering //溅射
 
+	Ejection BulletEjection //弹射
+
 	HurtRange BulletRange //范围
 
 	Crit                  float32 //暴击倍数
@@ -126,6 +135,8 @@ type Bullet struct {
 	//特殊情况处理 //3:风行束缚击
 	Exception      int32  //0表示没有特殊情况
 	ExceptionParam string //特殊情况处理参数
+
+	IsSetStartPosition bool //是否设置了开始位置 如果设置了 在oncreate的时候就不设置了
 
 	//--------附加攻击特效------
 
@@ -177,6 +188,7 @@ func (this *Bullet) Init() {
 
 	this.SkillID = -1 //普通攻击
 	this.SkillLevel = 1
+	this.IsSetStartPosition = false
 
 	this.NormalHurt.HurtType = 1 //物理伤害
 	this.NormalHurt.HurtValue = 0
@@ -189,6 +201,8 @@ func (this *Bullet) Init() {
 	this.IsDoHurtOnMove = 2
 	this.UnitTargetTeam = 2
 	this.EveryDoHurtChangeHurtCR = 1
+
+	this.Ejection = BulletEjection{0, 0, 1, make(map[int32]*Unit)}
 
 	this.HurtRange.RangeType = 1 //单体攻击范围
 	this.MoveType = 1            //瞬间移动
@@ -210,6 +224,17 @@ func (this *Bullet) Init() {
 	this.ExceptionParam = ""
 
 	this.SetForceMove(0, 0, 0, "")
+}
+
+//设置弹射
+func (this *Bullet) SetEjection(count int32, ejrange float32, ejdecay float32) {
+	this.Ejection.EjectionCount = count
+	this.Ejection.EjectionRange = ejrange
+	this.Ejection.EjectionDecay = ejdecay
+	if this.DestUnit != nil {
+		this.Ejection.EjectionedTarget[this.DestUnit.ID] = this.DestUnit
+	}
+
 }
 
 //设置路径光环
@@ -314,6 +339,14 @@ func (this *Bullet) SetNormalHurtRatio(ratio float32) {
 
 }
 
+//设置startpos
+func (this *Bullet) SetStartPosition(pos vec2d.Vector3) {
+	this.Position = pos
+	//开始位置
+	this.StartPosition = this.Position.Clone()
+	this.IsSetStartPosition = true
+}
+
 ////计算初始位置
 func (this *Bullet) OnCreate() {
 
@@ -323,32 +356,30 @@ func (this *Bullet) OnCreate() {
 			this.Done()
 			return
 		}
-		if this.SkillID <= 0 {
+		if this.IsSetStartPosition == false {
+			if this.SkillID <= 0 {
 
-			pos := this.SrcUnit.GetProjectileStartPos()
+				pos := this.SrcUnit.GetProjectileStartPos()
 
-			dis1 := vec2d.Distanse(this.SrcUnit.Body.Position, vec2d.Vec2{X: pos.X, Y: pos.Y})
-			dis2 := vec2d.Distanse(this.SrcUnit.Body.Position, vec2d.Vec2{X: this.DestPos.X, Y: this.DestPos.Y})
-			if dis2 <= dis1 {
-				this.Position = vec2d.Vector3{X: this.SrcUnit.Body.Position.X, Y: this.SrcUnit.Body.Position.Y, Z: pos.Z}
-				//开始位置
-				this.StartPosition = this.Position.Clone()
+				dis1 := vec2d.Distanse(this.SrcUnit.Body.Position, vec2d.Vec2{X: pos.X, Y: pos.Y})
+				dis2 := vec2d.Distanse(this.SrcUnit.Body.Position, vec2d.Vec2{X: this.DestPos.X, Y: this.DestPos.Y})
+				if dis2 <= dis1 {
+					this.Position = vec2d.Vector3{X: this.SrcUnit.Body.Position.X, Y: this.SrcUnit.Body.Position.Y, Z: pos.Z}
+					//开始位置
+					this.StartPosition = this.Position.Clone()
+				} else {
+					this.Position = pos
+					//开始位置
+					this.StartPosition = this.Position.Clone()
+				}
+
 			} else {
-				this.Position = pos
+
+				this.Position = vec2d.NewVector3(this.SrcUnit.Body.Position.X, this.SrcUnit.Body.Position.Y, 0.5)
 				//开始位置
 				this.StartPosition = this.Position.Clone()
 			}
-
-		} else {
-
-			this.Position = vec2d.NewVector3(this.SrcUnit.Body.Position.X, this.SrcUnit.Body.Position.Y, 0.5)
-			//开始位置
-			this.StartPosition = this.Position.Clone()
 		}
-
-		//		if this.DestUnit != nil {
-		//			this.DestPos = this.DestUnit.GetProjectileEndPos()
-		//		}
 
 	}
 
@@ -903,6 +934,62 @@ func (this *Bullet) DoSwitchedPlaces() {
 	this.DestUnit.Body.Position = srcpos
 }
 
+//处理弹射
+func (this *Bullet) DoEjection() {
+	if this.Ejection.EjectionCount <= 0 || this.Ejection.EjectionRange <= 0 {
+		return
+	}
+	if this.SrcUnit == nil || this.DestUnit == nil || this.SrcUnit.IsDisappear() {
+		return
+	}
+
+	pos2d := vec2d.Vec2{X: this.Position.X, Y: this.Position.Y}
+	allunit := this.SrcUnit.InScene.FindVisibleUnitsByPos(pos2d)
+	for _, v := range allunit {
+		if v.IsDisappear() {
+			continue
+		}
+		//检测是否在范围内
+		if v.Body == nil {
+			continue
+		}
+		//目前只对敌人弹射
+		if this.SrcUnit.CheckUnitTargetTeam(v, 2) == false {
+			continue
+		}
+		//已经弹射过了
+		_, ok := this.Ejection.EjectionedTarget[v.ID]
+		if ok {
+			continue
+		}
+
+		dis := float32(vec2d.Distanse(pos2d, v.Body.Position))
+		if dis <= this.Ejection.EjectionRange {
+			//可以弹射
+			b := NewBullet1(this.SrcUnit, v)
+			//设置坐标
+
+			b.SetStartPosition(this.Position)
+			//普通攻击衰减
+			b.SetNormalHurtRatio(0)
+			b.NormalHurt.HurtValue = int32(float32(this.NormalHurt.HurtValue) * this.Ejection.EjectionDecay)
+			//额外伤害衰减
+			for _, otherhurt := range this.OtherHurt {
+				b.AddOtherHurt(HurtInfo{otherhurt.HurtType, int32(float32(otherhurt.HurtValue) * this.Ejection.EjectionDecay)})
+			}
+			//重新设置弹射信息
+			//b.Ejection.EjectionedTarget = this.Ejection.EjectionedTarget
+			b.SetEjection(this.Ejection.EjectionCount-1, this.Ejection.EjectionRange, this.Ejection.EjectionDecay)
+
+			//设置弹道
+			b.SetProjectileMode(this.ModeType, this.Speed)
+
+			this.SrcUnit.AddBullet(b)
+			return
+		}
+	}
+}
+
 //计算结果
 func (this *Bullet) CalResult() {
 
@@ -911,6 +998,8 @@ func (this *Bullet) CalResult() {
 	this.DoSwitchedPlaces()
 	//计算伤害
 	this.DoHurt()
+	//处理弹射
+	this.DoEjection()
 
 	//等待删除
 	this.Done()

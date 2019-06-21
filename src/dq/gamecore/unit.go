@@ -383,6 +383,8 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 					}
 					//特殊情况处理
 					this.DoSkillException(v, b.DestUnit, b)
+					//弹射
+					b.SetEjection(v.EjectionCount, v.EjectionRange, v.EjectionDecay)
 
 					//召唤信息
 					b.BulletCallUnitInfo = BulletCallUnitInfo{v.CallUnitInfo, v.Level}

@@ -68,6 +68,8 @@ func (this *Skill) SetBulletProperty(b *Bullet, unit *Unit) {
 	if this.AwaysHurt == 1 {
 		b.IsDoHurtOnMove = 1
 	}
+	//弹射
+	b.SetEjection(this.EjectionCount, this.EjectionRange, this.EjectionDecay)
 	//伤害范围 和目标关系
 	b.SetRange(this.HurtRange)
 	b.UnitTargetTeam = this.UnitTargetTeam
