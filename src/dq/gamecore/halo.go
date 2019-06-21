@@ -32,6 +32,8 @@ type Halo struct {
 	IsEnd             bool       //是否已经结束
 	IsActive          bool       //是否生效
 
+	IsForbidden bool //是否禁用 禁止被动的时候需要
+
 	//发送数据部分
 	ClientData    *protomsg.HaloDatas //客户端显示数据
 	ClientDataSub *protomsg.HaloDatas //客户端显示差异数据
@@ -76,15 +78,16 @@ func (this *Halo) GetCastUnit() *Unit {
 func (this *Halo) Update(dt float32) {
 
 	//CD时间减少
-	if this.IsActive {
+	if this.IsActive && this.IsForbidden == false {
+
 		this.RemainTime -= float32(dt)
-		if this.RemainTime <= 0 {
+		if this.RemainTime <= 0.00001 {
 			this.RemainTime = 0
 			this.IsEnd = true
 		}
 		this.TriggerRemainTime -= float32(dt)
 		//检查是否触发
-		if this.TriggerRemainTime <= 0 {
+		if this.TriggerRemainTime <= 0.00001 {
 			//重置触发时间
 			this.TriggerRemainTime = this.Cooldown + this.TriggerRemainTime
 
@@ -103,20 +106,6 @@ func (this *Halo) Update(dt float32) {
 							if v.IsDisappear() {
 								continue
 							}
-							//UnitTargetTeam      int32   //目标单位关系 1:友方  2:敌方 3:友方敌方都行 5:自己 10:除自己外的其他
-
-							//							if this.UnitTargetTeam == 1 && this.GetCastUnit().CheckIsEnemy(v) == true {
-							//								continue
-							//							}
-							//							if this.UnitTargetTeam == 2 && this.GetCastUnit().CheckIsEnemy(v) == false {
-							//								continue
-							//							}
-							//							if this.UnitTargetTeam == 5 && this.GetCastUnit() != v {
-							//								continue
-							//							}
-							//							if this.UnitTargetTeam == 10 && this.GetCastUnit() == v {
-							//								continue
-							//							}
 
 							if this.GetCastUnit().CheckUnitTargetTeam(v, this.UnitTargetTeam) == false {
 								continue
@@ -243,6 +232,7 @@ func NewHalo(typeid int32, level int32) *Halo {
 	halo.TriggerRemainTime = halodata.Cooldown
 	halo.IsEnd = false
 	halo.IsActive = true
+	halo.IsForbidden = false
 	//	if halodata.ActiveTime <= 0 {
 	//		halo.IsActive = true
 	//	} else {

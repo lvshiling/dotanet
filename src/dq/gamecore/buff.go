@@ -176,12 +176,29 @@ func (this *Buff) DoCreatePathHalo() {
 
 }
 
+func (this *Buff) GetHurtValue(src *Unit, dest *Unit) int32 {
+	switch this.HurtValueType {
+	case 0:
+		return int32(this.HurtValue)
+	case 1:
+		{
+			if dest == nil || dest.IsDisappear() {
+				return 0
+			}
+			return int32(this.HurtValue * (1 - float32(dest.HP)/float32(dest.MAX_HP)) * 100.0)
+		}
+	}
+
+	return 0
+
+}
+
 //更新
 func (this *Buff) Update(dt float64) {
 	//CD时间减少
 	if this.IsActive {
 		this.RemainTime -= float32(dt)
-		if this.RemainTime <= 0 {
+		if this.RemainTime <= 0.00001 {
 			this.RemainTime = 0
 			this.IsEnd = true
 		}
@@ -193,8 +210,9 @@ func (this *Buff) Update(dt float64) {
 		this.UpdateForceAttack()
 
 		this.TriggerRemainTime -= float32(dt)
+		//log.Info("time:%f  :%f", this.RemainTime, this.TriggerRemainTime)
 		//检查是否触发
-		if this.TriggerRemainTime <= 0 {
+		if this.TriggerRemainTime <= 0.00001 {
 			//重置触发时间
 			this.TriggerRemainTime = this.HurtTimeInterval + this.TriggerRemainTime
 
@@ -209,7 +227,7 @@ func (this *Buff) Update(dt float64) {
 					b := NewBullet1(castunit, this.Parent)
 					b.SetProjectileMode("", 0)
 					this.ExceptionTrigger()
-					b.AddOtherHurt(HurtInfo{HurtType: this.HurtType, HurtValue: int32(this.HurtValue)})
+					b.AddOtherHurt(HurtInfo{HurtType: this.HurtType, HurtValue: this.GetHurtValue(castunit, this.Parent)})
 					if b != nil {
 						this.Parent.AddBullet(b)
 					}

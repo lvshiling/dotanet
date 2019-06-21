@@ -114,9 +114,10 @@ func (this *Scene) Init() {
 	}
 
 	//创建英雄2
-	hero2 := CreateUnit(this, 1)
-	hero2.AttackMode = 1 //和平攻击模式
+	hero2 := CreateUnit(this, 15)
+	hero2.AttackMode = 3 //和平攻击模式
 	hero2.SetAI(NewNormalAI(hero2))
+	hero2.AddSkill(52, 4)
 	//设置移动核心body
 	pos2 := vec2d.Vec2{float64(10), float64(5)}
 	r2 := vec2d.Vec2{hero2.CollisionR, hero2.CollisionR}
@@ -362,6 +363,14 @@ func (this *Scene) AddHalo(halo *Halo) {
 func (this *Scene) RemoveHalo(id int32) {
 	delete(this.Halos, id)
 	delete(this.CanRemoveHalos, id)
+}
+
+//获取光环
+func (this *Scene) ForbiddenHalo(id int32, isForbidden bool) {
+	halo, ok := this.Halos[id]
+	if ok && halo != nil {
+		halo.IsForbidden = isForbidden
+	}
 }
 
 //删除击杀单位后无效光环

@@ -92,6 +92,7 @@ type BuffBaseData struct {
 	NoTurn            int32 //禁止转向 1:是 2:非
 	NoAttack          int32 //禁止攻击 1:是 2:非
 	NoSkill           int32 //禁止使用技能 1:是 2:非
+	NoPassiveSkill    int32 //禁止被动技能 1:是 2:非
 	NoItem            int32 //禁止使用道具 1:是 2:非
 	MagicImmune       int32 //是否魔法免疫 1:是 2:非
 	PhisicImmune      int32 //物理攻击免疫 1:是 2:非
@@ -175,6 +176,7 @@ type BuffData struct {
 	//
 	HurtTimeInterval float32 //伤害时间间隔
 	HurtValue        float32 //伤害值
+	HurtValueType    int32   //伤害值类型 0表示固定值 1表示目标受到总伤害比列的一定比列
 
 	SpurtingHurtRatio float32 //溅射伤害百分比
 
@@ -228,6 +230,7 @@ type BuffFileData struct {
 	//
 	HurtTimeInterval string //伤害时间间隔
 	HurtValue        string //伤害值
+	HurtValueType    string //伤害值类型 0表示固定值 1表示受到总伤害的一定比列
 
 	SpurtingHurtRatio string //溅射伤害百分比
 
@@ -280,6 +283,8 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 
 	HurtTimeInterval := utils.GetFloat32FromString2(this.HurtTimeInterval)
 	HurtValue := utils.GetFloat32FromString2(this.HurtValue)
+	HurtValueType := utils.GetInt32FromString2(this.HurtValueType)
+
 	SpurtingHurtRatio := utils.GetFloat32FromString2(this.SpurtingHurtRatio)
 
 	ExceptionParam := utils.GetStringFromString2(this.ExceptionParam)
@@ -476,6 +481,12 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 		} else {
 			ssd.HurtValue = HurtValue[i]
 		}
+		if int32(len(HurtValueType)) <= i {
+			ssd.HurtValueType = HurtValueType[len(HurtValueType)-1]
+		} else {
+			ssd.HurtValueType = HurtValueType[i]
+		}
+
 		if int32(len(SpurtingHurtRatio)) <= i {
 			ssd.SpurtingHurtRatio = SpurtingHurtRatio[len(SpurtingHurtRatio)-1]
 		} else {

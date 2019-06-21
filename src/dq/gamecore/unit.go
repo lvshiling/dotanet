@@ -616,6 +616,11 @@ func (this *Unit) DoForceMove(skilldata *Skill, targetpos vec2d.Vec2) bool {
 //检查攻击 触发攻击特效
 func (this *Unit) CheckTriggerBeAttackSkill(target *Unit) {
 
+	//禁止被动
+	if this.NoPassiveSkill == 1 {
+		return
+	}
+
 	for _, v := range this.Skills {
 		//CastType              int32   // 施法类型:  1:主动技能  2:被动技能
 		//TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
@@ -1190,6 +1195,7 @@ type UnitProperty struct {
 	TurnEnable          int32 //能否转向 (比如 被眩晕不能转向) 1:可以 2:不可以
 	AttackEnable        int32 //能否攻击 (比如 被眩晕和缴械不能攻击) 1:可以 2:不可以
 	SkillEnable         int32 //能否使用主动技能 (比如 被眩晕和沉默不能使用主动技能) 1:可以 2:不可以
+	NoPassiveSkill      int32 //禁止被动技能 1:是 2:非
 	ItemEnable          int32 //能否使用主动道具 (比如 被眩晕和禁用道具不能使用主动道具) 1:可以 2:不可以
 	MagicImmune         int32 //是否技能免疫 1：是 2:不是
 	PhisicImmune        int32 //是否物理攻击免疫 1:是 2:否
@@ -1333,6 +1339,11 @@ func CreateUnit(scene *Scene, typeid int32) *Unit {
 	unitre.Name = unitre.UnitName
 	unitre.Level = 1
 
+	//初始化技能被动光环
+	unitre.Skills = make(map[int32]*Skill) //所有技能
+	unitre.HaloInSkills = make(map[int32][]int32)
+	unitre.FreshHaloInSkills()
+
 	unitre.Init()
 	unitre.InitHPandMP(1.0, 1.0)
 	unitre.IsMain = 2
@@ -1340,6 +1351,13 @@ func CreateUnit(scene *Scene, typeid int32) *Unit {
 	unitre.ControlID = -1
 
 	return unitre
+}
+func (this *Unit) AddSkill(id int32, level int32) {
+	skill := NewOneSkill(id, level, this)
+	if skill != nil {
+		this.Skills[id] = skill
+	}
+	this.FreshHaloInSkills()
 }
 func CreateUnitByCopyUnit(unit *Unit, controlplayer *Player) *Unit {
 	if unit == nil || unit.InScene == nil {
@@ -1497,6 +1515,51 @@ func (this *Unit) UpdateForceMove(dt float64) {
 	}
 }
 
+//目前1秒钟更新一次
+func (this *Unit) UpdateSkillAddBuff() {
+	//------
+	//技能携带的buf
+	for _, v := range this.Skills {
+		if v.Level <= 0 {
+			continue
+		}
+		//被动技能
+		if v.CastType == 2 {
+
+			//没有禁止被动
+			if this.NoPassiveSkill == 2 {
+				buffs := this.AddBuffFromStr(v.InitBuff, v.Level, this)
+				for _, v := range buffs {
+					v.RemainTime = 1
+				}
+				//log.Info("NoPassiveSkill")
+
+				if len(v.InitHalo) > 0 {
+					if _, ok := this.HaloInSkills[v.TypeID]; ok {
+						for _, v1 := range this.HaloInSkills[v.TypeID] {
+							this.InScene.ForbiddenHalo(v1, false)
+						}
+					}
+				}
+			} else { //禁止被动
+				if len(v.InitHalo) > 0 {
+					if _, ok := this.HaloInSkills[v.TypeID]; ok {
+						for _, v1 := range this.HaloInSkills[v.TypeID] {
+							this.InScene.ForbiddenHalo(v1, true)
+						}
+					}
+				}
+			}
+		} else {
+			buffs := this.AddBuffFromStr(v.InitBuff, v.Level, this)
+			for _, v := range buffs {
+				v.RemainTime = 1
+			}
+		}
+
+	}
+}
+
 //
 func (this *Unit) EveryTimeDo(dt float64) {
 
@@ -1513,18 +1576,7 @@ func (this *Unit) EveryTimeDo(dt float64) {
 		this.ChangeHP(int32(this.HPRegain))
 		this.ChangeMP(int32(this.MPRegain))
 
-		//------
-		//技能携带的buf
-		for _, v := range this.Skills {
-			if v.Level <= 0 {
-				continue
-			}
-			buffs := this.AddBuffFromStr(v.InitBuff, v.Level, this)
-			for _, v := range buffs {
-				v.RemainTime = 1
-			}
-
-		}
+		this.UpdateSkillAddBuff()
 
 		this.AutoRemoveTimeAndHurt()
 	}
@@ -1569,18 +1621,20 @@ func (this *Unit) Update(dt float64) {
 		//log.Info("----buff-----id:%d", k)
 		for i := 0; i < len(this.Buffs[k]); {
 			//log.Info("----buff22-----id:%d  %d %d", k, i, len(v))
+			this.Buffs[k][i].Update(dt)
+
 			if this.Buffs[k][i].IsEnd == true {
 				this.Buffs[k] = append(this.Buffs[k][:i], this.Buffs[k][i+1:]...)
 			} else {
-				this.Buffs[k][i].Update(dt)
 				i++
 			}
 
 		}
 		if len(this.Buffs[k]) <= 0 {
 			delete(this.Buffs, k)
+
 		}
-		//log.Info("----buff11-----id:%d", k)
+		//log.Info("----buff11-----id:%d  %f  %f", k, utils.GetCurTimeOfSecond())
 
 	}
 
@@ -1852,7 +1906,8 @@ func (this *Unit) CalControlState() {
 	this.TurnEnable = 1   //能否转向 (比如 被眩晕不能转向) 1:可以 2:不可以
 	this.AttackEnable = 1 //能否攻击 (比如 被眩晕和缴械不能攻击) 1:可以 2:不可以
 	this.SkillEnable = 1  //能否使用主动技能 (比如 被眩晕和沉默不能使用主动技能) 1:可以 2:不可以
-	this.ItemEnable = 1   //能否使用主动道具 (比如 被眩晕和禁用道具不能使用主动道具) 1:可以 2:不可以
+	this.NoPassiveSkill = 2
+	this.ItemEnable = 1 //能否使用主动道具 (比如 被眩晕和禁用道具不能使用主动道具) 1:可以 2:不可以
 	this.MagicImmune = 2
 	this.PhisicImmune = 2
 	this.MagicCDStop = 2
@@ -1960,6 +2015,9 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 	}
 	if v1.NoAttack == 1 {
 		this.AttackEnable = 2
+	}
+	if v1.NoPassiveSkill == 1 {
+		this.NoPassiveSkill = 1
 	}
 	if v1.NoSkill == 1 {
 		this.SkillEnable = 2
@@ -2256,6 +2314,7 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 					bf[0].TagNum = buff.TagNum
 				}
 			}
+			//log.Info("bb--111111122:%d  %f  %f", buff.TypeID, bf[0].RemainTime, buff.Time)
 			return bf[0]
 
 		} else if buff.OverlyingType == 2 {
@@ -2274,7 +2333,7 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 		bfs = append(bfs, buff)
 		this.Buffs[buff.TypeID] = bfs
 		//log.Info("--111111144")
-		log.Info("aa--111111122:%d", buff.TypeID)
+		//log.Info("aa--111111122:%d", buff.TypeID)
 		this.CheckTriggerCreateBuff(buff)
 
 		//给单位计算buff效果
@@ -2503,9 +2562,9 @@ func (this *Unit) CheckTriggerBeAttack(attacker *Unit, hurttype int32, hurtvalue
 		return
 	}
 	//物理攻击
-	if hurttype == 1 {
-		this.CheckTriggerBeAttackSkill(attacker)
-	}
+	//if hurttype == 1 {
+	this.CheckTriggerBeAttackSkill(attacker)
+	//}
 
 	//-----------处理异常------------------
 	//遍历 可以优化  本体的buff
