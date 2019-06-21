@@ -138,6 +138,7 @@ type BuffData struct {
 	Time      float32 //持续时间
 
 	//CV表示变化量  CR表示变化比率
+	AttributePrimaryCV        float32 //主属性变化量 20表示增加20点主属性
 	AttributeStrengthCV       float32 //力量变化值 20表示增加20点力量
 	AttributeIntelligenceCV   float32 //智力变化值 20表示增加20点智力
 	AttributeAgilityCV        float32 //敏捷变化值 20表示增加20点敏捷
@@ -190,6 +191,7 @@ type BuffFileData struct {
 	Time      string //持续时间
 
 	//CV表示变化量  CR表示变化比率
+	AttributePrimaryCV        string //主属性变化量 20表示增加20点主属性
 	AttributeStrengthCV       string //力量变化值 20表示增加20点力量
 	AttributeIntelligenceCV   string //智力变化值 20表示增加20点智力
 	AttributeAgilityCV        string //敏捷变化值 20表示增加20点敏捷
@@ -240,6 +242,8 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 
 	BuffRange := utils.GetFloat32FromString2(this.BuffRange)
 	Time := utils.GetFloat32FromString2(this.Time)
+
+	AttributePrimaryCV := utils.GetFloat32FromString2(this.AttributePrimaryCV)
 	AttributeStrengthCV := utils.GetFloat32FromString2(this.AttributeStrengthCV)
 	AttributeIntelligenceCV := utils.GetFloat32FromString2(this.AttributeIntelligenceCV)
 	AttributeAgilityCV := utils.GetFloat32FromString2(this.AttributeAgilityCV)
@@ -292,6 +296,12 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 			ssd.Time = Time[len(Time)-1]
 		} else {
 			ssd.Time = Time[i]
+		}
+
+		if int32(len(AttributePrimaryCV)) <= i {
+			ssd.AttributePrimaryCV = AttributePrimaryCV[len(AttributePrimaryCV)-1]
+		} else {
+			ssd.AttributePrimaryCV = AttributePrimaryCV[i]
 		}
 		if int32(len(AttributeStrengthCV)) <= i {
 			ssd.AttributeStrengthCV = AttributeStrengthCV[len(AttributeStrengthCV)-1]

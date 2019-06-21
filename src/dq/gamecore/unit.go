@@ -1879,91 +1879,41 @@ func (this *Unit) CalControlState() {
 	this.Body.MoveDir = vec2d.Vec2{}
 }
 
-////计算单个buff对属性的影响
-//func (this *Unit) CalPropertyByBuffCR(v1 *Buff) {
-//	if v1 == nil || v1.IsActive == false {
-//		return
-//	}
-//	this.Attack += int32(float32(this.Attack) * v1.AttackCR)
-//	if this.Attack < 0 {
-//		this.Attack = 0
-//	}
-//	this.MoveSpeed += this.MoveSpeed * float64(v1.MoveSpeedCR)
-//	if this.MoveSpeed < 0 {
-//		this.MoveSpeed = 0
-//	}
-//	this.MPRegain += this.MPRegain * v1.MPRegainCR
-//	if this.MPRegain < 0 {
-//		this.MPRegain = 0
-//	}
-//	this.PhysicalAmaor += this.PhysicalAmaor * v1.PhysicalAmaorCR
-//	if this.PhysicalAmaor < 0 {
-//		this.PhysicalAmaor = 0
-//	}
-//	this.HPRegain += this.HPRegain * v1.HPRegainCR
-//	if this.HPRegain < 0 {
-//		this.HPRegain = 0
-//	}
+//计算单个buff对属性的影响
+func (this *Unit) CalPropertyByBuffFirst(v1 *Buff, add *UnitBaseProperty) {
+	if v1 == nil || v1.IsActive == false || v1.IsUseable == false {
+		return
+	}
+	if v1.AttributePrimaryCV > 0 {
+		switch this.AttributePrimary {
+		case 1:
+			{
+				add.AttributeStrength += v1.AttributePrimaryCV
+			}
+		case 2:
+			{
+				add.AttributeAgility += v1.AttributePrimaryCV
+			}
+		case 3:
+			{
+				add.AttributeIntelligence += v1.AttributePrimaryCV
+			}
+		}
+	}
 
-//}
+	add.AttributeStrength += v1.AttributeStrengthCV
+	add.AttributeIntelligence += v1.AttributeIntelligenceCV
+	add.AttributeAgility += v1.AttributeAgilityCV
 
-////计算单个buff对属性的影响
-//func (this *Unit) CalPropertyByBuffCV(v1 *Buff) {
-//	if v1 == nil || v1.IsActive == false {
-//		return
-//	}
+}
 
-//	//log.Info("--11--speed:%f", this.AttackSpeed)
-//	this.AttributeStrength += v1.AttributeStrengthCV
-//	this.AttributeIntelligence += v1.AttributeIntelligenceCV
-//	this.AttributeAgility += v1.AttributeAgilityCV
-//	this.AttackSpeed += v1.AttackSpeedCV
+func (this *Unit) AddBuffPropertyFirst(add *UnitBaseProperty) {
 
-//	this.Attack += int32(v1.AttackCV)
+	this.AttributeStrength += add.AttributeStrength
+	this.AttributeIntelligence += add.AttributeIntelligence
+	this.AttributeAgility += add.AttributeAgility
 
-//	this.MoveSpeed += float64(v1.MoveSpeedCV)
-//	this.MagicScale = utils.NoLinerAdd(this.MagicScale, v1.MagicScaleCV)
-
-//	this.MPRegain += v1.MPRegainCV
-
-//	this.PhysicalAmaor += v1.PhysicalAmaorCV
-//	this.MagicAmaor = utils.NoLinerAdd(this.MagicAmaor, v1.MagicAmaorCV)
-//	this.Dodge = utils.NoLinerAdd(this.Dodge, v1.DodgeCV)
-
-//	this.HPRegain += v1.HPRegainCV
-//	this.HPRegain += v1.HPRegainCVOfMaxHP * float32(this.MAX_HP)
-
-//	this.NoCareDodge = utils.NoLinerAdd(this.NoCareDodge, v1.NoCareDodgeCV)
-//	this.AddedMagicRange += v1.AddedMagicRangeCV
-//	this.ManaCost = utils.NoLinerAdd(this.ManaCost, v1.ManaCostCV)
-//	this.MagicCD = utils.NoLinerAdd(this.MagicCD, v1.MagicCDCV)
-
-//	if v1.NoMove == 1 {
-//		this.MoveEnable = 2
-//	}
-//	if v1.NoTurn == 1 {
-//		this.TurnEnable = 2
-//	}
-//	if v1.NoAttack == 1 {
-//		this.AttackEnable = 2
-//	}
-//	if v1.NoSkill == 1 {
-//		this.SkillEnable = 2
-//	}
-//	if v1.NoItem == 1 {
-//		this.ItemEnable = 2
-//	}
-//	if v1.MagicImmune == 1 {
-//		this.MagicImmune = 1
-//	}
-//	if v1.Invisible == 1 {
-//		this.Invisible = 1
-//	}
-//	if v1.PhisicImmune == 1 {
-//		this.PhisicImmune = 1
-//	}
-
-//}
+}
 
 //计算单个buff对属性的影响
 func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
@@ -2055,9 +2005,10 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 }
 
 func (this *Unit) AddBuffProperty(add *UnitBaseProperty) {
-	this.AttributeStrength += add.AttributeStrength
-	this.AttributeIntelligence += add.AttributeIntelligence
-	this.AttributeAgility += add.AttributeAgility
+	//属性的增加需要在最开始计算
+	//this.AttributeStrength += add.AttributeStrength
+	//this.AttributeIntelligence += add.AttributeIntelligence
+	//this.AttributeAgility += add.AttributeAgility
 	this.AttackSpeed += add.AttackSpeed
 	this.Attack += add.Attack
 	this.MoveSpeed += add.MoveSpeed
@@ -2083,7 +2034,22 @@ func (this *Unit) FreshBuffsUseable(target *Unit) {
 	}
 }
 
-//计算所有buff对属性的影响
+//计算所有buff对1级属性的影响
+func (this *Unit) CalPropertyByBuffsFirst() {
+	add := &UnitBaseProperty{}
+
+	//buff
+	for _, v := range this.Buffs {
+		for _, v1 := range v {
+			this.CalPropertyByBuffFirst(v1, add)
+		}
+
+	}
+	this.AddBuffPropertyFirst(add)
+
+}
+
+//计算所有buff对2级属性的影响
 func (this *Unit) CalPropertyByBuffs() {
 	add := &UnitBaseProperty{}
 
@@ -2111,6 +2077,8 @@ func (this *Unit) CalPropertyByBuffs() {
 func (this *Unit) CalProperty() {
 	//计算属性
 	this.CalAttribute()
+	//计算buff对属性的影响
+	this.CalPropertyByBuffsFirst()
 	//计算MAXHP MP
 	this.CalMaxHP_MaxHP()
 	//计算攻击速度
