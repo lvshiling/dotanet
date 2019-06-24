@@ -94,6 +94,7 @@ type HaloBaseData struct {
 	HaloModeType        string  //光环模型
 	BlinkToTarget       int32   //是否瞬间移动到目的地 1:是 2:否
 	KilledInvalid       int32   //击杀其他单位后失效 1:是 2:否
+	HurtedInvalid       int32   //造成伤害后失效 1:是 2:否
 
 	//特殊情况处理
 	Exception int32 //特殊情况处理 1 小小的山崩 对投掷状态的单位造成3倍伤害

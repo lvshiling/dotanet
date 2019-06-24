@@ -23,7 +23,7 @@ type Buff struct {
 
 	IsActive bool //是否生效
 
-	IsUseable     bool  //是否起作用
+	IsUseable     bool  //是否起作用 对特定单位其中有功能
 	UseableUnitID int32 //起作用的单位ID
 
 	LastPos          vec2d.Vec2 //载体上次计算的位置 血魔大招

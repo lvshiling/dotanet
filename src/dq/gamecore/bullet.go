@@ -116,6 +116,7 @@ type Bullet struct {
 	ForceMoveSpeedSize float32 //强制移动速度大小
 	ForceMoveLevel     int32   //强制移动等级
 	ForceMoveBuff      string  //强制移动时的buff 随着移动结束消失
+	ForceMoveType      int32   //强制移动类型
 
 	//加血相关
 	AddHPType  int32   //加血类型 0:不加 1:以AddHPValue为固定值 2:以AddHPValue为时间 加单位在此时间内受到的伤害值
@@ -223,7 +224,7 @@ func (this *Bullet) Init() {
 	this.Exception = 0
 	this.ExceptionParam = ""
 
-	this.SetForceMove(0, 0, 0, "")
+	this.SetForceMove(0, 0, 0, 0, "")
 }
 
 //设置弹射
@@ -289,12 +290,13 @@ func (this *Bullet) AddDoHurtPhysicalAmaorCV(val int32) {
 }
 
 //设置强制移动相关
-func (this *Bullet) SetForceMove(time float32, speedsize float32, level int32, buff string) {
+func (this *Bullet) SetForceMove(time float32, speedsize float32, level int32, fmtype int32, buff string) {
 	//对目标造成强制移动相关
 	this.ForceMoveTime = time           //强制移动时间
 	this.ForceMoveSpeedSize = speedsize //强制移动速度大小
 	this.ForceMoveLevel = level         //强制移动等级
 	this.ForceMoveBuff = buff
+	this.ForceMoveType = fmtype
 
 }
 
@@ -752,26 +754,46 @@ func (this *Bullet) HurtUnit(unit *Unit) int32 {
 
 	//强制移动
 	if this.ForceMoveTime > 0 {
-		if this.HurtRange.RangeType == 1 {
 
-			dir := vec2d.Sub(unit.Body.Position, vec2d.Vec2{this.StartPosition.X, this.StartPosition.Y})
-			dir.Normalize()
-			dir.MulToFloat64(float64(this.ForceMoveSpeedSize))
-			unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel, float32(0))
-		} else {
-			dir := vec2d.Sub(unit.Body.Position, this.GetPosition2D())
-			dir.Normalize()
-			dir.MulToFloat64(float64(this.ForceMoveSpeedSize))
-			unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel, float32(0))
-		}
-		//更改buff时间
-		if len(this.ForceMoveBuff) > 0 {
-			buffs := unit.AddBuffFromStr(this.ForceMoveBuff, this.SkillLevel, this.SrcUnit)
-			for _, v := range buffs {
-				v.RemainTime = this.ForceMoveTime
-				v.Time = this.ForceMoveTime
+		if this.ForceMoveType == 1 || this.ForceMoveType == 4 {
+			if this.ForceMoveType == 1 { //向后推
+				if this.HurtRange.RangeType == 1 {
+
+					dir := vec2d.Sub(unit.Body.Position, vec2d.Vec2{this.StartPosition.X, this.StartPosition.Y})
+					dir.Normalize()
+					dir.MulToFloat64(float64(this.ForceMoveSpeedSize))
+					unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel, float32(0))
+				} else {
+					dir := vec2d.Sub(unit.Body.Position, this.GetPosition2D())
+					dir.Normalize()
+					dir.MulToFloat64(float64(this.ForceMoveSpeedSize))
+					unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel, float32(0))
+				}
+			} else if this.ForceMoveType == 4 { //向前拉
+				if this.HurtRange.RangeType == 1 {
+
+					dir := vec2d.Sub(vec2d.Vec2{this.StartPosition.X, this.StartPosition.Y}, unit.Body.Position)
+					dir.Normalize()
+					dir.MulToFloat64(float64(this.ForceMoveSpeedSize))
+					unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel, float32(0))
+				} else {
+					dir := vec2d.Sub(this.GetPosition2D(), unit.Body.Position)
+					dir.Normalize()
+					dir.MulToFloat64(float64(this.ForceMoveSpeedSize))
+					unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel, float32(0))
+				}
+			}
+
+			//更改buff时间
+			if len(this.ForceMoveBuff) > 0 {
+				buffs := unit.AddBuffFromStr(this.ForceMoveBuff, this.SkillLevel, this.SrcUnit)
+				for _, v := range buffs {
+					v.RemainTime = this.ForceMoveTime
+					v.Time = this.ForceMoveTime
+				}
 			}
 		}
+
 	}
 
 	//小于0 表示被miss

@@ -328,6 +328,19 @@ func (this *Unit) CheckTriggerOtherRule(rule int32, param string) bool {
 			return true
 
 		}
+	case 3: //需要有特定buff
+		{
+			param := utils.GetInt32FromString3(param, ":")
+			if len(param) < 1 {
+				return false
+			}
+
+			buff := this.GetBuff(param[0])
+			if buff == nil {
+				return false
+			}
+			return true
+		}
 	default:
 	}
 
@@ -390,10 +403,11 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 					b.BulletCallUnitInfo = BulletCallUnitInfo{v.CallUnitInfo, v.Level}
 					//目标buff
 					b.AddTargetBuff(v.TargetBuff, v.Level)
+					b.AddTargetHalo(v.TargetHalo, v.Level)
 					//强制移动
-					if v.ForceMoveType == 1 {
-						b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel, v.ForceMoveBuff)
-					}
+					//if v.ForceMoveType == 1 {
+					b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel, v.ForceMoveType, v.ForceMoveBuff)
+					//}
 					b.PhysicalHurtAddHP += v.PhysicalHurtAddHP
 					b.MagicHurtAddHP += v.MagicHurtAddHP
 
@@ -420,10 +434,11 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 			}
 			//目标buff
 			b.AddTargetBuff(v.TargetBuff, v.Level)
+			b.AddTargetHalo(v.TargetHalo, v.Level)
 			//强制移动
-			if v.ForceMoveType == 1 {
-				b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel, v.ForceMoveBuff)
-			}
+			//if v.ForceMoveType == 1 {
+			b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel, v.ForceMoveType, v.ForceMoveBuff)
+			//}
 
 			b.PhysicalHurtAddHP += v.PhysicalHurtAddHP
 			b.MagicHurtAddHP += v.MagicHurtAddHP
@@ -2389,6 +2404,16 @@ func (this *Unit) AddHaloFromStr(halosstr string, level int32, pos *vec2d.Vec2) 
 	return re
 }
 
+//客户端 显示自己受到的伤害
+func (this *Unit) CreateShowHurt(hurtvalue int32) {
+	if this.MyPlayer == nil {
+		return
+	}
+	//为了显示 玩家造成的伤害
+	mph := &protomsg.MsgPlayerHurt{HurtUnitID: this.ID, HurtAllValue: hurtvalue}
+	this.MyPlayer.AddHurtValue(mph)
+}
+
 //直接造成伤害
 func (this *Unit) BeAttackedFromValue(value int32, attackunit *Unit) {
 
@@ -2401,6 +2426,9 @@ func (this *Unit) BeAttackedFromValue(value int32, attackunit *Unit) {
 
 	//
 	this.CheckTriggerBeAttack(attackunit, 1, value)
+
+	//客户端显示自己受伤数字
+	this.CreateShowHurt(value)
 
 	//被攻击死亡
 	if this.HP <= 0 && lasthp > 0 {
@@ -2473,6 +2501,9 @@ func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 
 	lasthp := this.HP
 	this.ChangeHP(-hurtvalue)
+
+	//客户端显示自己受伤数字
+	this.CreateShowHurt(-hurtvalue)
 
 	maxhurttype := int32(1)
 	if magicAttack > physicAttack && magicAttack > pureAttack {

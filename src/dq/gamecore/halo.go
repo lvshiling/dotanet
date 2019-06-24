@@ -121,6 +121,11 @@ func (this *Halo) Update(dt float32) {
 
 								count++
 
+								//造成伤害后失效
+								if this.HurtedInvalid == 1 {
+									this.IsEnd = true
+								}
+
 								//增加buff
 								v.AddBuffFromStr(this.InitBuff, this.Level, this.GetCastUnit())
 								//log.Info("-----------------InitBuff:%s", this.InitBuff)
