@@ -86,6 +86,7 @@ type HaloBaseData struct {
 	BulletModeType      string  //子弹模型
 	BulletSpeed         float32 //子弹速度
 	HurtType            int32   //伤害类型(1:物理伤害 2:魔法伤害 3:纯粹伤害 4:不造成伤害)
+	HurtValueType       int32   //伤害值类型 0表示固定值 1表示目标受到总伤害比列的一定比列 2:最大血量百分比
 	TriggerAttackEffect int32   //能否触发普通攻击特效 (1:触发 2:不触发)
 	MaxLevel            int32   //最高升级到的等级 5 表示能升级到5级
 	TargetBuff          string  //对施法目标造成的buff 比如 1,2 表示对目标造成typeid为 1和2的buff
@@ -106,7 +107,7 @@ type HaloData struct {
 	UnitTargetMaxCount int32   //最大选择目标数量
 	Time               float32 //持续时间
 	Cooldown           float32 //技能冷却时间 为施法间隔
-	HurtValue          int32   //技能伤害
+	HurtValue          float32 //技能伤害
 	HaloRange          float32 //光环范围 小于等于0表示单体
 	NormalHurt         float32 //附带普通攻击百分比 (0.5 为 50%的普通攻击伤害) 一般为0
 	ExceptionParam     string  //特殊情况处理参数
@@ -136,7 +137,7 @@ func (this *HaloFileData) Trans2HaloData(re *[]HaloData) {
 	UnitTargetMaxCount := utils.GetInt32FromString2(this.UnitTargetMaxCount)
 	Time := utils.GetFloat32FromString2(this.Time)
 	Cooldown := utils.GetFloat32FromString2(this.Cooldown)
-	HurtValue := utils.GetInt32FromString2(this.HurtValue)
+	HurtValue := utils.GetFloat32FromString2(this.HurtValue)
 	HaloRange := utils.GetFloat32FromString2(this.HaloRange)
 	NormalHurt := utils.GetFloat32FromString2(this.NormalHurt)
 	ExceptionParam := utils.GetStringFromString2(this.ExceptionParam)

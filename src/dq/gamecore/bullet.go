@@ -744,9 +744,14 @@ func (this *Bullet) HurtUnit(unit *Unit) int32 {
 
 	this.HurtUnits[unit.ID] = unit
 
-	//对目标加血
+	//对目标加血 目标为敌人则不能加血
 	if this.AddHPType != 0 {
-		unit.DoAddHP(this.AddHPType, this.AddHPValue)
+		if this.SrcUnit != nil {
+			if this.SrcUnit.CheckIsEnemy(unit) == false {
+				unit.DoAddHP(this.AddHPType, this.AddHPValue)
+			}
+		}
+
 	}
 
 	//伤害

@@ -115,9 +115,9 @@ func (this *Scene) Init() {
 
 	//创建英雄2
 	hero2 := CreateUnit(this, 15)
-	hero2.AttackMode = 3 //和平攻击模式
+	hero2.AttackMode = 1 //和平攻击模式
 	hero2.SetAI(NewNormalAI(hero2))
-	hero2.AddSkill(52, 4)
+	//hero2.AddSkill(52, 4)
 	//设置移动核心body
 	pos2 := vec2d.Vec2{float64(10), float64(5)}
 	r2 := vec2d.Vec2{hero2.CollisionR, hero2.CollisionR}

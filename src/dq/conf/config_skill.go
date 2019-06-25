@@ -97,7 +97,6 @@ type SkillBaseData struct {
 	UnitTargetCamp         int32   //目标单位阵营 (1:英雄 2:普通单位 3:远古 4:boss) 5:都行
 	NoCareMagicImmune      int32   //无视技能免疫 (1:无视技能免疫 2:非)
 	BulletModeType         string  //子弹模型
-	BulletSpeed            float32 //子弹速度
 	HurtType               int32   //伤害类型(1:物理伤害 2:魔法伤害 3:纯粹伤害)
 	TriggerAttackEffect    int32   //能否触发普通攻击特效 (1:触发 2:不触发)
 	CastPoint              float32 //施法前摇(以施法时间为比列 0.5表示 施法的中间时间点触发)
@@ -151,17 +150,19 @@ type SkillBaseData struct {
 //技能数据 (会根据等级变化的数据)
 type SkillData struct {
 	SkillBaseData
-	CastRange     float32 //施法距离
-	Cooldown      float32 //技能冷却时间
-	HurtValue     int32   //技能伤害
-	HurtRange     float32 //伤害范围 小于等于0表示单体
-	NormalHurt    float32 //附带普通攻击百分比 (0.5 为 50%的普通攻击伤害) 一般为0
-	ManaCost      int32   //技能魔法消耗
-	BulletCount   int32   //子弹数量 仅对 对自己施法有效 在自己周围创造多个弹道
-	SkillCount    int32   //技能点数
-	EjectionCount int32   //弹射次数
-	EjectionRange float32 //弹射范围
-	EjectionDecay float32 //弹射衰减
+	CastRange         float32 //施法距离
+	Cooldown          float32 //技能冷却时间
+	HurtValue         int32   //技能伤害
+	HurtRange         float32 //伤害范围 小于等于0表示单体
+	NormalHurt        float32 //附带普通攻击百分比 (0.5 为 50%的普通攻击伤害) 一般为0
+	ManaCost          int32   //技能魔法消耗
+	OtherManaCostVal  float32 //额外魔法消耗值
+	OtherManaCostType int32   //额外魔法消耗类型
+	BulletCount       int32   //子弹数量 仅对 对自己施法有效 在自己周围创造多个弹道
+	SkillCount        int32   //技能点数
+	EjectionCount     int32   //弹射次数
+	EjectionRange     float32 //弹射范围
+	EjectionDecay     float32 //弹射衰减
 
 	//被动技能相关参数
 	TriggerProbability float32 //触发几率 0.5表示50%
@@ -169,6 +170,7 @@ type SkillData struct {
 	NoCareDodge        float32 //无视闪避几率
 	PhysicalAmaorCV    int32   //物理护甲削弱 -7表示本次计算伤害减7点护甲  -10000表示本次计算伤害减光目标的基础护甲
 
+	BulletSpeed float32 //子弹速度
 	//强制移动相关
 	ForceMoveTime      float32 //强制移动时间
 	ForceMoveSpeedSize float32 //强制移动速度大小
@@ -191,18 +193,19 @@ type SkillFileData struct {
 	//配置文件数据
 	SkillBaseData
 	//跟等级相关的数值 逗号分隔
-	CastRange  string //施法距离
-	Cooldown   string //技能冷却时间
-	HurtValue  string //技能伤害
-	HurtRange  string //伤害范围 小于等于0表示单体
-	NormalHurt string //附带普通攻击百分比 (0.5 为 50%的普通攻击伤害) 一般为0
-	ManaCost   string //技能魔法消耗
-
-	BulletCount   string //子弹数量 仅对 对自己施法有效 在自己周围创造多个弹道
-	SkillCount    string //技能点数
-	EjectionCount string //弹射次数
-	EjectionRange string //弹射范围
-	EjectionDecay string //弹射衰减
+	CastRange         string //施法距离
+	Cooldown          string //技能冷却时间
+	HurtValue         string //技能伤害
+	HurtRange         string //伤害范围 小于等于0表示单体
+	NormalHurt        string //附带普通攻击百分比 (0.5 为 50%的普通攻击伤害) 一般为0
+	ManaCost          string //技能魔法消耗
+	OtherManaCostVal  string //额外魔法消耗值
+	OtherManaCostType string //额外魔法消耗类型
+	BulletCount       string //子弹数量 仅对 对自己施法有效 在自己周围创造多个弹道
+	SkillCount        string //技能点数
+	EjectionCount     string //弹射次数
+	EjectionRange     string //弹射范围
+	EjectionDecay     string //弹射衰减
 
 	//被动技能相关参数
 	TriggerProbability string //触发几率 0.5表示50%
@@ -210,6 +213,7 @@ type SkillFileData struct {
 	NoCareDodge        string //无视闪避几率
 	PhysicalAmaorCV    string //物理护甲削弱 -7表示本次计算伤害减7点护甲  -10000表示本次计算伤害减光基础护甲
 
+	BulletSpeed string //子弹速度
 	//强制移动相关
 	ForceMoveTime      string //强制移动时间
 	ForceMoveSpeedSize string //强制移动速度大小
@@ -237,6 +241,8 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 	HurtRange := utils.GetFloat32FromString2(this.HurtRange)
 	NormalHurt := utils.GetFloat32FromString2(this.NormalHurt)
 	ManaCost := utils.GetInt32FromString2(this.ManaCost)
+	OtherManaCostVal := utils.GetFloat32FromString2(this.OtherManaCostVal)
+	OtherManaCostType := utils.GetInt32FromString2(this.OtherManaCostType)
 
 	BulletCount := utils.GetInt32FromString2(this.BulletCount)
 	SkillCount := utils.GetInt32FromString2(this.SkillCount)
@@ -250,6 +256,7 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 	NoCareDodge := utils.GetFloat32FromString2(this.NoCareDodge)
 	PhysicalAmaorCV := utils.GetInt32FromString2(this.PhysicalAmaorCV)
 
+	BulletSpeed := utils.GetFloat32FromString2(this.BulletSpeed)
 	//强制移动相关
 	ForceMoveTime := utils.GetFloat32FromString2(this.ForceMoveTime)
 	ForceMoveSpeedSize := utils.GetFloat32FromString2(this.ForceMoveSpeedSize)
@@ -296,6 +303,16 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 			ssd.ManaCost = ManaCost[len(ManaCost)-1]
 		} else {
 			ssd.ManaCost = ManaCost[i]
+		}
+		if int32(len(OtherManaCostVal)) <= i {
+			ssd.OtherManaCostVal = OtherManaCostVal[len(OtherManaCostVal)-1]
+		} else {
+			ssd.OtherManaCostVal = OtherManaCostVal[i]
+		}
+		if int32(len(OtherManaCostType)) <= i {
+			ssd.OtherManaCostType = OtherManaCostType[len(OtherManaCostType)-1]
+		} else {
+			ssd.OtherManaCostType = OtherManaCostType[i]
 		}
 		if int32(len(BulletCount)) <= i {
 			ssd.BulletCount = BulletCount[len(BulletCount)-1]
@@ -344,6 +361,11 @@ func (this *SkillFileData) Trans2SkillData(re *[]SkillData) {
 			ssd.PhysicalAmaorCV = PhysicalAmaorCV[i]
 		}
 
+		if int32(len(BulletSpeed)) <= i {
+			ssd.BulletSpeed = BulletSpeed[len(BulletSpeed)-1]
+		} else {
+			ssd.BulletSpeed = BulletSpeed[i]
+		}
 		if int32(len(ForceMoveTime)) <= i {
 			ssd.ForceMoveTime = ForceMoveTime[len(ForceMoveTime)-1]
 		} else {

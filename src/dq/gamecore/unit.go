@@ -558,6 +558,22 @@ func (this *Unit) DoSkillException(skilldata *Skill, targetunit *Unit, b *Bullet
 			skilldata1.Param1 = b.ID
 
 		}
+	case 8: //瘟疫法师歇心光环
+		{
+			//对击杀英雄是 增加5个buff
+			if targetunit == nil || targetunit.UnitType != 1 {
+				return
+			}
+			param := utils.GetInt32FromString3(skilldata.ExceptionParam, ":")
+			if len(param) < 2 {
+				return
+			}
+			count := param[0]
+			buffid := strconv.Itoa(int(param[1]))
+			for i := int32(0); i < count; i++ {
+				this.AddBuffFromStr(buffid, skilldata.Level, this)
+			}
+		}
 	default:
 	}
 }
@@ -628,6 +644,78 @@ func (this *Unit) DoForceMove(skilldata *Skill, targetpos vec2d.Vec2) bool {
 	return true
 }
 
+//检查击杀 触发特效
+func (this *Unit) CheckTriggerKillerSkill(target *Unit) {
+
+	//禁止被动
+	if this.NoPassiveSkill == 1 {
+		return
+	}
+
+	for _, v := range this.Skills {
+		//CastType              int32   // 施法类型:  1:主动技能  2:被动技能
+		//TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时 3:击杀单位时
+		//主动技能
+		if v.CastType == 2 && v.TriggerTime == 3 {
+			//检查cd 魔法消耗
+			if v.CheckCDTime() {
+				//检查 触发概率 和额外条件
+				if utils.CheckRandom(v.TriggerProbability) && this.CheckTriggerOtherRule(v.TriggerOtherRule, v.TriggerOtherRuleParam) {
+
+					skilldata := v
+					data := &protomsg.CS_PlayerSkill{}
+					data.TargetUnitID = target.ID
+					data.SkillID = v.TypeID
+					data.X = float32(target.Body.Position.X)
+					data.Y = float32(target.Body.Position.Y)
+					//驱散自己的buff
+					this.ClearBuffForTarget(this, skilldata.MyClearLevel)
+
+					//MyBuff
+					buffs := this.AddBuffFromStr(skilldata.MyBuff, skilldata.Level, this)
+					for _, v := range buffs {
+						v.UseableUnitID = data.TargetUnitID
+					}
+					//MyHalo
+					this.AddHaloFromStr(skilldata.MyHalo, skilldata.Level, nil)
+
+					//创建子弹
+					bullets := skilldata.CreateBullet(this, data)
+					if len(bullets) > 0 {
+						for _, v := range bullets {
+							if skilldata.TriggerAttackEffect == 1 {
+								this.CheckTriggerAttackSkill(v)
+							}
+							this.AddBullet(v)
+						}
+
+					}
+
+					//加血
+					if skilldata.AddHPTarget == 1 {
+						this.DoAddHP(skilldata.AddHPType, skilldata.AddHPValue)
+					}
+					//特殊处理
+					targetunit := this.InScene.FindUnitByID(data.TargetUnitID)
+					if len(bullets) > 0 {
+						this.DoSkillException(skilldata, targetunit, bullets[0])
+					} else {
+						this.DoSkillException(skilldata, targetunit, nil)
+					}
+
+					//消耗 CD
+					namacost := skilldata.GetManaCost() - int32(this.ManaCost*float32(skilldata.GetManaCost()))
+					this.ChangeMP(-namacost)
+
+					cdtime := skilldata.Cooldown - this.MagicCD*skilldata.Cooldown
+					skilldata.FreshCDTime(cdtime)
+
+				}
+			}
+		}
+	}
+}
+
 //检查攻击 触发攻击特效
 func (this *Unit) CheckTriggerBeAttackSkill(target *Unit) {
 
@@ -688,7 +776,7 @@ func (this *Unit) CheckTriggerBeAttackSkill(target *Unit) {
 					}
 
 					//消耗 CD
-					namacost := skilldata.ManaCost - int32(this.ManaCost*float32(skilldata.ManaCost))
+					namacost := skilldata.GetManaCost() - int32(this.ManaCost*float32(skilldata.GetManaCost()))
 					this.ChangeMP(-namacost)
 
 					cdtime := skilldata.Cooldown - this.MagicCD*skilldata.Cooldown
@@ -777,7 +865,7 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 	}
 
 	//消耗 CD
-	namacost := skilldata.ManaCost - int32(this.ManaCost*float32(skilldata.ManaCost))
+	namacost := skilldata.GetManaCost() - int32(this.ManaCost*float32(skilldata.GetManaCost()))
 	this.ChangeMP(-namacost)
 
 	cdtime := skilldata.Cooldown - this.MagicCD*skilldata.Cooldown
@@ -827,7 +915,7 @@ func (this *Unit) UseSkillEnable(data *protomsg.CS_PlayerSkill) bool {
 		return false
 	}
 	//魔法不足
-	shouldmp := skilldata.ManaCost - int32(this.ManaCost*float32(skilldata.ManaCost))
+	shouldmp := skilldata.GetManaCost() - int32(this.ManaCost*float32(skilldata.GetManaCost()))
 	if shouldmp > this.MP {
 		return false
 	}
@@ -1165,6 +1253,7 @@ type UnitBaseProperty struct {
 	StatusAmaor    float32 //状态抗性(0)
 	Dodge          float32 //闪避(0)
 	HPRegain       float32 //生命恢复
+	AddHPEffect    float32 //加血效果变化
 
 	NoCareDodge     float32 //无视闪避几率
 	AddedMagicRange float32 //额外施法距离
@@ -1702,16 +1791,29 @@ func (this *Unit) CalAttribute() {
 
 //加血
 func (this *Unit) DoAddHP(addType int32, addval float32) int32 {
+	re := int32(0)
 	if addType == 1 {
-		return this.ChangeHP(int32(addval))
+		re = this.ChangeHP(int32(addval))
 	} else if addType == 2 {
-		return this.ChangeHP(0 - this.GetTimeAndHurt(addval))
+		re = this.ChangeHP(0 - this.GetTimeAndHurt(addval))
 	}
-	return 0
+	//客户端显示
+	if this.MyPlayer != nil {
+		mph := &protomsg.MsgPlayerHurt{HurtUnitID: this.ID, HurtAllValue: re}
+		this.MyPlayer.AddHurtValue(mph)
+	}
+
+	return re
 }
 
 //改变血量
 func (this *Unit) ChangeHP(hp int32) int32 {
+
+	//加血增强
+	if hp > 0 {
+		hp = hp + int32(float32(hp)*this.AddHPEffect)
+	}
+
 	lasthp := this.HP
 	this.HP += hp
 	if this.HP <= 0 {
@@ -1931,6 +2033,7 @@ func (this *Unit) CalControlState() {
 
 	this.AddedMagicRange = 0 //额外施法距离
 	this.ManaCost = 0        //魔法消耗降低
+	this.AddHPEffect = 0     //
 	this.MagicCD = 0         //技能CD降低
 	this.Invisible = 2       //隐身   否
 	this.InvisibleBeSee = 2
@@ -2014,12 +2117,14 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 	add.AllHurtCV += v1.AllHurtCV
 	add.DoAllHurtCV += v1.DoAllHurtCV
 	add.AttackRange += v1.AttackRangeCV
+	add.AddHPEffect += v1.AddHPEffectCV
 
 	this.MagicScale = utils.NoLinerAdd(this.MagicScale, v1.MagicScaleCV)
 	this.MagicAmaor = utils.NoLinerAdd(this.MagicAmaor, v1.MagicAmaorCV)
 	this.Dodge = utils.NoLinerAdd(this.Dodge, v1.DodgeCV)
 	this.NoCareDodge = utils.NoLinerAdd(this.NoCareDodge, v1.NoCareDodgeCV)
 	this.ManaCost = utils.NoLinerAdd(this.ManaCost, v1.ManaCostCV)
+	//this.AddHPEffect = utils.NoLinerAdd(this.AddHPEffect, v1.AddHPEffectCV)
 	this.MagicCD = utils.NoLinerAdd(this.MagicCD, v1.MagicCDCV)
 
 	if v1.NoMove == 1 {
@@ -2094,6 +2199,7 @@ func (this *Unit) AddBuffProperty(add *UnitBaseProperty) {
 	this.AllHurtCV += add.AllHurtCV
 	this.DoAllHurtCV += add.DoAllHurtCV
 	this.AttackRange += add.AttackRange
+	this.AddHPEffect += add.AddHPEffect
 
 }
 
@@ -2329,7 +2435,7 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 					bf[0].TagNum = buff.TagNum
 				}
 			}
-			//log.Info("bb--111111122:%d  %f  %f", buff.TypeID, bf[0].RemainTime, buff.Time)
+			//log.Info("bb--111111122:%d  %f  %f  %f  ", buff.TypeID, bf[0].RemainTime, buff.Time, utils.GetCurTimeOfSecond())
 			return bf[0]
 
 		} else if buff.OverlyingType == 2 {
@@ -2348,7 +2454,7 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 		bfs = append(bfs, buff)
 		this.Buffs[buff.TypeID] = bfs
 		//log.Info("--111111144")
-		//log.Info("aa--111111122:%d", buff.TypeID)
+		//log.Info("aa--111111122:%d  %f  %f", buff.TypeID, utils.GetCurTimeOfSecond(), bfs[0].RemainTime)
 		this.CheckTriggerCreateBuff(buff)
 
 		//给单位计算buff效果
@@ -2663,6 +2769,7 @@ func (this *Unit) CheckTriggerDie(killer *Unit) {
 
 	killer.RemoveBuffForKilled()
 	killer.RemoveHaloForKilled()
+	killer.CheckTriggerKillerSkill(this)
 
 	//--------------处理buff Exception-------------
 
@@ -2789,7 +2896,7 @@ func (this *Unit) FreshClientData() {
 		skdata.CastRange = v.CastRange + this.AddedMagicRange
 		skdata.Cooldown = v.Cooldown
 		skdata.HurtRange = v.HurtRange
-		skdata.ManaCost = v.ManaCost
+		skdata.ManaCost = v.GetManaCost()
 		skdata.AttackAutoActive = v.AttackAutoActive
 		skdata.Visible = v.Visible
 		skdata.RemainSkillCount = v.RemainSkillCount
@@ -2906,7 +3013,7 @@ func (this *Unit) FreshClientDataSub() {
 		skdata.CastRange = v.CastRange + this.AddedMagicRange - lastdata.CastRange
 		skdata.Cooldown = v.Cooldown - lastdata.Cooldown
 		skdata.HurtRange = v.HurtRange - lastdata.HurtRange
-		skdata.ManaCost = v.ManaCost - lastdata.ManaCost
+		skdata.ManaCost = v.GetManaCost() - lastdata.ManaCost
 		skdata.AttackAutoActive = v.AttackAutoActive - lastdata.AttackAutoActive
 		skdata.Visible = v.Visible - lastdata.Visible
 		skdata.RemainSkillCount = v.RemainSkillCount - lastdata.RemainSkillCount

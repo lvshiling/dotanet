@@ -39,6 +39,37 @@ type Halo struct {
 	ClientDataSub *protomsg.HaloDatas //客户端显示差异数据
 }
 
+func (this *Halo) GetHurtValue(src *Unit, dest *Unit) int32 {
+	switch this.HurtValueType {
+	case 0:
+		return int32(this.HurtValue)
+	case 1: //受到总伤害比例 的比例
+		{
+			if dest == nil || dest.IsDisappear() {
+				return 0
+			}
+			return int32(this.HurtValue * (1 - float32(dest.HP)/float32(dest.MAX_HP)) * 100.0)
+		}
+	case 2: //最大血量百分比
+		{
+			if dest == nil || dest.IsDisappear() {
+				return 0
+			}
+			return int32(this.HurtValue * float32(dest.MAX_HP))
+		}
+	case 3: //受到总伤害比例
+		{
+			if dest == nil || dest.IsDisappear() {
+				return 0
+			}
+			return int32(this.HurtValue * (1 - float32(dest.HP)/float32(dest.MAX_HP)) * float32(dest.MAX_HP))
+		}
+	}
+
+	return 0
+
+}
+
 func (this *Halo) DoHurtException(b *Bullet) {
 	if this.Exception <= 0 {
 		return
@@ -150,10 +181,10 @@ func (this *Halo) Update(dt float32) {
 								b.SetProjectileMode(this.BulletModeType, this.BulletSpeed)
 								//技能增强
 								if this.HurtType == 2 {
-									hurtvalue := (this.HurtValue + int32(float32(this.HurtValue)*this.GetCastUnit().MagicScale))
+									hurtvalue := (this.GetHurtValue(b.SrcUnit, b.DestUnit) + int32(float32(this.GetHurtValue(b.SrcUnit, b.DestUnit))*this.GetCastUnit().MagicScale))
 									b.AddOtherHurt(HurtInfo{HurtType: this.HurtType, HurtValue: hurtvalue})
 								} else {
-									b.AddOtherHurt(HurtInfo{HurtType: this.HurtType, HurtValue: this.HurtValue})
+									b.AddOtherHurt(HurtInfo{HurtType: this.HurtType, HurtValue: this.GetHurtValue(b.SrcUnit, b.DestUnit)})
 								}
 								//特殊情况处理
 								this.DoHurtException(b)

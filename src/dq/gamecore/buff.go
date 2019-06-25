@@ -180,12 +180,26 @@ func (this *Buff) GetHurtValue(src *Unit, dest *Unit) int32 {
 	switch this.HurtValueType {
 	case 0:
 		return int32(this.HurtValue)
-	case 1:
+	case 1: //受到总伤害比例 的比例
 		{
 			if dest == nil || dest.IsDisappear() {
 				return 0
 			}
 			return int32(this.HurtValue * (1 - float32(dest.HP)/float32(dest.MAX_HP)) * 100.0)
+		}
+	case 2: //最大血量百分比
+		{
+			if dest == nil || dest.IsDisappear() {
+				return 0
+			}
+			return int32(this.HurtValue * float32(dest.MAX_HP))
+		}
+	case 3: //受到总伤害比例
+		{
+			if dest == nil || dest.IsDisappear() {
+				return 0
+			}
+			return int32(this.HurtValue * (1 - float32(dest.HP)/float32(dest.MAX_HP)) * float32(dest.MAX_HP))
 		}
 	}
 

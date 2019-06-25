@@ -161,6 +161,7 @@ type BuffData struct {
 	HPRegainCR                float32 //生命恢复变化率 0.5表示增加50%的生命恢复
 	HPRegainCV                float32 //生命恢复变化量 1.2表示增加1.2hp每秒的生命恢复
 	HPRegainCVOfMaxHP         float32 //生命恢复变化量以最大生命值为基础 0.2表示增加20%最大生命值每秒的生命恢复
+	AddHPEffectCV             float32 //加血效果变化量 0.2 表示加血效果增强20%
 	NoCareDodgeCV             float32 //无视闪避变化量 0.2就是增加20%的无视闪避
 	AddedMagicRangeCV         float32 //额外施法距离变化量 2.3表示增加施法距离2.3米
 	ManaCostCV                float32 //魔法消耗变化量 -0.1表示降低10%的魔法消耗
@@ -215,6 +216,7 @@ type BuffFileData struct {
 	HPRegainCR                string //生命恢复变化率 0.5表示增加50%的生命恢复
 	HPRegainCV                string //生命恢复变化量 1.2表示增加1.2hp每秒的生命恢复
 	HPRegainCVOfMaxHP         string //生命恢复变化量以最大生命值为基础 0.2表示增加20%最大生命值每秒的生命恢复
+	AddHPEffectCV             string //加血效果变化量 0.2 表示加血效果增强20%
 	NoCareDodgeCV             string //无视闪避变化量 0.2就是增加20%的无视闪避
 	AddedMagicRangeCV         string //额外施法距离变化量 2.3表示增加施法距离2.3米
 	ManaCostCV                string //魔法消耗变化量 -0.1表示降低10%的魔法消耗
@@ -268,6 +270,8 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 	HPRegainCR := utils.GetFloat32FromString2(this.HPRegainCR)
 	HPRegainCV := utils.GetFloat32FromString2(this.HPRegainCV)
 	HPRegainCVOfMaxHP := utils.GetFloat32FromString2(this.HPRegainCVOfMaxHP)
+	AddHPEffectCV := utils.GetFloat32FromString2(this.AddHPEffectCV)
+
 	NoCareDodgeCV := utils.GetFloat32FromString2(this.NoCareDodgeCV)
 	AddedMagicRangeCV := utils.GetFloat32FromString2(this.AddedMagicRangeCV)
 	ManaCostCV := utils.GetFloat32FromString2(this.ManaCostCV)
@@ -412,6 +416,11 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 			ssd.HPRegainCVOfMaxHP = HPRegainCVOfMaxHP[len(HPRegainCVOfMaxHP)-1]
 		} else {
 			ssd.HPRegainCVOfMaxHP = HPRegainCVOfMaxHP[i]
+		}
+		if int32(len(AddHPEffectCV)) <= i {
+			ssd.AddHPEffectCV = AddHPEffectCV[len(AddHPEffectCV)-1]
+		} else {
+			ssd.AddHPEffectCV = AddHPEffectCV[i]
 		}
 
 		if int32(len(NoCareDodgeCV)) <= i {

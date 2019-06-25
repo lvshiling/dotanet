@@ -33,6 +33,20 @@ func (this *Skill) DoActive() {
 	}
 }
 
+//获取魔法消耗
+func (this *Skill) GetManaCost() int32 {
+	if this.OtherManaCostType == 0 {
+		return this.ManaCost
+	} else if this.OtherManaCostType == 1 { //最大魔法百分比
+		if this.Parent == nil {
+			return this.ManaCost
+		}
+		v := this.ManaCost + int32(float32(this.Parent.MAX_MP)*this.OtherManaCostVal)
+		return v
+	}
+	return this.ManaCost
+}
+
 //设置显示
 func (this *Skill) SetVisible(visible int32) {
 	this.Visible = visible
