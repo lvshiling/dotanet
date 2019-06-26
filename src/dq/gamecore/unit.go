@@ -1549,6 +1549,8 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 	unitre.IsMain = 1
 	unitre.ControlID = player.Uid
 
+	log.Info("---DB_CharacterInfo---over")
+
 	return unitre
 }
 
@@ -1809,6 +1811,7 @@ func (this *Unit) DoAddHP(addType int32, addval float32) int32 {
 //改变血量
 func (this *Unit) ChangeHP(hp int32) int32 {
 
+	//log.Info("---ChangeHP11---:%d   :%d", hp, this.HP)
 	//加血增强
 	if hp > 0 {
 		hp = hp + int32(float32(hp)*this.AddHPEffect)
@@ -1827,6 +1830,7 @@ func (this *Unit) ChangeHP(hp int32) int32 {
 	if this.HP >= this.MAX_HP {
 		this.HP = this.MAX_HP
 	}
+	//log.Info("---ChangeHP---:%d   :%d", hp, this.HP)
 	return this.HP - lasthp
 	//log.Info("---ChangeHP---:%d   :%d", hp, this.HP)
 }
@@ -2626,7 +2630,7 @@ func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 	}
 
 	this.SaveTimeAndHurt(-hurtvalue)
-	//log.Info("---hurtvalue---%d   %f", hurtvalue, this.PhysicalResist)
+	//log.Info("---hurtvalue---:%d   %f", hurtvalue, this.PhysicalResist)
 	return false, -hurtvalue, -physicAttack, -magicAttack
 }
 func (this *Unit) CheckTriggerCreateBuff(v1 *Buff) {
