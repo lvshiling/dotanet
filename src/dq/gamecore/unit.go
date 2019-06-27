@@ -380,6 +380,8 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 					this.AddBuffFromStr(v.MyBuff, v.Level, this)
 					//添加自己的halo
 					this.AddHaloFromStr(v.MyHalo, v.Level, nil)
+					//--
+					b.SetProjectileMode(v.BulletModeType, v.BulletSpeed)
 					//暴击
 					b.SetCrit(v.TriggerCrit)
 					b.AddNoCareDodge(v.NoCareDodge)
@@ -435,6 +437,8 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 			//目标buff
 			b.AddTargetBuff(v.TargetBuff, v.Level)
 			b.AddTargetHalo(v.TargetHalo, v.Level)
+
+			b.SetProjectileMode(v.BulletModeType, v.BulletSpeed)
 			//强制移动
 			//if v.ForceMoveType == 1 {
 			b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel, v.ForceMoveType, v.ForceMoveBuff)
@@ -1189,14 +1193,18 @@ func (this *Unit) MoveCmd(data *protomsg.CS_PlayerMove) {
 
 //创建子弹的时候需要使用
 type UnitProjectilePos struct {
-	//弹道起始位置距离
-	ProjectileStartPosDis float32
-	//弹道起始位置高度
-	ProjectileStartPosHeight float32
-	//弹道结束位置距离
-	ProjectileEndPosDis float32
-	//弹道结束位置高度
-	ProjectileEndPosHeight float32
+	//弹道起始位置
+	ProjectileStartPosition vec2d.Vector3
+	//弹道结束位置
+	ProjectileEndPosition vec2d.Vector3
+	//	//弹道起始位置距离
+	//	ProjectileStartPosDis float32
+	//	//弹道起始位置高度
+	//	ProjectileStartPosHeight float32
+	//	//弹道结束位置距离
+	//	ProjectileEndPosDis float32
+	//	//弹道结束位置高度
+	//	ProjectileEndPosHeight float32
 }
 
 //获取弹道起始位置
@@ -1204,12 +1212,16 @@ func (this *Unit) GetProjectileStartPos() vec2d.Vector3 {
 	if this.Body == nil {
 		return vec2d.NewVector3(0, 0, 0.5)
 	}
-	pos := vec2d.Add(this.Body.Position, vec2d.Mul(this.Body.Direction.GetNormalized(), float64(this.ProjectileStartPosDis)))
+	v3 := vec2d.Vec2{X: this.ProjectileStartPosition.X, Y: this.ProjectileStartPosition.Z}
+	v3.Rotate(this.Body.Direction.Angle() - 90)
+
+	//pos := vec2d.Add(this.Body.Position, vec2d.Mul(this.Body.Direction.GetNormalized(), float64(this.ProjectileStartPosDis)))
+	pos := vec2d.Add(this.Body.Position, v3)
 
 	//log.Info("GetProjectileStartPos---:%f---:%f", this.ProjectileStartPosDis, this.ProjectileStartPosHeight)
 
 	//后期可能需要单位的z坐标参与计算
-	return vec2d.NewVector3(pos.X, pos.Y, float64(this.ProjectileStartPosHeight))
+	return vec2d.NewVector3(pos.X, pos.Y, float64(this.ProjectileStartPosition.Y))
 }
 
 //获取弹道结束位置
@@ -1217,10 +1229,16 @@ func (this *Unit) GetProjectileEndPos() vec2d.Vector3 {
 	if this.Body == nil {
 		return vec2d.NewVector3(0, 0, 0.5)
 	}
-	pos := vec2d.Add(this.Body.Position, vec2d.Mul(this.Body.Direction.GetNormalized(), float64(this.ProjectileEndPosDis)))
+	v3 := vec2d.Vec2{X: this.ProjectileEndPosition.X, Y: this.ProjectileEndPosition.Z}
+	v3.Rotate(this.Body.Direction.Angle() - 90)
+
+	//pos := vec2d.Add(this.Body.Position, vec2d.Mul(this.Body.Direction.GetNormalized(), float64(this.ProjectileStartPosDis)))
+	pos := vec2d.Add(this.Body.Position, v3)
+
+	//pos := vec2d.Add(this.Body.Position, vec2d.Mul(this.Body.Direction.GetNormalized(), float64(this.ProjectileEndPosDis)))
 
 	//后期可能需要单位的z坐标参与计算
-	return vec2d.NewVector3(pos.X, pos.Y, float64(this.ProjectileEndPosHeight))
+	return vec2d.NewVector3(pos.X, pos.Y, float64(this.ProjectileEndPosition.Y))
 }
 
 //初始化hp和mp
@@ -1568,8 +1586,8 @@ func (this *Unit) Init() {
 
 	//弹道位置计算
 
-	utils.GetFloat32FromString(this.ProjectileStartPos, &this.ProjectileStartPosDis, &this.ProjectileStartPosHeight)
-	utils.GetFloat32FromString(this.ProjectileEndPos, &this.ProjectileEndPosDis, &this.ProjectileEndPosHeight)
+	utils.GetFloat64FromString(this.ProjectileStartPos, &this.ProjectileStartPosition.X, &this.ProjectileStartPosition.Z, &this.ProjectileStartPosition.Y)
+	utils.GetFloat64FromString(this.ProjectileEndPos, &this.ProjectileEndPosition.X, &this.ProjectileEndPosition.Z, &this.ProjectileEndPosition.Y)
 
 	//this.TestData()
 	this.TimeHurts = make([]TimeAndHurt, 0)

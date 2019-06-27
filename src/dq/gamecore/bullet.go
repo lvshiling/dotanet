@@ -319,13 +319,21 @@ func (this *Bullet) SetCrit(crit float32) {
 
 //设置弹道
 func (this *Bullet) SetProjectileMode(modetype string, speed float32) {
-	this.ModeType = modetype
-	this.Speed = speed
-	if this.Speed <= 0 || this.Speed >= 1000000 {
-		this.MoveType = 1
+
+	if len(this.ModeType) <= 0 {
+		this.ModeType = modetype
+		this.Speed = speed
+		if this.Speed <= 0 || this.Speed >= 1000000 {
+			this.MoveType = 1
+		} else {
+			this.MoveType = 2
+		}
 	} else {
-		this.MoveType = 2
+		if len(modetype) > 0 {
+			this.ModeType += "," + modetype
+		}
 	}
+
 }
 
 //设置普通攻击伤害百分比

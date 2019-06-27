@@ -84,6 +84,27 @@ func GetFloat32FromString(str string, params ...(*float32)) {
 }
 
 //从字符串中获取数据 逗号分隔
+func GetFloat64FromString(str string, params ...(*float64)) {
+	str1 := strings.Split(str, ",")
+	count := 0
+	//log.Info("str1len:%d", len(str1))
+	for _, v := range params {
+
+		if len(str1) <= count {
+			return
+		}
+		//log.Info("str1:%s", str1[count])
+
+		value, err1 := strconv.ParseFloat(str1[count], 64)
+		if err1 == nil {
+			*v = float64(value)
+			//log.Info("v:%f", v)
+		}
+		count++
+	}
+}
+
+//从字符串中获取数据 逗号分隔
 func GetFloat32FromString2(str string) []float32 {
 	re := make([]float32, 0)
 	str1 := strings.Split(str, ",")
