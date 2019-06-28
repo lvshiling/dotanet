@@ -75,9 +75,10 @@ type Bullet struct {
 
 	UnitTargetTeam int32 //目标单位关系 1:友方  2:敌方 3:友方敌方都行
 
-	ModeType string  //子弹模型
-	Speed    float32 //子弹速度
-	MoveType int32   //移动类型 1:瞬间移动  2:直线移动
+	ModeType             string  //子弹模型
+	Speed                float32 //子弹速度
+	MoveType             int32   //移动类型 1:瞬间移动  2:直线移动
+	UseUnitProjectilePos int32   //是否使用单位攻击弹道起始点
 
 	State     int32 //子弹状态(1:创建,2:移动,3:到达后计算结果(伤害和回血) 4:完成 可以删除了)
 	NextState int32 //下一帧状态
@@ -169,10 +170,11 @@ func NewBullet2(src *Unit, pos vec2d.Vec2) *Bullet {
 	re := &Bullet{}
 	re.SrcUnit = src
 	re.DestUnit = nil
-	re.DestPos = vec2d.Vector3{pos.X, pos.Y, 0}
+	re.DestPos = vec2d.Vector3{pos.X, pos.Y, 1}
 	if src != nil {
 		re.PhysicalHurtAddHP = src.PhysicalHurtAddHP
 		re.MagicHurtAddHP = src.MagicHurtAddHP
+		re.DestPos = vec2d.Vector3{pos.X, pos.Y, src.ProjectileEndPosition.Y}
 	}
 	//唯一ID处理
 	re.ID = GetBulletID()
@@ -207,6 +209,7 @@ func (this *Bullet) Init() {
 
 	this.HurtRange.RangeType = 1 //单体攻击范围
 	this.MoveType = 1            //瞬间移动
+	this.UseUnitProjectilePos = 1
 
 	this.Crit = 1
 	this.ClearLevel = 0
@@ -367,7 +370,7 @@ func (this *Bullet) OnCreate() {
 			return
 		}
 		if this.IsSetStartPosition == false {
-			if this.SkillID <= 0 {
+			if this.UseUnitProjectilePos == 1 {
 
 				pos := this.SrcUnit.GetProjectileStartPos()
 
@@ -385,7 +388,7 @@ func (this *Bullet) OnCreate() {
 
 			} else {
 
-				this.Position = vec2d.NewVector3(this.SrcUnit.Body.Position.X, this.SrcUnit.Body.Position.Y, 0.5)
+				this.Position = vec2d.NewVector3(this.SrcUnit.Body.Position.X, this.SrcUnit.Body.Position.Y, this.SrcUnit.ProjectileEndPosition.Y)
 				//开始位置
 				this.StartPosition = this.Position.Clone()
 			}

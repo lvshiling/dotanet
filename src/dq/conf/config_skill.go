@@ -97,6 +97,7 @@ type SkillBaseData struct {
 	UnitTargetCamp         int32   //目标单位阵营 (1:英雄 2:普通单位 3:远古 4:boss) 5:都行
 	NoCareMagicImmune      int32   //无视技能免疫 (1:无视技能免疫 2:非)
 	BulletModeType         string  //子弹模型
+	UseUnitProjectilePos   int32   //是否使用单位攻击弹道起始点 1:是 2:否
 	HurtType               int32   //伤害类型(1:物理伤害 2:魔法伤害 3:纯粹伤害)
 	TriggerAttackEffect    int32   //能否触发普通攻击特效 (1:触发 2:不触发)
 	CastPoint              float32 //施法前摇(以施法时间为比列 0.5表示 施法的中间时间点触发)
