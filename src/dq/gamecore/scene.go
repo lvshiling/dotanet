@@ -101,17 +101,17 @@ func (this *Scene) Init() {
 		}
 
 	}
-	//	for i := 0; i < 4; i++ {
-	//		//创建英雄
-	//		hero1 := CreateUnit(this, 5+int32(i))
-	//		hero1.AttackMode = 3 //全体攻击模式
-	//		hero1.SetAI(NewNormalAI(hero1))
-	//		//设置移动核心body
-	//		pos1 := vec2d.Vec2{float64(2 + i*2), float64(5)}
-	//		r1 := vec2d.Vec2{hero1.CollisionR, hero1.CollisionR}
-	//		hero1.Body = this.MoveCore.CreateBody(pos1, r1, 0, 1)
-	//		this.Units[hero1.ID] = hero1
-	//	}
+	for i := 0; i < 4; i++ {
+		//创建英雄
+		hero1 := CreateUnit(this, 5+int32(i))
+		hero1.AttackMode = 3 //全体攻击模式
+		hero1.SetAI(NewNormalAI(hero1))
+		//设置移动核心body
+		pos1 := vec2d.Vec2{float64(2 + i*2), float64(5)}
+		r1 := vec2d.Vec2{hero1.CollisionR, hero1.CollisionR}
+		hero1.Body = this.MoveCore.CreateBody(pos1, r1, 0, 1)
+		this.Units[hero1.ID] = hero1
+	}
 
 	//创建英雄2
 	hero2 := CreateUnit(this, 15)
