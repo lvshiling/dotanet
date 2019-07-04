@@ -191,7 +191,7 @@ func (this *Halo) Update(dt float32) {
 								b.AddTargetBuff(this.TargetBuff, this.Level)
 								if b != nil {
 									if this.TriggerAttackEffect == 1 {
-										this.GetCastUnit().CheckTriggerAttackSkill(b)
+										this.GetCastUnit().CheckTriggerAttackSkill(b, make([]int32, 0))
 									}
 									//log.Info("----------------add bullet")
 									this.GetCastUnit().AddBullet(b)

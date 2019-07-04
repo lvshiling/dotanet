@@ -347,8 +347,29 @@ func (this *Unit) CheckTriggerOtherRule(rule int32, param string) bool {
 	return true
 }
 
+//检查被动触发技能 从 有攻击动画的技能
+func (this *Unit) GetTriggerAttackFromAttackAnim() []int32 {
+	//AttackAnim
+	var re = make([]int32, 0)
+	for _, v := range this.Skills {
+		//CastType              int32   // 施法类型:  1:主动技能  2:被动技能
+		//TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
+		//主动技能
+		if v.CastType == 2 && v.TriggerTime == 1 && v.AttackAnim > 0 {
+			//检查cd 魔法消耗
+			if v.CheckCDTime() {
+				//检查 触发概率 和额外条件
+				if utils.CheckRandom(v.TriggerProbability) && this.CheckTriggerOtherRule(v.TriggerOtherRule, v.TriggerOtherRuleParam) {
+					re = append(re, v.TypeID)
+				}
+			}
+		}
+	}
+	return re
+}
+
 //检查攻击 触发攻击特效
-func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
+func (this *Unit) CheckTriggerAttackSkill(b *Bullet, animattack []int32) {
 	//溅射buff
 	for _, v := range this.Buffs {
 		if len(v) > 0 {
@@ -371,52 +392,69 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet) {
 		//TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
 		//主动技能
 		if v.CastType == 2 && v.TriggerTime == 1 {
-			//检查cd 魔法消耗
-			if v.CheckCDTime() {
-				//检查 触发概率 和额外条件
-				if utils.CheckRandom(v.TriggerProbability) && this.CheckTriggerOtherRule(v.TriggerOtherRule, v.TriggerOtherRuleParam) {
-					//触发
-					//添加自己的buff
-					this.AddBuffFromStr(v.MyBuff, v.Level, this)
-					//添加自己的halo
-					this.AddHaloFromStr(v.MyHalo, v.Level, nil)
-					//--
-					b.SetProjectileMode(v.BulletModeType, v.BulletSpeed)
-					//暴击
-					b.SetCrit(v.TriggerCrit)
-					b.AddNoCareDodge(v.NoCareDodge)
-					b.AddDoHurtPhysicalAmaorCV(v.PhysicalAmaorCV)
-					//额外伤害
-					if v.HurtValue > 0 {
-						//技能增强
-						if v.HurtType == 2 {
-							hurtvalue := (v.HurtValue + int32(float32(v.HurtValue)*this.MagicScale))
-							b.AddOtherHurt(HurtInfo{HurtType: v.HurtType, HurtValue: hurtvalue})
-						} else {
-							b.AddOtherHurt(HurtInfo{HurtType: v.HurtType, HurtValue: v.HurtValue})
-						}
+			//animattack
+			isTrigger := false
+			if v.AttackAnim > 0 {
+				for _, v1 := range animattack {
+					if v.TypeID == v1 {
+						isTrigger = true
 					}
-					//特殊情况处理
-					this.DoSkillException(v, b.DestUnit, b)
-					//弹射
-					b.SetEjection(v.EjectionCount, v.EjectionRange, v.EjectionDecay)
-
-					//召唤信息
-					b.BulletCallUnitInfo = BulletCallUnitInfo{v.CallUnitInfo, v.Level}
-					//目标buff
-					b.AddTargetBuff(v.TargetBuff, v.Level)
-					b.AddTargetHalo(v.TargetHalo, v.Level)
-					//强制移动
-					//if v.ForceMoveType == 1 {
-					b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel, v.ForceMoveType, v.ForceMoveBuff)
-					//}
-					b.PhysicalHurtAddHP += v.PhysicalHurtAddHP
-					b.MagicHurtAddHP += v.MagicHurtAddHP
-
-					cdtime := v.Cooldown - this.MagicCD*v.Cooldown
-					v.FreshCDTime(cdtime)
-
 				}
+			} else {
+				if v.CheckCDTime() {
+					//检查 触发概率 和额外条件
+					if utils.CheckRandom(v.TriggerProbability) && this.CheckTriggerOtherRule(v.TriggerOtherRule, v.TriggerOtherRuleParam) {
+						isTrigger = true
+					}
+				}
+			}
+
+			//检查cd 魔法消耗
+			if isTrigger == true {
+				//检查 触发概率 和额外条件
+				//if utils.CheckRandom(v.TriggerProbability) && this.CheckTriggerOtherRule(v.TriggerOtherRule, v.TriggerOtherRuleParam) {
+				//触发
+				//添加自己的buff
+				this.AddBuffFromStr(v.MyBuff, v.Level, this)
+				//添加自己的halo
+				this.AddHaloFromStr(v.MyHalo, v.Level, nil)
+				//--
+				b.SetProjectileMode(v.BulletModeType, v.BulletSpeed)
+				//暴击
+				b.SetCrit(v.TriggerCrit)
+				b.AddNoCareDodge(v.NoCareDodge)
+				b.AddDoHurtPhysicalAmaorCV(v.PhysicalAmaorCV)
+				//额外伤害
+				if v.HurtValue > 0 {
+					//技能增强
+					if v.HurtType == 2 {
+						hurtvalue := (v.HurtValue + int32(float32(v.HurtValue)*this.MagicScale))
+						b.AddOtherHurt(HurtInfo{HurtType: v.HurtType, HurtValue: hurtvalue})
+					} else {
+						b.AddOtherHurt(HurtInfo{HurtType: v.HurtType, HurtValue: v.HurtValue})
+					}
+				}
+				//特殊情况处理
+				this.DoSkillException(v, b.DestUnit, b)
+				//弹射
+				b.SetEjection(v.EjectionCount, v.EjectionRange, v.EjectionDecay)
+
+				//召唤信息
+				b.BulletCallUnitInfo = BulletCallUnitInfo{v.CallUnitInfo, v.Level}
+				//目标buff
+				b.AddTargetBuff(v.TargetBuff, v.Level)
+				b.AddTargetHalo(v.TargetHalo, v.Level)
+				//强制移动
+				//if v.ForceMoveType == 1 {
+				b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel, v.ForceMoveType, v.ForceMoveBuff)
+				//}
+				b.PhysicalHurtAddHP += v.PhysicalHurtAddHP
+				b.MagicHurtAddHP += v.MagicHurtAddHP
+
+				cdtime := v.Cooldown - this.MagicCD*v.Cooldown
+				v.FreshCDTime(cdtime)
+
+				//}
 			}
 		} else if v.CastType == 1 && v.CastTargetType == 4 && v.AttackAutoActive == 1 {
 			//主动技能 攻击时自动释放的攻击特效
@@ -688,7 +726,7 @@ func (this *Unit) CheckTriggerKillerSkill(target *Unit) {
 					if len(bullets) > 0 {
 						for _, v := range bullets {
 							if skilldata.TriggerAttackEffect == 1 {
-								this.CheckTriggerAttackSkill(v)
+								this.CheckTriggerAttackSkill(v, make([]int32, 0))
 							}
 							this.AddBullet(v)
 						}
@@ -760,7 +798,7 @@ func (this *Unit) CheckTriggerBeAttackSkill(target *Unit) {
 					if len(bullets) > 0 {
 						for _, v := range bullets {
 							if skilldata.TriggerAttackEffect == 1 {
-								this.CheckTriggerAttackSkill(v)
+								this.CheckTriggerAttackSkill(v, make([]int32, 0))
 							}
 							this.AddBullet(v)
 						}
@@ -844,7 +882,7 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 	if len(bullets) > 0 {
 		for _, v := range bullets {
 			if skilldata.TriggerAttackEffect == 1 {
-				this.CheckTriggerAttackSkill(v)
+				this.CheckTriggerAttackSkill(v, make([]int32, 0))
 			}
 			this.AddBullet(v)
 		}
@@ -1295,6 +1333,7 @@ type UnitProperty struct {
 	IsMain    int32 //是否是主单位 1:是  2:不是
 
 	AnimotorState int32 //动画状态 1:idle 2:walk 3:attack 4:skill 5:death
+	AttackAnim    int32 //攻击动画
 	//-------------新加----------
 	AttackMode int32 //攻击模式(1:和平模式 2:组队模式 3:全体模式 4:阵营模式(玩家,NPC) 5:行会模式)
 
@@ -2900,8 +2939,9 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.Z = this.Z
 	this.ClientData.IsMirrorImage = this.IsMirrorImage
 	this.ClientData.AttackRange = this.AttackRange
+	this.ClientData.AttackAnim = this.AttackAnim
 
-	//技能
+	//技能AttackAnim
 	this.ClientData.SD = make([]*protomsg.SkillDatas, 0)
 	for _, v := range this.Skills {
 		skdata := &protomsg.SkillDatas{}
@@ -3008,6 +3048,7 @@ func (this *Unit) FreshClientDataSub() {
 	this.ClientDataSub.Z = this.Z - this.ClientData.Z
 	this.ClientDataSub.IsMirrorImage = this.IsMirrorImage - this.ClientData.IsMirrorImage
 	this.ClientDataSub.AttackRange = this.AttackRange - this.ClientData.AttackRange
+	this.ClientDataSub.AttackAnim = this.AttackAnim - this.ClientData.AttackAnim
 
 	//技能
 	this.ClientDataSub.SD = make([]*protomsg.SkillDatas, 0)

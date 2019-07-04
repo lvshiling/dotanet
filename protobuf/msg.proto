@@ -126,8 +126,9 @@ message UnitDatas{
     float   Z = 29;//z坐标
     int32   IsMirrorImage = 30; //是否是镜像
     float   AttackRange = 31;//攻击距离
-    repeated SkillDatas SD = 32;//技能数据
-    repeated BuffDatas BD = 33;//buff数据
+    int32   AttackAnim = 32;//攻击动画
+    repeated SkillDatas SD = 33;//技能数据
+    repeated BuffDatas BD = 34;//buff数据
 
     //单位状态(idle walk attack skill die)
     //各种buff状态(单位身上的buff 包括剩余时间)

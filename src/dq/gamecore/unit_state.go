@@ -264,6 +264,8 @@ type AttackState struct {
 	OneAttackTime float64 //一次攻击所需的时间
 	IsDone        bool    //是否完成
 	AttackTarget  *Unit   //攻击目标
+
+	AttackAnimSkillID []int32 //攻击动画 触发被动技能
 }
 
 func NewAttackState(p *Unit) *AttackState {
@@ -361,7 +363,7 @@ func (this *AttackState) Update(dt float64) {
 			b.SetNormalHurtRatio(1)
 			b.AddNoCareDodge(this.Parent.NoCareDodge)
 			b.SetProjectileMode(this.Parent.ProjectileMode, this.Parent.ProjectileSpeed)
-			this.Parent.CheckTriggerAttackSkill(b)
+			this.Parent.CheckTriggerAttackSkill(b, this.AttackAnimSkillID)
 			this.Parent.AddBullet(b)
 
 			//b.AddTargetBuff("1", 4)
@@ -384,6 +386,7 @@ func (this *AttackState) Update(dt float64) {
 }
 func (this *AttackState) OnEnd() {
 	//log.Info(" AttackState end%f", utils.GetCurTimeOfSecond())
+	this.Parent.AttackAnim = 0
 	this.Parent.FreshBuffsUseable(nil)
 }
 func (this *AttackState) OnStart() {
@@ -399,6 +402,11 @@ func (this *AttackState) OnStart() {
 	this.IsDoBullet = false
 	this.IsDone = false
 	this.OneAttackTime = float64(this.Parent.GetOneAttackTime())
+
+	this.AttackAnimSkillID = this.Parent.GetTriggerAttackFromAttackAnim()
+	if len(this.AttackAnimSkillID) > 0 {
+		this.Parent.AttackAnim = 1
+	}
 
 	//	if this.Parent.UnitType == 1 {
 	//		log.Info(" Attacktime%f   speed:%f", this.OneAttackTime, this.Parent.AttackSpeed)
