@@ -89,7 +89,11 @@ message BuffDatas{
     int32    TypeID = 1; //buffid 对应人物身上的特效 buff图标
     float    RemainTime = 2;//剩余时间
     float    Time = 3;//总时间
-    int32    TagNum = 4;//标记数字  
+    int32    TagNum = 4;//标记数字
+    int32    ConnectionType = 5; //是否有连接 0表示没有 1表示有连接点 2表示有连接单位
+    float    ConnectionX = 6;//连接点x
+    float    ConnectionY = 7;//连接点y
+    float    ConnectionZ = 8;//连接点z
 
 }
 

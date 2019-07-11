@@ -1269,6 +1269,7 @@ func (this *Unit) GetProjectileEndPos() vec2d.Vector3 {
 	}
 	v3 := vec2d.Vec2{X: this.ProjectileEndPosition.X, Y: this.ProjectileEndPosition.Z}
 	v3.Rotate(this.Body.Direction.Angle() - 90)
+	//log.Info("------GetProjectileEndPos:%v", v3)
 
 	//pos := vec2d.Add(this.Body.Position, vec2d.Mul(this.Body.Direction.GetNormalized(), float64(this.ProjectileStartPosDis)))
 	pos := vec2d.Add(this.Body.Position, v3)
@@ -2547,7 +2548,10 @@ func (this *Unit) AddBuffFromStr(buffsstr string, level int32, castunit *Unit) [
 		//log.Info("----------buff:", buff.TypeID)
 		if buff != nil {
 			buff = this.AddBuffFromBuff(buff, castunit)
-			re = append(re, buff)
+			if buff != nil {
+				re = append(re, buff)
+			}
+
 		}
 	}
 	return re
@@ -2974,6 +2978,11 @@ func (this *Unit) FreshClientData() {
 		buffdata.TypeID = v[0].TypeID
 		buffdata.RemainTime = v[0].RemainTime
 		buffdata.Time = v[0].Time
+		buffdata.ConnectionType = v[0].ConnectionType
+		buffdata.ConnectionX = float32(v[0].ConnectionPoint.X)
+		buffdata.ConnectionY = float32(v[0].ConnectionPoint.Y)
+		buffdata.ConnectionZ = float32(0)
+
 		if len(v) > 1 {
 			buffdata.TagNum = int32(len(v))
 		} else {
@@ -3106,6 +3115,11 @@ func (this *Unit) FreshClientDataSub() {
 		} else {
 			buffdata.TagNum = v[0].TagNum - lastdata.TagNum
 		}
+
+		buffdata.ConnectionType = v[0].ConnectionType - lastdata.ConnectionType
+		buffdata.ConnectionX = float32(v[0].ConnectionPoint.X) - lastdata.ConnectionX
+		buffdata.ConnectionY = float32(v[0].ConnectionPoint.Y) - lastdata.ConnectionY
+		buffdata.ConnectionZ = float32(0) - lastdata.ConnectionZ
 
 		this.ClientDataSub.BD = append(this.ClientDataSub.BD, buffdata)
 	}

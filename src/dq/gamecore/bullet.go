@@ -772,6 +772,7 @@ func (this *Bullet) HurtUnit(unit *Unit) int32 {
 	if this.ForceMoveTime > 0 {
 
 		if this.ForceMoveType == 1 || this.ForceMoveType == 4 {
+			connectpoint := vec2d.Vec2{0, 0}
 			if this.ForceMoveType == 1 { //向后推
 				if this.HurtRange.RangeType == 1 {
 
@@ -779,24 +780,29 @@ func (this *Bullet) HurtUnit(unit *Unit) int32 {
 					dir.Normalize()
 					dir.MulToFloat64(float64(this.ForceMoveSpeedSize))
 					unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel, float32(0))
+					connectpoint = vec2d.Vec2{this.StartPosition.X, this.StartPosition.Y}
 				} else {
 					dir := vec2d.Sub(unit.Body.Position, this.GetPosition2D())
 					dir.Normalize()
 					dir.MulToFloat64(float64(this.ForceMoveSpeedSize))
 					unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel, float32(0))
+					connectpoint = this.GetPosition2D()
 				}
 			} else if this.ForceMoveType == 4 { //向前拉
+
 				if this.HurtRange.RangeType == 1 {
 
 					dir := vec2d.Sub(vec2d.Vec2{this.StartPosition.X, this.StartPosition.Y}, unit.Body.Position)
 					dir.Normalize()
 					dir.MulToFloat64(float64(this.ForceMoveSpeedSize))
 					unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel, float32(0))
+					connectpoint = vec2d.Vec2{this.StartPosition.X, this.StartPosition.Y}
 				} else {
 					dir := vec2d.Sub(this.GetPosition2D(), unit.Body.Position)
 					dir.Normalize()
 					dir.MulToFloat64(float64(this.ForceMoveSpeedSize))
 					unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel, float32(0))
+					connectpoint = this.GetPosition2D()
 				}
 			}
 
@@ -806,6 +812,7 @@ func (this *Bullet) HurtUnit(unit *Unit) int32 {
 				for _, v := range buffs {
 					v.RemainTime = this.ForceMoveTime
 					v.Time = this.ForceMoveTime
+					v.SetConnectionPoint(connectpoint)
 				}
 			}
 		}

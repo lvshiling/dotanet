@@ -177,6 +177,7 @@ func (this *Halo) Update(dt float32) {
 								}
 
 								b := NewBullet1(this.GetCastUnit(), v)
+								b.SetStartPosition(vec2d.NewVector3(this.Position.X, this.Position.Y, float64(this.PositionZ)))
 								b.SetNormalHurtRatio(this.NormalHurt)
 								b.SetProjectileMode(this.BulletModeType, this.BulletSpeed)
 								//技能增强
@@ -191,7 +192,8 @@ func (this *Halo) Update(dt float32) {
 								b.AddTargetBuff(this.TargetBuff, this.Level)
 								if b != nil {
 									if this.TriggerAttackEffect == 1 {
-										this.GetCastUnit().CheckTriggerAttackSkill(b, make([]int32, 0))
+										triggerskill := this.GetCastUnit().GetTriggerAttackFromAttackAnim()
+										this.GetCastUnit().CheckTriggerAttackSkill(b, triggerskill)
 									}
 									//log.Info("----------------add bullet")
 									this.GetCastUnit().AddBullet(b)
