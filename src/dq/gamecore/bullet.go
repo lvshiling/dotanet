@@ -657,12 +657,14 @@ func (this *Bullet) DoException(unit *Unit) {
 				if len(buffs) > 0 {
 					buffs[0].RemainTime = big
 					buffs[0].Time = big
+					buffs[0].SetConnectionPoint(nextunit.Body.Position)
 				}
 
 				buffs2 := nextunit.AddBuffFromStr(strconv.Itoa(buff), this.SkillLevel, this.SrcUnit)
 				if len(buffs2) > 0 {
 					buffs2[0].RemainTime = big
 					buffs2[0].Time = big
+					buffs2[0].SetConnectionPoint(unit.Body.Position)
 				}
 				//log.Info("5555555555")
 			}
