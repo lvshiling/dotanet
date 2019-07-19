@@ -175,7 +175,7 @@ func (this *Halo) Update(dt float32) {
 								if this.HurtType == 4 {
 									continue
 								}
-
+								//log.Info("--create bullet %f", utils.GetCurTimeOfSecond())
 								b := NewBullet1(this.GetCastUnit(), v)
 								b.SetStartPosition(vec2d.NewVector3(this.Position.X, this.Position.Y, float64(this.PositionZ)))
 								b.SetNormalHurtRatio(this.NormalHurt)
@@ -256,7 +256,7 @@ func (this *Halo) SetParent(parent *Unit) {
 //创建buf
 func NewHalo(typeid int32, level int32) *Halo {
 
-	log.Info("---new halo:%d   %d", typeid, level)
+	log.Info("---new halo:%d   %d %f", typeid, level, utils.GetCurTimeOfSecond())
 
 	halodata := conf.GetHaloData(typeid, level)
 	if halodata == nil {

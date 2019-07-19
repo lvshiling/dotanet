@@ -175,11 +175,13 @@ func (this *MoveState) OnTransform() {
 			return
 		}
 	} else {
-		if this.Parent.HaveMoveCmd() == false || this.Parent.GetCanMove() == false {
-			this.OnEnd()
-			this.Parent.SetState(NewIdleState(this.Parent))
-			return
-		}
+
+	}
+
+	if this.Parent.HaveMoveCmd() == false || this.Parent.GetCanMove() == false {
+		this.OnEnd()
+		this.Parent.SetState(NewIdleState(this.Parent))
+		return
 	}
 
 }
