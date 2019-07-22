@@ -382,6 +382,9 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet, animattack []int32) {
 					Radius:            v[0].SpurtingRadius,
 					Radian:            v[0].SpurtingRadian,
 					NoCareMagicImmune: v[0].SpurtingNoCareMagicImmune})
+				if len(v[0].SpurtingBulletModeType) > 0 {
+					b.SetProjectileMode(v[0].SpurtingBulletModeType, 0)
+				}
 
 			}
 		}
