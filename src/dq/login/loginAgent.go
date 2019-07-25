@@ -216,7 +216,7 @@ func (a *LoginAgent) DoSelectCharacter(data *protomsg.MsgBase) {
 
 	//初始场景名字
 	if len(players[0].SceneName) <= 0 {
-		players[0].SceneName = "Map/set_5v5"
+		players[0].SceneName = "Map/Scene1"
 	}
 
 	//通知进入场景

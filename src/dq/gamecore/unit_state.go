@@ -174,14 +174,17 @@ func (this *MoveState) OnTransform() {
 			}
 			return
 		}
+		if this.Parent.GetCanMove() == false {
+			this.OnEnd()
+			this.Parent.SetState(NewIdleState(this.Parent))
+			return
+		}
 	} else {
-
-	}
-
-	if this.Parent.HaveMoveCmd() == false || this.Parent.GetCanMove() == false {
-		this.OnEnd()
-		this.Parent.SetState(NewIdleState(this.Parent))
-		return
+		if this.Parent.HaveMoveCmd() == false || this.Parent.GetCanMove() == false {
+			this.OnEnd()
+			this.Parent.SetState(NewIdleState(this.Parent))
+			return
+		}
 	}
 
 }
@@ -456,7 +459,7 @@ func (this *DeathState) Update(dt float64) {
 	if dotime >= 2 {
 		this.Parent.SetAnimotorState(5)
 	}
-	if dotime >= 4 {
+	if dotime >= this.Parent.Death2RemoveTime {
 		this.Parent.InScene.RemoveUnit(this.Parent)
 	}
 }

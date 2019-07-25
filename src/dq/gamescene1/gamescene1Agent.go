@@ -60,8 +60,8 @@ func (a *GameScene1Agent) Init() {
 
 	//创建场景
 	for k := 0; k < 1; k++ {
-		scene := gamecore.CreateScene("Map/set_5v5")
-		a.Scenes.Set("Map/set_5v5", scene)
+		scene := gamecore.CreateScene("Map/Scene1")
+		a.Scenes.Set("Map/Scene1", scene)
 		a.wgScene.Add(1)
 		go func() {
 			scene.Update()
@@ -125,6 +125,7 @@ func (a *GameScene1Agent) DoMsgUserEnterScene(data *protomsg.MsgBase) {
 
 		scene := a.Scenes.Get(h2.SceneName)
 		if scene == nil {
+			log.Info("no scene :%s", h2.SceneName)
 			return
 		}
 

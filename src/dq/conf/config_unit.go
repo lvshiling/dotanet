@@ -107,6 +107,7 @@ type UnitFileData struct {
 	//-----
 	Camp int32 //阵营(1:玩家 2:NPC)  玩家的召唤物和幻象camp也是 玩家
 
-	InitSkillsInfo string  //初始技能信息 逗号分隔
-	CollisionR     float64 //碰撞半径
+	InitSkillsInfo   string  //初始技能信息 逗号分隔
+	CollisionR       float64 //碰撞半径
+	Death2RemoveTime float64 //死亡到删除的时间
 }

@@ -1558,6 +1558,8 @@ func CreateUnitByCopyUnit(unit *Unit, controlplayer *Player) *Unit {
 	unitre.HaloInSkills = make(map[int32][]int32)
 	unitre.FreshHaloInSkills()
 
+	unitre.Death2RemoveTime = 0
+
 	//初始化
 	unitre.Init()
 	unitre.IsMain = 0
