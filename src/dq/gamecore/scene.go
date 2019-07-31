@@ -85,22 +85,22 @@ func (this *Scene) Init() {
 			this.MoveCore.CreateBodyPolygon(pos, v.Points, 1, 2)
 		}
 	}
-	//	//场景分区数据 创建100个单位
-	//	for i := 0; i < 20; i++ {
-	//		for j := 0; j < 20; j++ {
-	//			unit := CreateUnit(this, 2)
-	//			unit.SetAI(NewNormalAI(unit))
-	//			//设置移动核心body
-	//			pos := vec2d.Vec2{float64(-63 + j*6), float64(-63 + i*6)}
-	//			r := vec2d.Vec2{unit.CollisionR, unit.CollisionR}
-	//			unit.Body = this.MoveCore.CreateBody(pos, r, 0, 1)
-	//			//unit.Body.Tag = i*20 + j
-	//			this.Units[unit.ID] = unit
+	//场景分区数据 创建100个单位
+	for i := 0; i < 20; i++ {
+		for j := 0; j < 20; j++ {
+			unit := CreateUnit(this, 2)
+			unit.SetAI(NewNormalAI(unit))
+			//设置移动核心body
+			pos := vec2d.Vec2{float64(-63 + j*6), float64(-63 + i*6)}
+			r := vec2d.Vec2{unit.CollisionR, unit.CollisionR}
+			unit.Body = this.MoveCore.CreateBody(pos, r, 0, 1)
+			//unit.Body.Tag = i*20 + j
+			this.Units[unit.ID] = unit
 
-	//			//timer.AddCallback(time.Second*15+time.Second*time.Duration(((i*20)+j)*2), this.UnitBlink, unit)
-	//		}
+			//timer.AddCallback(time.Second*15+time.Second*time.Duration(((i*20)+j)*2), this.UnitBlink, unit)
+		}
 
-	//	}
+	}
 	//	for i := 0; i < 4; i++ {
 	//		//创建英雄
 	//		hero1 := CreateUnit(this, 5+int32(i))

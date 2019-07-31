@@ -1202,10 +1202,15 @@ type WardCore struct {
 	Bodys map[*Body]*Body
 	//Bodys []*Body
 	ZoneBodys map[utils.SceneZone][]*Body
+
+	//巨大障碍物 和Bodys重复
+	BigBodys map[*Body]*Body
 }
 
 //获取静止且不包含目的点 的body
 func (this *WardCore) GetStaticBodysNoTarget(bodys *[]*Body, mypos vec2d.Vec2, target vec2d.Vec2, mybody *Body) {
+
+	allbody := make(map[*Body]*Body)
 
 	zones := utils.GetVisibleZonesFromWH_Two((mypos.X), (mypos.Y), target.X, target.Y, gWardCore_ZoneWidth, gWardCore_ZoneHeight)
 	//遍历可视区域
@@ -1219,20 +1224,32 @@ func (this *WardCore) GetStaticBodysNoTarget(bodys *[]*Body, mypos vec2d.Vec2, t
 						continue
 					}
 					(*bodys) = append((*bodys), v)
+					allbody[v] = v
 				}
 			}
 		}
 	}
+	//大障碍物
+	r1 := utils.CreateRectFrom2(mypos, target)
+	r2 := utils.Rect{}
+	for _, v := range this.BigBodys {
+		if v.IsRect {
+			r2 = utils.CreateRectFromCYWardR(v.Position, v.R)
+		} else {
+			r2 = utils.CreateRectFromCYWardP(v.Position, v.OffsetPoints)
+		}
+		if utils.CheckRectCollision(r1, r2) {
+			if _, ok := allbody[v]; !ok {
 
-	//	for _, v := range this.Bodys {
-	//		if v.CurSpeedSize <= 0 {
-	//			mypolygon1 := v.GetMyPolygon(nil)
-	//			if mypolygon1.IsInMyPolygon(target) {
-	//				continue
-	//			}
-	//			(*bodys) = append((*bodys), v)
-	//		}
-	//	}
+				(*bodys) = append((*bodys), v)
+				allbody[v] = v
+
+			}
+		}
+
+	}
+	allbody = make(map[*Body]*Body)
+
 }
 
 //获取静止的body
@@ -1324,6 +1341,10 @@ func (this *WardCore) CreateBody(position vec2d.Vec2, r vec2d.Vec2, speedsize fl
 	body.TurnDirection = true
 	this.Bodys[body] = body
 
+	if r.X >= gWardCore_ZoneWidth || r.Y >= gWardCore_ZoneHeight {
+		this.BigBodys[body] = body
+	}
+
 	//body.BlinkToPos(position)
 	return body
 }
@@ -1340,18 +1361,28 @@ func (this *WardCore) CreateBodyPolygon(position vec2d.Vec2, points []vec2d.Vec2
 	body.IsCollisoin = true
 	body.TurnDirection = true
 	this.Bodys[body] = body
+
+	for _, v := range points {
+		if math.Abs(v.X) >= gWardCore_ZoneWidth || math.Abs(v.Y) >= gWardCore_ZoneHeight {
+			this.BigBodys[body] = body
+		}
+	}
+
 	return body
 }
 
 func (this *WardCore) RemoveBody(body *Body) {
 
 	delete(this.Bodys, body)
+	delete(this.BigBodys, body)
+
 }
 
 func CreateWardCore() *WardCore {
 	re := &WardCore{}
 	re.Bodys = make(map[*Body]*Body)
 	re.ZoneBodys = make(map[utils.SceneZone][]*Body)
+	re.BigBodys = make(map[*Body]*Body)
 
 	return re
 }

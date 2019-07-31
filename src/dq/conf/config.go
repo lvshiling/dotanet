@@ -48,7 +48,7 @@ func LoadScene(Path string) {
 		panic(err)
 	}
 
-	err, data := readFileInto(f.Name())
+	err, data := readBigFileInto(f.Name())
 	if err != nil {
 		panic(err)
 	}
@@ -115,6 +115,33 @@ type gateInfo struct {
 	MaxConnNum       int
 	PendingWriteNum  int
 	TimeOut          int
+}
+
+func readBigFileInto(path string) (error, []byte) {
+	var data []byte
+	buf := new(bytes.Buffer)
+	f, err := os.Open(path)
+	if err != nil {
+		return err, data
+	}
+	defer f.Close()
+	r := bufio.NewReaderSize(f, 1024*1024)
+	for {
+		line, err := r.ReadSlice('\n')
+		if err != nil {
+			if len(line) > 0 {
+				buf.Write(line)
+			}
+			break
+		}
+		//处理注释
+		if !strings.HasPrefix(strings.TrimLeft(string(line), "\t "), "//") {
+			buf.Write(line)
+		}
+	}
+	data = buf.Bytes()
+	//log.Info(string(data))
+	return nil, data
 }
 
 func readFileInto(path string) (error, []byte) {
