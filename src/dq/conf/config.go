@@ -165,6 +165,7 @@ type DoorWay struct {
 	NeedLevel   int32
 	NextX       float32
 	NextY       float32
+	HaloTypeID  int32
 }
 
 //基础配置文件

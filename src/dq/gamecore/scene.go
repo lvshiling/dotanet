@@ -113,7 +113,17 @@ func (this *Scene) Init() {
 		this.CreateUnitByConf(v)
 		log.Info("createunity :%v", v)
 	}
+	//传送门显示
 	this.DoorWays = createunitdata.DoorWays
+	for _, v := range this.DoorWays {
+		halo := NewHalo(v.HaloTypeID, 1)
+		halo.SetParent(nil)
+		halo.IsActive = false
+		halo.Position = vec2d.Vec2{X: v.X, Y: v.Y}
+		if halo != nil {
+			this.AddHalo(halo)
+		}
+	}
 
 	//	for i := 0; i < 4; i++ {
 	//		//创建英雄
