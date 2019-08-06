@@ -143,7 +143,9 @@ func (app *DefaultApp) Run() error {
 
 	conf.LoadConfig(f.Name()) //加载配置文件
 	conf.LoadScene("/bin/conf/SceneCollides.sc")
+	conf.LoadCreateUnit("/bin/conf/CreateUnits.sc")
 
+	conf.LoadSceneFileData() //加载场景配置信息
 	conf.LoadUnitFileData()  //加载单位数据配置
 	conf.LoadSkillFileData() //加载技能数据配置
 	conf.LoadBuffFileData()  //加载buff数据配置

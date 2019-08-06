@@ -169,7 +169,7 @@ message MsgUserEnterScene {
     int32 ConnectId = 2;
     string SrcServerName = 3;
     string DestServerName = 4;
-    string SceneName = 5;
+    int32 SceneID = 5;
     bytes Datas = 6;    //玩家信息数据
 }
 

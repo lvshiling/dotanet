@@ -50,13 +50,13 @@ func InitBuffDatas() {
 	log.Info("----------buff---------")
 
 	//log.Info("-:%v", SkillDatas)
-	for i := 1; i < 5; i++ {
-		t := GetBuffData(1, int32(i))
-		if t != nil {
-			log.Info("buff %d:%v", i, *t)
-		}
+	//	for i := 1; i < 5; i++ {
+	//		t := GetBuffData(1, int32(i))
+	//		if t != nil {
+	//			log.Info("buff %d:%v", i, *t)
+	//		}
 
-	}
+	//	}
 
 	//log.Info("----------2---------")
 }

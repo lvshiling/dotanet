@@ -17,6 +17,7 @@ package conf
 import (
 	"bufio"
 	"bytes"
+	"dq/log"
 	"encoding/json"
 	"fmt"
 	//"fmt"
@@ -30,6 +31,9 @@ var (
 	Conf         = Config{}
 	SceneRawData = SceneAllData{}
 	SceneData    = make(map[string]*Scene)
+
+	CreateUnitRawData = CreateUnitAllData{}
+	CreateUnitData    = make(map[string]*CreateUnits)
 )
 
 //场景配置文件
@@ -87,6 +91,80 @@ type Collide struct {
 	Width   float64
 	Height  float64
 	Points  []vec2d.Vec2
+}
+
+//场景配置文件
+func LoadCreateUnit(Path string) {
+	// Read config.
+
+	ApplicationDir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	confPath := fmt.Sprintf("%s"+Path, ApplicationDir)
+
+	f, err := os.Open(confPath)
+	if err != nil {
+		panic(err)
+	}
+
+	err, data := readBigFileInto(f.Name())
+	if err != nil {
+		panic(err)
+	}
+	err = json.Unmarshal(data, &CreateUnitRawData)
+	if err != nil {
+		panic(err)
+	}
+
+	//---------
+	for k, v := range CreateUnitRawData.CreateUnits {
+		CreateUnitData[v.Name] = &CreateUnitRawData.CreateUnits[k]
+		log.Info("createunit:%v", v)
+	}
+
+	//	for k, v := range CreateUnitData {
+	//		log.Info("createunit111:%s %v", k, v)
+	//	}
+
+}
+
+func GetCreateUnitData(name string) *CreateUnits {
+	log.Info("GetCreateUnitData:%s", name)
+	if _, ok := CreateUnitData[name]; !ok {
+
+		return nil
+	}
+	return CreateUnitData[name]
+}
+
+//创建单位文件
+type CreateUnitAllData struct {
+	CreateUnits []CreateUnits
+}
+type CreateUnits struct {
+	Name     string
+	Units    []Unit
+	DoorWays []DoorWay
+}
+type Unit struct {
+	TypeID       int32
+	X            float64
+	Y            float64
+	Z            float64
+	ReCreateTime float64
+	Rotation     float64
+}
+type DoorWay struct {
+	NextSceneID int32
+	X           float64
+	Y           float64
+	Z           float64
+	R           float64
+	NeedLevel   int32
+	NextX       float32
+	NextY       float32
 }
 
 //基础配置文件

@@ -1452,9 +1452,16 @@ type Unit struct {
 	//每秒钟干事 剩余时间
 	EveryTimeDoRemainTime float32 //每秒钟干事 的剩余时间
 
+	//场景中的NPC 死亡后重新创建信息
+	ReCreateInfo *conf.Unit
+
 	//发送数据部分
 	ClientData    *protomsg.UnitDatas //客户端显示数据
 	ClientDataSub *protomsg.UnitDatas //客户端显示差异数据
+}
+
+func (this *Unit) SetReCreateInfo(recreateinfo *conf.Unit) {
+	this.ReCreateInfo = recreateinfo
 }
 
 func (this *Unit) SetAI(ai UnitAI) {

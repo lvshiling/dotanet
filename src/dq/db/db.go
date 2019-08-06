@@ -263,6 +263,7 @@ func (a *DB) SaveCharacter(playerInfo DB_CharacterInfo) error {
 	datastring["gold"] = 0
 	datastring["hp"] = playerInfo.HP
 	datastring["mp"] = playerInfo.MP
+	datastring["sceneid"] = playerInfo.SceneID
 	datastring["scenename"] = playerInfo.SceneName
 	datastring["x"] = playerInfo.X
 	datastring["y"] = playerInfo.Y

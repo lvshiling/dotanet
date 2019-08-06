@@ -50,13 +50,13 @@ func InitSkillDatas() {
 	//log.Info("----------1---------")
 
 	//log.Info("-:%v", SkillDatas)
-	for i := 1; i < 5; i++ {
-		t := GetSkillData(6, int32(i))
-		if t != nil {
-			log.Info("skill %d:%v", i, *t)
-		}
+	//	for i := 1; i < 5; i++ {
+	//		t := GetSkillData(6, int32(i))
+	//		if t != nil {
+	//			log.Info("skill %d:%v", i, *t)
+	//		}
 
-	}
+	//	}
 
 	//log.Info("----------2---------")
 }

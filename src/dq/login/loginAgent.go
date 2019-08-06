@@ -215,8 +215,8 @@ func (a *LoginAgent) DoSelectCharacter(data *protomsg.MsgBase) {
 	a.WriteMsgBytes(datamsg.NewMsg1Bytes(data, jd))
 
 	//初始场景名字
-	if len(players[0].SceneName) <= 0 {
-		players[0].SceneName = "Map/Scene1"
+	if players[0].SceneID <= 0 {
+		players[0].SceneID = 1
 	}
 
 	//通知进入场景
@@ -226,7 +226,7 @@ func (a *LoginAgent) DoSelectCharacter(data *protomsg.MsgBase) {
 		ConnectId:      data.ConnectId,
 		SrcServerName:  "",
 		DestServerName: datamsg.GameScene1, //
-		SceneName:      players[0].SceneName,
+		SceneID:        players[0].SceneID,
 		Datas:          utils.Struct2Bytes(players[0]), //数据库中的角色信息
 	}
 	t1 := protomsg.MsgBase{

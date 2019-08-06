@@ -39,15 +39,19 @@ func CreatePlayer(uid int32, connectid int32, characterid int32) *Player {
 	re.Uid = uid
 	re.ConnectId = connectid
 	re.Characterid = characterid
-	re.LastShowUnit = make(map[int32]*Unit)
-	re.CurShowUnit = make(map[int32]*Unit)
-	re.LastShowBullet = make(map[int32]*Bullet)
-	re.CurShowBullet = make(map[int32]*Bullet)
-	re.LastShowHalo = make(map[int32]*Halo)
-	re.CurShowHalo = make(map[int32]*Halo)
-	re.OtherUnit = utils.NewBeeMap()
-	re.Msg = &protomsg.SC_Update{}
+	re.ReInit()
 	return re
+}
+func (this *Player) ReInit() {
+	this.MainUnit = nil
+	this.LastShowUnit = make(map[int32]*Unit)
+	this.CurShowUnit = make(map[int32]*Unit)
+	this.LastShowBullet = make(map[int32]*Bullet)
+	this.CurShowBullet = make(map[int32]*Bullet)
+	this.LastShowHalo = make(map[int32]*Halo)
+	this.CurShowHalo = make(map[int32]*Halo)
+	this.OtherUnit = utils.NewBeeMap()
+	this.Msg = &protomsg.SC_Update{}
 }
 
 func (this *Player) AddOtherUnit(unit *Unit) {
@@ -84,24 +88,25 @@ func (this *Player) CheckOtherUnit() {
 //	X           float32 `json:"x"`
 //	Y           float32 `json:"y"`
 //}
-//存档数据
-func (this *Player) SaveDB() {
+
+func (this *Player) GetDBData() *db.DB_CharacterInfo {
 	if this.MainUnit == nil {
-		return
+		return nil
 	}
 	dbdata := db.DB_CharacterInfo{}
 	dbdata.Characterid = this.Characterid
 	dbdata.Uid = this.Uid
 	dbdata.Name = this.MainUnit.Name
+	dbdata.Typeid = this.MainUnit.TypeID
 	dbdata.Level = this.MainUnit.Level
 	dbdata.Experience = this.MainUnit.Experience
 	//dbdata.Gold = this.MainUnit.Gold
 	dbdata.HP = float32(this.MainUnit.HP) / float32(this.MainUnit.MAX_HP)
 	dbdata.MP = float32(this.MainUnit.MP) / float32(this.MainUnit.MAX_MP)
 	if this.CurScene != nil {
-		dbdata.SceneName = this.CurScene.SceneName
+		dbdata.SceneID = this.CurScene.TypeID
 	} else {
-		dbdata.SceneName = ""
+		dbdata.SceneID = 1
 	}
 	if this.MainUnit.Body == nil {
 		dbdata.X = 0
@@ -114,8 +119,13 @@ func (this *Player) SaveDB() {
 	for _, v := range this.MainUnit.Skills {
 		dbdata.Skill += v.ToDBString() + ";"
 	}
+	return &dbdata
+}
 
-	db.DbOne.SaveCharacter(dbdata)
+//存档数据
+func (this *Player) SaveDB() {
+	dbdata := this.GetDBData()
+	db.DbOne.SaveCharacter(*dbdata)
 
 }
 
@@ -260,9 +270,12 @@ func (this *Player) SendMsgToClient(msgtype string, msg proto.Message) {
 
 //退出场景
 func (this *Player) OutScene() {
+
 	if this.CurScene != nil {
 		this.CurScene.PlayerGoout(this)
 	}
+	this.ReInit()
+
 }
 
 //进入场景
@@ -273,6 +286,7 @@ func (this *Player) GoInScene(scene *Scene, datas []byte) {
 	this.CurScene = scene
 
 	this.CurScene.PlayerGoin(this, datas)
+	//this.ReInit()
 }
 
 //玩家移动操作

@@ -1,11 +1,12 @@
 package gamescene1
 
 import (
-	"fmt"
-	//"dq/conf"
+	"dq/conf"
 	"dq/datamsg"
+	//"dq/db"
 	"dq/log"
 	"dq/network"
+	"fmt"
 	"net"
 	//"time"
 
@@ -59,17 +60,17 @@ func (a *GameScene1Agent) Init() {
 	a.handles["CS_PlayerSkill"] = a.DoPlayerSkill
 
 	//创建场景
-	for k := 0; k < 1; k++ {
-		scene := gamecore.CreateScene("Map/Scene1")
-		a.Scenes.Set("Map/Scene1", scene)
+	allscene := conf.GetAllScene()
+	for _, v := range allscene {
+		log.Info("scene:%d  %s", v.(*conf.SceneFileData).TypeID, v.(*conf.SceneFileData).ScenePath)
+		scene := gamecore.CreateScene(v.(*conf.SceneFileData), a)
+		a.Scenes.Set(v.(*conf.SceneFileData).TypeID, scene)
 		a.wgScene.Add(1)
 		go func() {
 			scene.Update()
 			a.wgScene.Done()
 		}()
 	}
-
-	//玩家进来
 
 }
 
@@ -107,25 +108,42 @@ func (a *GameScene1Agent) DoDisconnect(data *protomsg.MsgBase) {
 	a.WriteMsgBytes(datamsg.NewMsg1Bytes(&t1, nil))
 
 }
-
-func (a *GameScene1Agent) DoMsgUserEnterScene(data *protomsg.MsgBase) {
-
-	log.Info("---------DoMsgUserEnterScene")
-	h2 := &protomsg.MsgUserEnterScene{}
-	err := proto.Unmarshal(data.Datas, h2)
-	if err != nil {
-		log.Info(err.Error())
+func (a *GameScene1Agent) PlayerChangeScene(player *gamecore.Player, doorway conf.DoorWay) {
+	if player == nil {
 		return
 	}
+	dbdata := player.GetDBData()
+	if dbdata == nil {
+		return
+	}
+	dbdata.X = doorway.NextX
+	dbdata.Y = doorway.NextY
+	//h2 := &protomsg.MsgUserEnterScene{}
 
+	h2 := &protomsg.MsgUserEnterScene{
+		Uid:            player.Uid,
+		ConnectId:      player.ConnectId,
+		SrcServerName:  "",
+		DestServerName: datamsg.GameScene1, //
+		SceneID:        doorway.NextSceneID,
+		Datas:          utils.Struct2Bytes(dbdata), //数据库中的角色信息
+	}
+	a.DoUserEnterScene(h2)
+}
+
+func (a *GameScene1Agent) DoUserEnterScene(h2 *protomsg.MsgUserEnterScene) {
+	if h2 == nil {
+		return
+	}
 	log.Info("---------datas:%d---%s", len(h2.Datas), string(h2.Datas))
 
 	//如果目的地服务器是本服务器
 	if h2.DestServerName == a.ServerName {
 
-		scene := a.Scenes.Get(h2.SceneName)
+		scene := a.Scenes.Get(h2.SceneID)
+		log.Info("enter scene :%d", h2.SceneID)
 		if scene == nil {
-			log.Info("no scene :%s", h2.SceneName)
+			log.Info("no scene :%d", h2.SceneID)
 			return
 		}
 
@@ -160,6 +178,20 @@ func (a *GameScene1Agent) DoMsgUserEnterScene(data *protomsg.MsgBase) {
 		log.Info("SendMsgToClient SC_NewScene")
 
 	}
+
+}
+
+func (a *GameScene1Agent) DoMsgUserEnterScene(data *protomsg.MsgBase) {
+
+	log.Info("---------DoMsgUserEnterScene")
+	h2 := &protomsg.MsgUserEnterScene{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+
+	a.DoUserEnterScene(h2)
 
 }
 
@@ -206,14 +238,14 @@ func (a *GameScene1Agent) DoPlayerAttack(data *protomsg.MsgBase) {
 
 func (a *GameScene1Agent) DoPlayerMove(data *protomsg.MsgBase) {
 
-	log.Info("---------DoPlayerOperate")
+	//log.Info("---------DoPlayerOperate")
 	h2 := &protomsg.CS_PlayerMove{}
 	err := proto.Unmarshal(data.Datas, h2)
 	if err != nil {
 		log.Info(err.Error())
 		return
 	}
-	log.Info("---------%v", h2)
+	//log.Info("---------%v", h2)
 
 	player := a.Players.Get(data.Uid)
 	if player == nil {

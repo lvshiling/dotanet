@@ -11,11 +11,26 @@ import (
 	"time"
 )
 
+type ReCreateUnit struct {
+	//场景中的NPC 死亡后重新创建信息
+	ReCreateInfo *conf.Unit
+	DeathTime    float64 //死亡时间
+}
+type ChangeSceneFunc interface {
+	PlayerChangeScene(player *Player, doorway conf.DoorWay)
+}
+
 type Scene struct {
-	FirstUpdateTime int64            //上次更新时间
-	MoveCore        *cyward.WardCore //移动核心
-	SceneName       string           //场景名字
-	CurFrame        int32            //当前帧
+	conf.SceneFileData                  //场景文件信息
+	FirstUpdateTime    int64            //上次更新时间
+	MoveCore           *cyward.WardCore //移动核心
+	SceneName          string           //场景名字
+	CurFrame           int32            //当前帧
+
+	EveryTimeDoRemainTime float32        //每秒钟干得事的剩余时间
+	DoorWays              []conf.DoorWay //传送门
+
+	ReCreateUnitInfo map[*ReCreateUnit]*ReCreateUnit //重新创建NPC信息
 
 	Players   map[int32]*Player           //游戏中所有的玩家
 	Units     map[int32]*Unit             //游戏中所有的单位
@@ -34,13 +49,16 @@ type Scene struct {
 	NextAddPlayer    *utils.BeeMap //下一帧需要增加的玩家
 	NextRemovePlayer *utils.BeeMap //下一帧需要删除的玩家
 
-	Quit       bool //是否退出
-	SceneFrame int32
+	ChangeScene ChangeSceneFunc
+	Quit        bool //是否退出
+	SceneFrame  int32
 }
 
-func CreateScene(name string) *Scene {
+func CreateScene(data *conf.SceneFileData, parent ChangeSceneFunc) *Scene {
 	scene := &Scene{}
-	scene.SceneName = name
+	scene.ChangeScene = parent
+	scene.SceneFileData = *data
+	scene.SceneName = data.ScenePath
 	scene.Quit = false
 	scene.Init()
 	return scene
@@ -50,6 +68,7 @@ func CreateScene(name string) *Scene {
 func (this *Scene) Init() {
 	this.SceneFrame = 40
 	this.CurFrame = 0
+	this.EveryTimeDoRemainTime = 1
 
 	this.FirstUpdateTime = time.Now().UnixNano()
 
@@ -58,6 +77,9 @@ func (this *Scene) Init() {
 
 	this.NextAddPlayer = utils.NewBeeMap()
 	this.NextRemovePlayer = utils.NewBeeMap()
+
+	//
+	this.ReCreateUnitInfo = make(map[*ReCreateUnit]*ReCreateUnit)
 
 	this.Players = make(map[int32]*Player)
 	this.Units = make(map[int32]*Unit)
@@ -70,12 +92,12 @@ func (this *Scene) Init() {
 	this.ZoneHalos = make(map[utils.SceneZone][]*Halo)
 	this.CanRemoveHalos = make(map[int32]*Halo)
 
-	scenedata := conf.GetSceneData(this.SceneName)
+	scenedata := conf.GetSceneData(this.ScenePath)
 
 	//场景碰撞区域
 	this.MoveCore = cyward.CreateWardCore()
 	for _, v := range scenedata.Collides {
-		log.Info("Collide %v", v)
+		//log.Info("Collide %v", v)
 		if v.IsRect == true {
 			pos := vec2d.Vec2{v.CenterX, v.CenterY}
 			r := vec2d.Vec2{v.Width, v.Height}
@@ -86,21 +108,13 @@ func (this *Scene) Init() {
 		}
 	}
 	//场景分区数据 创建100个单位
-	for i := 0; i < 20; i++ {
-		for j := 0; j < 20; j++ {
-			unit := CreateUnit(this, 2)
-			unit.SetAI(NewNormalAI(unit))
-			//设置移动核心body
-			pos := vec2d.Vec2{float64(-63 + j*6), float64(-63 + i*6)}
-			r := vec2d.Vec2{unit.CollisionR, unit.CollisionR}
-			unit.Body = this.MoveCore.CreateBody(pos, r, 0, 1)
-			//unit.Body.Tag = i*20 + j
-			this.Units[unit.ID] = unit
-
-			//timer.AddCallback(time.Second*15+time.Second*time.Duration(((i*20)+j)*2), this.UnitBlink, unit)
-		}
-
+	createunitdata := conf.GetCreateUnitData(this.CreateUnit)
+	for _, v := range createunitdata.Units {
+		this.CreateUnitByConf(v)
+		log.Info("createunity :%v", v)
 	}
+	this.DoorWays = createunitdata.DoorWays
+
 	//	for i := 0; i < 4; i++ {
 	//		//创建英雄
 	//		hero1 := CreateUnit(this, 5+int32(i))
@@ -124,6 +138,19 @@ func (this *Scene) Init() {
 	//	hero2.Body = this.MoveCore.CreateBody(pos2, r2, 0, 1)
 	//	this.Units[hero2.ID] = hero2
 
+}
+func (this *Scene) CreateUnitByConf(v conf.Unit) *Unit {
+	unit := CreateUnit(this, v.TypeID)
+	unit.SetAI(NewNormalAI(unit))
+	pos := vec2d.Vec2{v.X, v.Y}
+	r := vec2d.Vec2{unit.CollisionR, unit.CollisionR}
+	unit.Body = this.MoveCore.CreateBody(pos, r, 0, 1)
+	unit.Body.Direction = vec2d.Vec2{X: 0, Y: 1}
+	unit.Body.Direction.Rotate(-v.Rotation)
+	unit.SetReCreateInfo(&v)
+	//log.Info("Collide %v  %f", unit.Body.Direction, v.Rotation)
+	this.Units[unit.ID] = unit
+	return unit
 }
 
 func (this *Scene) UnitBlink(unit interface{}) {
@@ -178,6 +205,43 @@ func (this *Scene) FindVisibleUnits(my *Unit) []*Unit {
 	return units
 }
 
+//传送门检查
+func (this *Scene) DoDoorWay() {
+	if this.ChangeScene == nil {
+		return
+	}
+
+	for _, v := range this.DoorWays {
+		pos := vec2d.Vec2{X: v.X, Y: v.Y}
+		for _, player := range this.Players {
+			if player != nil && player.MainUnit != nil &&
+				player.MainUnit.Body != nil && player.MainUnit.Level >= v.NeedLevel {
+				mypos := player.MainUnit.Body.Position
+				subpos := vec2d.Sub(mypos, pos)
+				distanse := subpos.Length()
+				if distanse <= v.R {
+					//传送到其他场景
+					log.Info("chuan song :%v", v)
+					this.ChangeScene.PlayerChangeScene(player, v)
+				}
+			}
+		}
+	}
+}
+
+//
+func (this *Scene) EveryTimeDo(dt float32) {
+
+	this.EveryTimeDoRemainTime -= float32(dt)
+	if this.EveryTimeDoRemainTime <= 0 {
+		//do
+		this.EveryTimeDoRemainTime += 1
+		this.DoReCreateUnit()
+		this.DoDoorWay()
+
+	}
+}
+
 func (this *Scene) Update() {
 
 	log.Info("Update start")
@@ -189,6 +253,8 @@ func (this *Scene) Update() {
 		//log.Info("main time:%d", (t1)/1e6)
 
 		time1 := utils.GetCurTimeOfSecond()
+		this.EveryTimeDo(1 / float32(this.SceneFrame))
+
 		this.DoRemoveBullet()
 		this.DoRemoveHalo()
 		this.DoAddAndRemoveUnit()
@@ -505,6 +571,18 @@ func (this *Scene) PlayerGoin(player *Player, datas []byte) {
 
 }
 
+//处理重新创建NPC
+func (this *Scene) DoReCreateUnit() {
+	curtime := utils.GetCurTimeOfSecond()
+	for k, v := range this.ReCreateUnitInfo {
+
+		if curtime-v.DeathTime >= v.ReCreateInfo.ReCreateTime {
+			this.CreateUnitByConf(*(v.ReCreateInfo))
+			delete(this.ReCreateUnitInfo, k)
+		}
+	}
+}
+
 func (this *Scene) RemoveUnit(unit *Unit) {
 	if unit == nil {
 		return
@@ -512,6 +590,14 @@ func (this *Scene) RemoveUnit(unit *Unit) {
 	}
 	//删除主单位
 	this.NextRemoveUnit.Set(unit.ID, unit)
+	if unit.ReCreateInfo != nil {
+		rc := &ReCreateUnit{}
+		rc.ReCreateInfo = unit.ReCreateInfo
+		rc.DeathTime = utils.GetCurTimeOfSecond()
+		this.ReCreateUnitInfo[rc] = rc
+		//this.ReCreateUnitInfo = append(this.ReCreateUnitInfo)
+	}
+
 }
 
 //玩家退出
@@ -519,6 +605,10 @@ func (this *Scene) PlayerGoout(player *Player) {
 	//删除主单位
 	//this.NextRemoveUnit.Set(player.MainUnit.ID, player.MainUnit)
 	this.RemoveUnit(player.MainUnit)
+	items := player.OtherUnit.Items()
+	for _, v := range items {
+		this.RemoveUnit(v.(*Unit))
+	}
 
 	this.NextRemovePlayer.Set(player.Uid, player)
 }

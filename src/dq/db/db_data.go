@@ -10,6 +10,7 @@ type DB_CharacterInfo struct {
 	Gold        int32   `json:"gold"`
 	HP          float32 `json:"hp"`
 	MP          float32 `json:"mp"`
+	SceneID     int32   `json:"sceneid"`
 	SceneName   string  `json:"scenename"`
 	X           float32 `json:"x"`
 	Y           float32 `json:"y"`
