@@ -111,7 +111,7 @@ func (this *Scene) Init() {
 	createunitdata := conf.GetCreateUnitData(this.CreateUnit)
 	for _, v := range createunitdata.Units {
 		this.CreateUnitByConf(v)
-		log.Info("createunity :%v", v)
+		//log.Info("createunity :%v", v)
 	}
 	//传送门显示
 	this.DoorWays = createunitdata.DoorWays

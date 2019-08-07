@@ -121,7 +121,7 @@ func LoadCreateUnit(Path string) {
 	//---------
 	for k, v := range CreateUnitRawData.CreateUnits {
 		CreateUnitData[v.Name] = &CreateUnitRawData.CreateUnits[k]
-		log.Info("createunit:%v", v)
+		//log.Info("createunit:%v", v)
 	}
 
 	//	for k, v := range CreateUnitData {
