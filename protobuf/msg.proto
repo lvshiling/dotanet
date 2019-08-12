@@ -40,6 +40,40 @@ message CS_SelectCharacter {
 }
 
 
+//单位面板详细信息
+message UnitBoardDatas{
+    int32   ID = 1;
+    string  Name = 2;
+    float   AttributeStrength = 3;//力量
+    float   AttributeAgility = 4;//敏捷
+    float   AttributeIntelligence = 5;//智力
+    int32   Attack = 6;//攻击力 (基础攻击力+属性影响+buff影响)
+    float   AttackSpeed = 7;//攻击速度
+    float   AttackRange = 8;//攻击范围 攻击距离
+    float   MoveSpeed = 9;//移动速度
+    float   MagicScale = 10;//技能增强
+    float   MPRegain = 11;//魔法恢复
+    float   PhysicalAmaor = 12;//物理护甲
+    float   PhysicalResist = 13;//物理伤害抵挡
+    float   MagicAmaor = 14;//魔法抗性
+    float   StatusAmaor = 15;//状态抗性
+    float   Dodge = 16;//闪避(0)
+    float   HPRegain = 17;//生命恢复
+}
+
+
+//获取单位面板详细信息 
+message CS_GetUnitInfo {
+    int32 UnitID = 1;//单位对象id
+}
+//获取自己背包详细信息 
+message CS_GetBagInfo {
+    int32 UnitID = 1;//单位对象id
+}
+message SC_UnitInfo  {
+    UnitBoardDatas   UnitData = 1;//单位面板信息
+}
+
 
 
 //玩家移动操作

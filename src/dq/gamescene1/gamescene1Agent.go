@@ -59,6 +59,8 @@ func (a *GameScene1Agent) Init() {
 	a.handles["CS_PlayerAttack"] = a.DoPlayerAttack
 	a.handles["CS_PlayerSkill"] = a.DoPlayerSkill
 
+	a.handles["CS_GetUnitInfo"] = a.DoGetUnitInfo
+
 	//创建场景
 	allscene := conf.GetAllScene()
 	for _, v := range allscene {
@@ -192,6 +194,55 @@ func (a *GameScene1Agent) DoMsgUserEnterScene(data *protomsg.MsgBase) {
 	}
 
 	a.DoUserEnterScene(h2)
+
+}
+
+//DoGetUnitInfo
+func (a *GameScene1Agent) DoGetUnitInfo(data *protomsg.MsgBase) {
+
+	log.Info("---------DoGetUnitInfo")
+	h2 := &protomsg.CS_GetUnitInfo{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	log.Info("---------%d", h2.UnitID)
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	curscene := player.(*gamecore.Player).CurScene
+	if curscene == nil {
+		return
+	}
+	unit := curscene.FindUnitByID(h2.UnitID)
+	if unit == nil {
+		return
+	}
+
+	unitdata := &protomsg.UnitBoardDatas{}
+	unitdata.ID = h2.UnitID
+	unitdata.Name = unit.Name
+	unitdata.AttributeStrength = unit.AttributeStrength
+	unitdata.AttributeAgility = unit.AttributeAgility
+	unitdata.AttributeIntelligence = unit.AttributeIntelligence
+	unitdata.Attack = unit.Attack
+	unitdata.AttackSpeed = unit.AttackSpeed
+	unitdata.AttackRange = unit.AttackRange
+	unitdata.MoveSpeed = float32(unit.MoveSpeed)
+	unitdata.MagicScale = unit.MagicScale
+	unitdata.MPRegain = unit.MPRegain
+	unitdata.PhysicalAmaor = unit.PhysicalAmaor
+	unitdata.PhysicalResist = unit.PhysicalResist
+	unitdata.MagicAmaor = unit.MagicAmaor
+	unitdata.StatusAmaor = unit.StatusAmaor
+	unitdata.Dodge = unit.Dodge
+	unitdata.HPRegain = unit.HPRegain
+
+	msg := &protomsg.SC_UnitInfo{}
+	msg.UnitData = unitdata
+	player.(*gamecore.Player).SendMsgToClient("SC_UnitInfo", msg)
 
 }
 
