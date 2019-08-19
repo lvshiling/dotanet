@@ -5,28 +5,28 @@ package main
 import (
 	"dq/app"
 	"dq/log"
-	"dq/vec2d"
+	//"dq/vec2d"
 )
 
 func main() {
 
-	v1 := vec2d.Vec2{X: 0, Y: 1}
-	v2 := vec2d.Vec2{X: -1, Y: 0}
-	v3 := vec2d.Vec2{X: 1, Y: 1}
-	a1 := v1.Angle()
-	a2 := v2.Angle()
-	//a3 := v3.Angle()
-	v3.Rotate(a2 - a1)
-	log.Info("v3:%v", v3)
+	//	v1 := vec2d.Vec2{X: 0, Y: 1}
+	//	v2 := vec2d.Vec2{X: -1, Y: 0}
+	//	v3 := vec2d.Vec2{X: 1, Y: 1}
+	//	a1 := v1.Angle()
+	//	a2 := v2.Angle()
+	//	//a3 := v3.Angle()
+	//	v3.Rotate(a2 - a1)
+	//	log.Info("v3:%v", v3)
 
-	v4 := vec2d.Vec2{X: 0, Y: 1}
-	v5 := vec2d.Vec2{X: 0, Y: -1}
+	//	v4 := vec2d.Vec2{X: 0, Y: 1}
+	//	v5 := vec2d.Vec2{X: 0, Y: -1}
 
-	log.Info("angle1:%f", v1.Angle())
-	log.Info("angle2:%f", v2.Angle())
-	log.Info("angle3:%f", v3.Angle())
-	log.Info("angle4:%f", v4.Angle())
-	log.Info("angle5:%f", v5.Angle())
+	//	log.Info("angle1:%f", v1.Angle())
+	//	log.Info("angle2:%f", v2.Angle())
+	//	log.Info("angle3:%f", v3.Angle())
+	//	log.Info("angle4:%f", v4.Angle())
+	//	log.Info("angle5:%f", v5.Angle())
 
 	//	t1 := vec2d.Angle(vec2d.Vec2{0, 1}, vec2d.Vec2{1, 0})
 	//	log.Info("angle:%f", t1)

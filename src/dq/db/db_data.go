@@ -15,4 +15,10 @@ type DB_CharacterInfo struct {
 	X           float32 `json:"x"`
 	Y           float32 `json:"y"`
 	Skill       string  `json:"skill"`
+	Item1       string  `json:"item1"`
+	Item2       string  `json:"item2"`
+	Item3       string  `json:"item3"`
+	Item4       string  `json:"item4"`
+	Item5       string  `json:"item5"`
+	Item6       string  `json:"item6"`
 }

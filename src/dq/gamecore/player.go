@@ -5,6 +5,7 @@ import (
 	"dq/db"
 	"dq/protobuf"
 	"dq/utils"
+	"strconv"
 
 	"github.com/golang/protobuf/proto"
 )
@@ -119,6 +120,46 @@ func (this *Player) GetDBData() *db.DB_CharacterInfo {
 	for _, v := range this.MainUnit.Skills {
 		dbdata.Skill += v.ToDBString() + ";"
 	}
+	//道具
+	if this.MainUnit.Items != nil {
+		item1 := this.MainUnit.Items[0]
+		if item1 == nil {
+			dbdata.Item1 = ""
+		} else {
+			dbdata.Item1 = strconv.Itoa(int(item1.TypeID))
+		}
+		item2 := this.MainUnit.Items[1]
+		if item2 == nil {
+			dbdata.Item2 = ""
+		} else {
+			dbdata.Item2 = strconv.Itoa(int(item2.TypeID))
+		}
+		item3 := this.MainUnit.Items[2]
+		if item3 == nil {
+			dbdata.Item3 = ""
+		} else {
+			dbdata.Item3 = strconv.Itoa(int(item3.TypeID))
+		}
+		item4 := this.MainUnit.Items[3]
+		if item4 == nil {
+			dbdata.Item4 = ""
+		} else {
+			dbdata.Item4 = strconv.Itoa(int(item4.TypeID))
+		}
+		item5 := this.MainUnit.Items[4]
+		if item5 == nil {
+			dbdata.Item5 = ""
+		} else {
+			dbdata.Item5 = strconv.Itoa(int(item5.TypeID))
+		}
+		item6 := this.MainUnit.Items[5]
+		if item6 == nil {
+			dbdata.Item6 = ""
+		} else {
+			dbdata.Item6 = strconv.Itoa(int(item6.TypeID))
+		}
+	}
+
 	return &dbdata
 }
 

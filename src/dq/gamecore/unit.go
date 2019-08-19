@@ -1444,6 +1444,8 @@ type Unit struct {
 	Skills map[int32]*Skill  //所有技能
 	Buffs  map[int32][]*Buff //所有buff 同typeID下可能有多个buff
 
+	Items []*Item //所有道具
+
 	HaloInSkills map[int32][]int32 //来自被动技能的光环
 
 	//记录时间点的伤害
@@ -1492,6 +1494,16 @@ func (this *Unit) FreshHaloInSkills() {
 			}
 			this.HaloInSkills[v.TypeID] = re
 
+		}
+	}
+}
+
+//刷新道具的作用
+func (this *Unit) FreshUseableItem() {
+	for _, v := range this.Items {
+		if v != nil {
+			v.Clear()
+			v.Add2Unit(this)
 		}
 	}
 }
@@ -1612,10 +1624,22 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 	}
 	//初始化技能被动光环
 	unitre.HaloInSkills = make(map[int32][]int32)
-	unitre.FreshHaloInSkills()
 
 	//初始化
 	unitre.Init()
+
+	//创建道具
+	unitre.Items = make([]*Item, 6)
+	unitre.Items[0] = NewItemFromDB(characterinfo.Item1)
+	unitre.Items[1] = NewItemFromDB(characterinfo.Item2)
+	unitre.Items[2] = NewItemFromDB(characterinfo.Item3)
+	unitre.Items[3] = NewItemFromDB(characterinfo.Item4)
+	unitre.Items[4] = NewItemFromDB(characterinfo.Item5)
+	unitre.Items[5] = NewItemFromDB(characterinfo.Item6)
+	unitre.FreshUseableItem()
+
+	unitre.FreshHaloInSkills()
+
 	unitre.IsMain = 1
 	unitre.ControlID = player.Uid
 

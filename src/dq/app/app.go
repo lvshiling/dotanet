@@ -150,6 +150,7 @@ func (app *DefaultApp) Run() error {
 	conf.LoadSkillFileData() //加载技能数据配置
 	conf.LoadBuffFileData()  //加载buff数据配置
 	conf.LoadHaloFileData()  //加载halo数据配置
+	conf.LoadItemFileData()  //加载道具数据配置
 
 	log.InitBeego(true, "dq", Logdir, make(map[string]interface{}))
 
