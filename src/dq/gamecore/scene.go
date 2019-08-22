@@ -39,6 +39,9 @@ type Scene struct {
 	Bullets     map[int32]*Bullet             //游戏中所有的子弹
 	ZoneBullets map[utils.SceneZone][]*Bullet //区域中的的子弹
 
+	SceneItems     map[int32]*SceneItem             //游戏场景中所有的道具
+	ZoneSceneItems map[utils.SceneZone][]*SceneItem //区域中的的道具
+
 	Halos          map[int32]*Halo             //游戏中所有的光环
 	ZoneHalos      map[utils.SceneZone][]*Halo //区域中的的光环
 	CanRemoveHalos map[int32]*Halo             //可以被删除的halo 比如击杀单位后 halo无效
@@ -88,6 +91,9 @@ func (this *Scene) Init() {
 	this.Bullets = make(map[int32]*Bullet)
 	this.ZoneBullets = make(map[utils.SceneZone][]*Bullet)
 
+	this.SceneItems = make(map[int32]*SceneItem)
+	this.ZoneSceneItems = make(map[utils.SceneZone][]*SceneItem)
+
 	this.Halos = make(map[int32]*Halo)
 	this.ZoneHalos = make(map[utils.SceneZone][]*Halo)
 	this.CanRemoveHalos = make(map[int32]*Halo)
@@ -124,6 +130,11 @@ func (this *Scene) Init() {
 			this.AddHalo(halo)
 		}
 	}
+
+	//创建道具
+	this.CreateSceneItem(1, vec2d.Vec2{X: 34, Y: 84})
+	//创建道具
+	this.CreateSceneItem(2, vec2d.Vec2{X: 36, Y: 84})
 
 	//	for i := 0; i < 4; i++ {
 	//		//创建英雄
@@ -249,6 +260,10 @@ func (this *Scene) EveryTimeDo(dt float32) {
 		this.DoReCreateUnit()
 		this.DoDoorWay()
 
+		//道具
+		this.UpdateSceneItem(dt)
+		this.DoRemoveSceneItem()
+
 	}
 }
 
@@ -347,6 +362,13 @@ func (this *Scene) DoSendData() {
 					player.AddBulletData(bullet)
 				}
 			}
+			//ZoneSceneItems
+			if _, ok := this.ZoneSceneItems[vzone]; ok {
+				//遍历区域中的单位
+				for _, sceneitem := range this.ZoneSceneItems[vzone] {
+					player.AddSceneItemData(sceneitem)
+				}
+			}
 			//
 			if _, ok := this.ZoneHalos[vzone]; ok {
 				//遍历区域中的单位
@@ -380,6 +402,13 @@ func (this *Scene) DoZone() {
 
 		zone := utils.GetSceneZone((v.Position.X), (v.Position.Y))
 		this.ZoneBullets[zone] = append(this.ZoneBullets[zone], v)
+	}
+	//道具分区
+	this.ZoneSceneItems = make(map[utils.SceneZone][]*SceneItem)
+	for _, v := range this.SceneItems {
+
+		zone := utils.GetSceneZone((v.Position.X), (v.Position.Y))
+		this.ZoneSceneItems[zone] = append(this.ZoneSceneItems[zone], v)
 	}
 	//光环分区
 	this.ZoneHalos = make(map[utils.SceneZone][]*Halo)
@@ -479,6 +508,17 @@ func (this *Scene) UpdateHalo(dt float32) {
 	}
 }
 
+//创建场景道具
+func (this *Scene) CreateSceneItem(typeid int32, pos vec2d.Vec2) {
+	sceneitem := NewSceneItem(typeid, pos)
+	this.AddSceneItem(sceneitem)
+}
+
+//增加场景道具
+func (this *Scene) AddSceneItem(sceneitem *SceneItem) {
+	this.SceneItems[sceneitem.ID] = sceneitem
+}
+
 //增加子弹
 func (this *Scene) AddBullet(bullet *Bullet) {
 	this.Bullets[bullet.ID] = bullet
@@ -504,6 +544,23 @@ func (this *Scene) DoRemoveBullet() {
 func (this *Scene) UpdateBullet(dt float32) {
 	for _, v := range this.Bullets {
 		v.Update(dt)
+	}
+}
+
+//删除道具
+func (this *Scene) DoRemoveSceneItem() {
+	//ZoneBullets
+	for k, v := range this.SceneItems {
+		if v.IsDone() {
+			delete(this.SceneItems, k)
+		}
+	}
+}
+
+//更新道具
+func (this *Scene) UpdateSceneItem(dt float32) {
+	for _, v := range this.SceneItems {
+		v.Update()
 	}
 }
 

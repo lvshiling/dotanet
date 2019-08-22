@@ -10,6 +10,8 @@ type Item struct {
 	conf.ItemData         //技能数据
 	Parent        *Unit   //载体
 	UnitBuffs     []*Buff //单位身上的buf
+
+	//ScenePosition vec2d.Vec2 //场景里的位置
 }
 
 //删除道具的属性到单位身上
@@ -29,7 +31,7 @@ func (this *Item) Add2Unit(unit *Unit) {
 	this.Parent = unit
 	this.UnitBuffs = unit.AddBuffFromStr(this.Buffs, 1, unit)
 
-	log.Error("NewItembuf %s ", this.Buffs)
+	log.Info("NewItembuf %s ", this.Buffs)
 }
 
 //(dbdata []string,
@@ -52,6 +54,7 @@ func NewItemFromDB(dbdata string) *Item {
 	}
 	item := &Item{}
 	item.ItemData = *itemdata
+	//item.ScenePosition = vec2d.Vec2{X: 0, Y: 0}
 	//item.Parent = parent
 	return item
 }
@@ -66,6 +69,7 @@ func NewItem(typeid int32) *Item {
 	}
 	item := &Item{}
 	item.ItemData = *itemdata
+	//item.ScenePosition = vec2d.Vec2{X: 0, Y: 0}
 	//item.Parent = parent
 	return item
 }

@@ -39,6 +39,11 @@ message CS_SelectCharacter {
     CharacterBaseDatas SelectCharacter = 1;//选择角色
 }
 
+//装备栏
+message UnitEquip{
+    int32 Pos = 1;//位置
+    int32 TypdID = 2;//类型id
+}
 
 //单位面板详细信息
 message UnitBoardDatas{
@@ -59,6 +64,7 @@ message UnitBoardDatas{
     float   StatusAmaor = 15;//状态抗性
     float   Dodge = 16;//闪避(0)
     float   HPRegain = 17;//生命恢复
+    repeated UnitEquip Equips = 18;//装备
 }
 
 
@@ -189,6 +195,15 @@ message BulletDatas{
     float EndZ = 12;
 
 }
+
+message SceneItemDatas{
+    int32 ID = 1;//子弹唯一ID
+    int32 TypeID = 2;// (客户端使用的模型名字)
+    float X = 3;
+    float Y = 4;
+
+}
+
 message HaloDatas{
     int32 ID = 1;//光环唯一ID
     string ModeType = 2;//光环特效
@@ -230,8 +245,11 @@ message SC_Update  {
     repeated HaloDatas OldHalos = 9;//旧光环(只更新变化值)
     repeated int32 RemoveHalos = 10;//删除光环(子弹ID)
 
+    repeated SceneItemDatas NewSceneItems = 11;//新的道具
+    repeated int32 RemoveSceneItems = 12;//删除道具(道具ID)
 
-    repeated MsgPlayerHurt PlayerHurt = 11;//玩家造成的伤害
+
+    repeated MsgPlayerHurt PlayerHurt = 13;//玩家造成的伤害
 }
 
 //玩家进入新场景时的场景信息

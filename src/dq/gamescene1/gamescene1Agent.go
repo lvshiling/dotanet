@@ -240,6 +240,19 @@ func (a *GameScene1Agent) DoGetUnitInfo(data *protomsg.MsgBase) {
 	unitdata.Dodge = unit.Dodge
 	unitdata.HPRegain = unit.HPRegain
 
+	//道具栏
+	unitdata.Equips = make([]*protomsg.UnitEquip, 0)
+	for k, v := range unit.Items {
+		equip := &protomsg.UnitEquip{}
+		equip.Pos = int32(k)
+		if v != nil {
+			equip.TypdID = v.TypeID
+		} else {
+			equip.TypdID = 0
+		}
+		unitdata.Equips = append(unitdata.Equips, equip)
+	}
+
 	msg := &protomsg.SC_UnitInfo{}
 	msg.UnitData = unitdata
 	player.(*gamecore.Player).SendMsgToClient("SC_UnitInfo", msg)

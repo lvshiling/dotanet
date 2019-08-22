@@ -32,7 +32,10 @@ type Player struct {
 	CurShowBullet  map[int32]*Bullet
 	LastShowHalo   map[int32]*Halo
 	CurShowHalo    map[int32]*Halo
-	Msg            *protomsg.SC_Update
+
+	LastShowSceneItem map[int32]*SceneItem
+	CurShowSceneItem  map[int32]*SceneItem
+	Msg               *protomsg.SC_Update
 }
 
 func CreatePlayer(uid int32, connectid int32, characterid int32) *Player {
@@ -51,6 +54,10 @@ func (this *Player) ReInit() {
 	this.CurShowBullet = make(map[int32]*Bullet)
 	this.LastShowHalo = make(map[int32]*Halo)
 	this.CurShowHalo = make(map[int32]*Halo)
+	this.LastShowSceneItem = make(map[int32]*SceneItem)
+	this.CurShowSceneItem = make(map[int32]*SceneItem)
+
+	//
 	this.OtherUnit = utils.NewBeeMap()
 	this.Msg = &protomsg.SC_Update{}
 }
@@ -178,7 +185,11 @@ func (this *Player) ClearShowData() {
 	this.CurShowBullet = make(map[int32]*Bullet)
 	this.LastShowHalo = make(map[int32]*Halo)
 	this.CurShowHalo = make(map[int32]*Halo)
+
+	this.LastShowSceneItem = make(map[int32]*SceneItem)
+	this.CurShowSceneItem = make(map[int32]*SceneItem)
 	//
+
 	this.Msg = &protomsg.SC_Update{}
 }
 
@@ -226,6 +237,25 @@ func (this *Player) AddHaloData(halo *Halo) {
 		//新的单位数据
 		d1 := *halo.ClientData
 		this.Msg.NewHalos = append(this.Msg.NewHalos, &d1)
+	}
+
+}
+
+//this.LastShowSceneItem = make(map[int32]*SceneItem)
+//this.CurShowSceneItem = make(map[int32]*SceneItem)
+//添加客户端显示子弹数据包
+func (this *Player) AddSceneItemData(sceneitem *SceneItem) {
+
+	this.CurShowSceneItem[sceneitem.ID] = sceneitem
+
+	if _, ok := this.LastShowSceneItem[sceneitem.ID]; ok {
+		//旧单位(只更新变化的值)
+		//d1 := *bullet.ClientDataSub
+		//this.Msg.OldBullets = append(this.Msg.OldBullets, &d1)
+	} else {
+		//新的单位数据
+		d1 := *sceneitem.ClientData
+		this.Msg.NewSceneItems = append(this.Msg.NewSceneItems, &d1)
 	}
 
 }
@@ -280,6 +310,12 @@ func (this *Player) SendUpdateMsg(curframe int32) {
 			this.Msg.RemoveHalos = append(this.Msg.RemoveHalos, k)
 		}
 	}
+	//删除的sceneitem id
+	for k, _ := range this.LastShowSceneItem {
+		if _, ok := this.CurShowSceneItem[k]; !ok {
+			this.Msg.RemoveSceneItems = append(this.Msg.RemoveSceneItems, k)
+		}
+	}
 
 	//回复客户端
 	this.Msg.CurFrame = curframe
@@ -294,6 +330,9 @@ func (this *Player) SendUpdateMsg(curframe int32) {
 
 	this.LastShowHalo = this.CurShowHalo
 	this.CurShowHalo = make(map[int32]*Halo)
+
+	this.LastShowSceneItem = this.CurShowSceneItem
+	this.CurShowSceneItem = make(map[int32]*SceneItem)
 	this.Msg = &protomsg.SC_Update{}
 
 }
