@@ -70,6 +70,31 @@ func (this *Player) AddOtherUnit(unit *Unit) {
 	this.OtherUnit.Set(unit.ID, unit)
 }
 
+//是否可以拾取地面的物品
+func (this *Player) CanSelectSceneItem() bool {
+	if this.MainUnit == nil || this.MainUnit.Items == nil {
+		return false
+	}
+	for _, v := range this.MainUnit.Items {
+		if v == nil {
+			return true
+		}
+	}
+
+	return false
+}
+
+//拾取地面物品
+func (this *Player) SelectSceneItem(sceneitem *SceneItem) bool {
+	if this.CanSelectSceneItem() == false {
+		return false
+	}
+	item := NewItem(sceneitem.TypeID)
+	this.MainUnit.AddItem(-1, item)
+
+	return true
+}
+
 //遍历删除无效的
 func (this *Player) CheckOtherUnit() {
 

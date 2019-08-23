@@ -1498,6 +1498,30 @@ func (this *Unit) FreshHaloInSkills() {
 	}
 }
 
+//添加道具在装备栏
+func (this *Unit) AddItem(index int, item *Item) bool {
+
+	if index >= len(this.Items) || index < 0 {
+		for k, v := range this.Items {
+			if v == nil {
+				index = k
+				break
+			}
+		}
+	}
+	if this.Items[index] == nil {
+		this.Items[index] = item
+		if item != nil {
+			item.Clear()
+			item.Add2Unit(this)
+		}
+		return true
+	}
+
+	return false
+
+}
+
 //刷新道具的作用
 func (this *Unit) FreshUseableItem() {
 	for _, v := range this.Items {
@@ -1630,13 +1654,19 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 
 	//创建道具
 	unitre.Items = make([]*Item, 6)
-	unitre.Items[0] = NewItemFromDB(characterinfo.Item1)
-	unitre.Items[1] = NewItemFromDB(characterinfo.Item2)
-	unitre.Items[2] = NewItemFromDB(characterinfo.Item3)
-	unitre.Items[3] = NewItemFromDB(characterinfo.Item4)
-	unitre.Items[4] = NewItemFromDB(characterinfo.Item5)
-	unitre.Items[5] = NewItemFromDB(characterinfo.Item6)
-	unitre.FreshUseableItem()
+	//	unitre.Items[0] = NewItemFromDB(characterinfo.Item1)
+	//	unitre.Items[1] = NewItemFromDB(characterinfo.Item2)
+	//	unitre.Items[2] = NewItemFromDB(characterinfo.Item3)
+	//	unitre.Items[3] = NewItemFromDB(characterinfo.Item4)
+	//	unitre.Items[4] = NewItemFromDB(characterinfo.Item5)
+	//	unitre.Items[5] = NewItemFromDB(characterinfo.Item6)
+	unitre.AddItem(0, NewItemFromDB(characterinfo.Item1))
+	unitre.AddItem(1, NewItemFromDB(characterinfo.Item2))
+	unitre.AddItem(2, NewItemFromDB(characterinfo.Item3))
+	unitre.AddItem(3, NewItemFromDB(characterinfo.Item4))
+	unitre.AddItem(4, NewItemFromDB(characterinfo.Item5))
+	unitre.AddItem(5, NewItemFromDB(characterinfo.Item6))
+	//unitre.FreshUseableItem()
 
 	unitre.FreshHaloInSkills()
 

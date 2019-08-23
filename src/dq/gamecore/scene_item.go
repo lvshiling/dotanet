@@ -58,6 +58,10 @@ func (this *SceneItem) IsDone() bool {
 	return this.IsOver
 }
 
+func (this *SceneItem) BeSelect() {
+	this.IsOver = true
+}
+
 //创建buf
 func NewSceneItem(typeid int32, pos vec2d.Vec2) *SceneItem {
 	item := &SceneItem{}

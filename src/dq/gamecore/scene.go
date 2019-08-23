@@ -561,6 +561,26 @@ func (this *Scene) DoRemoveSceneItem() {
 func (this *Scene) UpdateSceneItem(dt float32) {
 	for _, v := range this.SceneItems {
 		v.Update()
+		if v.IsDone() == false {
+			//遍历所有玩家
+			for _, player := range this.Players {
+				unit := player.MainUnit
+				if unit == nil || unit.Body == nil {
+					continue
+				}
+				if player.CanSelectSceneItem() == false {
+					continue
+				}
+				//LengthSquared
+				dir := vec2d.Sub(unit.Body.Position, v.Position)
+				if dir.LengthSquared() <= 1 {
+					if player.SelectSceneItem(v) == true {
+						v.BeSelect()
+						break
+					}
+				}
+			}
+		}
 	}
 }
 
