@@ -8,6 +8,7 @@ import (
 	//"dq/timer"
 	"dq/utils"
 	"dq/vec2d"
+	"math/rand"
 	"time"
 )
 
@@ -508,6 +509,39 @@ func (this *Scene) UpdateHalo(dt float32) {
 	}
 }
 
+//单位死亡后创建道具
+func (this Scene) CreateSceneItems(typeid []int32, centerpos vec2d.Vec2) {
+	//CheckItemCollision
+	positions := make([]vec2d.Vec2, 8)
+	size := 1.0
+	positions[0] = vec2d.Vec2{X: centerpos.X - size, Y: centerpos.Y + size}
+	positions[1] = vec2d.Vec2{X: centerpos.X, Y: centerpos.Y + size}
+	positions[2] = vec2d.Vec2{X: centerpos.X + size, Y: centerpos.Y + size}
+
+	positions[3] = vec2d.Vec2{X: centerpos.X - size, Y: centerpos.Y}
+	positions[4] = vec2d.Vec2{X: centerpos.X + size, Y: centerpos.Y}
+
+	positions[5] = vec2d.Vec2{X: centerpos.X - size, Y: centerpos.Y - size}
+	positions[6] = vec2d.Vec2{X: centerpos.X, Y: centerpos.Y - size}
+	positions[7] = vec2d.Vec2{X: centerpos.X + size, Y: centerpos.Y - size}
+
+	createitemid := 0
+	startindex := rand.Intn(8)
+	for i := 0; i < 8; i++ {
+		posindex := startindex + i
+		if posindex >= 8 {
+			posindex = 0
+		}
+		if this.MoveCore.CheckItemCollision(positions[posindex]) == true {
+			this.CreateSceneItem(typeid[createitemid], positions[posindex])
+			createitemid++
+			if createitemid >= len(typeid) {
+				break
+			}
+		}
+	}
+}
+
 //创建场景道具
 func (this *Scene) CreateSceneItem(typeid int32, pos vec2d.Vec2) {
 	sceneitem := NewSceneItem(typeid, pos)
@@ -568,9 +602,9 @@ func (this *Scene) UpdateSceneItem(dt float32) {
 				if unit == nil || unit.Body == nil {
 					continue
 				}
-				if player.CanSelectSceneItem() == false {
-					continue
-				}
+				//				if player.CanSelectSceneItem() == false {
+				//					continue
+				//				}
 				//LengthSquared
 				dir := vec2d.Sub(unit.Body.Position, v.Position)
 				if dir.LengthSquared() <= 1 {

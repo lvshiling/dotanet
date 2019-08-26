@@ -110,4 +110,6 @@ type UnitFileData struct {
 	InitSkillsInfo   string  //初始技能信息 逗号分隔
 	CollisionR       float64 //碰撞半径
 	Death2RemoveTime float64 //死亡到删除的时间
+
+	NPCItemDropInfo string //NPC道具掉落信息 逗号分隔概率 分号分隔种类 1,0.02;2,0.03
 }

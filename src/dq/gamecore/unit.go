@@ -1456,6 +1456,7 @@ type Unit struct {
 
 	//场景中的NPC 死亡后重新创建信息
 	ReCreateInfo *conf.Unit
+	//场景中的NPC 死亡后掉落道具
 
 	//发送数据部分
 	ClientData    *protomsg.UnitDatas //客户端显示数据
@@ -1530,6 +1531,30 @@ func (this *Unit) FreshUseableItem() {
 			v.Add2Unit(this)
 		}
 	}
+}
+
+//掉落道具
+func (this *Unit) DropItem() {
+
+	drop := make([]int32, 0)
+	if len(this.NPCItemDropInfo) > 0 {
+		dropitems := strings.Split(this.NPCItemDropInfo, ";")
+		for _, v := range dropitems {
+			param := utils.GetFloat32FromString3(v, ",")
+			if len(param) != 2 {
+				continue
+			}
+			//
+			if utils.CheckRandom(param[1]) {
+				drop = append(drop, int32(param[0]))
+			}
+
+		}
+	}
+	if len(drop) > 0 {
+		this.InScene.CreateSceneItems(drop, this.Body.Position)
+	}
+	//CreateSceneItems
 }
 
 func CreateUnit(scene *Scene, typeid int32) *Unit {
@@ -1628,6 +1653,7 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 	characterinfo := db.DB_CharacterInfo{}
 	utils.Bytes2Struct(datas, &characterinfo)
 	player.Characterid = characterinfo.Characterid
+	player.LoadBagInfoFromDB(characterinfo.BagInfo)
 
 	log.Info("---DB_CharacterInfo---%v", characterinfo)
 	//	文件数据

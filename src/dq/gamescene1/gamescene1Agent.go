@@ -60,6 +60,7 @@ func (a *GameScene1Agent) Init() {
 	a.handles["CS_PlayerSkill"] = a.DoPlayerSkill
 
 	a.handles["CS_GetUnitInfo"] = a.DoGetUnitInfo
+	a.handles["CS_GetBagInfo"] = a.DoGetBagInfo
 
 	//创建场景
 	allscene := conf.GetAllScene()
@@ -194,6 +195,37 @@ func (a *GameScene1Agent) DoMsgUserEnterScene(data *protomsg.MsgBase) {
 	}
 
 	a.DoUserEnterScene(h2)
+
+}
+
+//DoGetBagInfo
+func (a *GameScene1Agent) DoGetBagInfo(data *protomsg.MsgBase) {
+
+	log.Info("---------DoGetBagInfo")
+	h2 := &protomsg.CS_GetBagInfo{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	log.Info("---------%d", h2.UnitID)
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+
+	msg := &protomsg.SC_BagInfo{}
+	msg.Equips = make([]*protomsg.UnitEquip, 0)
+	for _, v := range player.(*gamecore.Player).BagInfo {
+		if v != nil {
+			equip := &protomsg.UnitEquip{}
+			equip.Pos = v.Index
+			equip.TypdID = v.TypeID
+			msg.Equips = append(msg.Equips, equip)
+		}
+	}
+
+	player.(*gamecore.Player).SendMsgToClient("SC_BagInfo", msg)
 
 }
 

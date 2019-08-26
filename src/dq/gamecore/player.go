@@ -6,12 +6,22 @@ import (
 	"dq/protobuf"
 	"dq/utils"
 	"strconv"
+	"strings"
+	"sync"
 
 	"github.com/golang/protobuf/proto"
 )
 
+var MaxBagCount int32 = 36
+
 type Server interface {
 	WriteMsgBytes(msg []byte)
+}
+
+//场景里的道具
+type BagItem struct {
+	TypeID int32 //类型
+	Index  int32 //位置索引
 }
 
 type Player struct {
@@ -22,6 +32,10 @@ type Player struct {
 	OtherUnit   *utils.BeeMap //其他单位
 	CurScene    *Scene
 	ServerAgent Server
+
+	BagInfo []*BagItem
+
+	lock *sync.RWMutex //同步操作锁
 
 	//OtherUnit  *Unit //其他单位
 
@@ -40,12 +54,34 @@ type Player struct {
 
 func CreatePlayer(uid int32, connectid int32, characterid int32) *Player {
 	re := &Player{}
+	re.lock = new(sync.RWMutex)
 	re.Uid = uid
 	re.ConnectId = connectid
 	re.Characterid = characterid
 	re.ReInit()
 	return re
 }
+func (this *Player) LoadBagInfoFromDB(baginfo string) {
+	if len(baginfo) <= 0 {
+		return
+	}
+	bagitems := strings.Split(baginfo, ";")
+	for _, v := range bagitems {
+		item := utils.GetInt32FromString3(v, ",")
+		if len(item) < 2 {
+			continue
+		}
+		if item[0] >= MaxBagCount {
+			return
+		}
+		bagitem := &BagItem{}
+		bagitem.Index = item[0]
+		bagitem.TypeID = item[1]
+		this.BagInfo[bagitem.Index] = bagitem
+
+	}
+}
+
 func (this *Player) ReInit() {
 	this.MainUnit = nil
 	this.LastShowUnit = make(map[int32]*Unit)
@@ -56,6 +92,8 @@ func (this *Player) ReInit() {
 	this.CurShowHalo = make(map[int32]*Halo)
 	this.LastShowSceneItem = make(map[int32]*SceneItem)
 	this.CurShowSceneItem = make(map[int32]*SceneItem)
+
+	this.BagInfo = make([]*BagItem, MaxBagCount)
 
 	//
 	this.OtherUnit = utils.NewBeeMap()
@@ -71,28 +109,51 @@ func (this *Player) AddOtherUnit(unit *Unit) {
 }
 
 //是否可以拾取地面的物品
-func (this *Player) CanSelectSceneItem() bool {
-	if this.MainUnit == nil || this.MainUnit.Items == nil {
-		return false
-	}
-	for _, v := range this.MainUnit.Items {
-		if v == nil {
-			return true
-		}
-	}
+//func (this *Player) CanSelectSceneItem() bool {
+//	if this.MainUnit == nil || this.MainUnit.Items == nil {
+//		return false
+//	}
+//	for _, v := range this.MainUnit.Items {
+//		if v == nil {
+//			return true
+//		}
+//	}
+//	for _, v := range this.BagInfo {
+//		if v == nil {
+//			return true
+//		}
+//	}
 
-	return false
-}
+//	return false
+//}
 
 //拾取地面物品
 func (this *Player) SelectSceneItem(sceneitem *SceneItem) bool {
-	if this.CanSelectSceneItem() == false {
+	if this.MainUnit == nil || this.MainUnit.Items == nil {
 		return false
 	}
-	item := NewItem(sceneitem.TypeID)
-	this.MainUnit.AddItem(-1, item)
+	this.lock.Lock()
+	for _, v := range this.MainUnit.Items {
+		if v == nil {
 
-	return true
+			item := NewItem(sceneitem.TypeID)
+			this.MainUnit.AddItem(-1, item)
+			this.lock.Unlock()
+			return true
+		}
+	}
+	for k, v := range this.BagInfo {
+		if v == nil {
+			item := &BagItem{}
+			item.Index = int32(k)
+			item.TypeID = sceneitem.TypeID
+			this.BagInfo[k] = item
+			this.lock.Unlock()
+			return true
+		}
+	}
+	this.lock.Unlock()
+	return false
 }
 
 //遍历删除无效的
@@ -192,6 +253,15 @@ func (this *Player) GetDBData() *db.DB_CharacterInfo {
 		}
 	}
 
+	//背包信息
+	baginfo := ""
+	for _, v := range this.BagInfo {
+		if v != nil {
+			itemstr := strconv.Itoa(int(v.Index)) + "," + strconv.Itoa(int(v.TypeID)) + ";"
+			baginfo += itemstr
+		}
+	}
+	dbdata.BagInfo = baginfo
 	return &dbdata
 }
 

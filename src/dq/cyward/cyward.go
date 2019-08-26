@@ -1308,6 +1308,26 @@ func (this *WardCore) GetTargetPosCollision(one *Body, targetpos vec2d.Vec2) *Bo
 	return nil
 }
 
+//检查道具碰撞
+func (this *WardCore) CheckItemCollision(itempos vec2d.Vec2) bool {
+
+	zones := utils.GetVisibleZonesFromWH((itempos.X), (itempos.Y), gWardCore_ZoneWidth, gWardCore_ZoneHeight)
+	for _, vzone := range zones {
+		if _, ok := this.ZoneBodys[vzone]; ok {
+			//遍历区域中的单位
+			for _, v := range this.ZoneBodys[vzone] {
+				if v.CollisoinLevel >= 2 {
+					mypolygon1 := v.GetMyPolygon(nil)
+					if mypolygon1.IsInMyPolygon(itempos) {
+						return false
+					}
+				}
+			}
+		}
+	}
+	return true
+}
+
 //处理分区
 func (this *WardCore) DoZone() {
 	this.ZoneBodys = make(map[utils.SceneZone][]*Body)

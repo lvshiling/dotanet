@@ -21,4 +21,5 @@ type DB_CharacterInfo struct {
 	Item4       string  `json:"item4"`
 	Item5       string  `json:"item5"`
 	Item6       string  `json:"item6"`
+	BagInfo     string  `json:"baginfo"`
 }
