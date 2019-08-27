@@ -76,10 +76,12 @@ message CS_GetUnitInfo {
 message CS_GetBagInfo {
     int32 UnitID = 1;//单位对象id
 }
-//交换道具位置 背包位置+100
+//交换道具位置 背包位置
 message CS_ChangeItemPos {
     int32 SrcPos = 1;//源位置
     int32 DestPos = 2;//目标位置
+    int32 SrcType = 3;//源类型 1表示装备栏 2表示背包
+    int32 DestType = 4;//目标类型 1表示装备栏 2表示背包
 }
 message SC_UnitInfo  {
     UnitBoardDatas   UnitData = 1;//单位面板信息

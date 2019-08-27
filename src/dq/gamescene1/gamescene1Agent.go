@@ -61,6 +61,7 @@ func (a *GameScene1Agent) Init() {
 
 	a.handles["CS_GetUnitInfo"] = a.DoGetUnitInfo
 	a.handles["CS_GetBagInfo"] = a.DoGetBagInfo
+	a.handles["CS_ChangeItemPos"] = a.DoChangeItemPos
 
 	//创建场景
 	allscene := conf.GetAllScene()
@@ -198,6 +199,46 @@ func (a *GameScene1Agent) DoMsgUserEnterScene(data *protomsg.MsgBase) {
 
 }
 
+//DoChangeItemPos
+func (a *GameScene1Agent) DoChangeItemPos(data *protomsg.MsgBase) {
+
+	log.Info("---------DoChangeItemPos")
+	h2 := &protomsg.CS_ChangeItemPos{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	player.(*gamecore.Player).ChangeItemPos(h2)
+
+	a.SendUnitInfo(player.(*gamecore.Player).MainUnit, player.(*gamecore.Player))
+	a.SendBagInfo(player.(*gamecore.Player))
+
+}
+
+func (a *GameScene1Agent) SendBagInfo(player *gamecore.Player) {
+	if player == nil {
+		return
+	}
+	msg := &protomsg.SC_BagInfo{}
+	msg.Equips = make([]*protomsg.UnitEquip, 0)
+	for _, v := range player.BagInfo {
+		if v != nil {
+			equip := &protomsg.UnitEquip{}
+			equip.Pos = v.Index
+			equip.TypdID = v.TypeID
+			msg.Equips = append(msg.Equips, equip)
+		}
+	}
+
+	player.SendMsgToClient("SC_BagInfo", msg)
+}
+
 //DoGetBagInfo
 func (a *GameScene1Agent) DoGetBagInfo(data *protomsg.MsgBase) {
 
@@ -213,48 +254,13 @@ func (a *GameScene1Agent) DoGetBagInfo(data *protomsg.MsgBase) {
 	if player == nil {
 		return
 	}
-
-	msg := &protomsg.SC_BagInfo{}
-	msg.Equips = make([]*protomsg.UnitEquip, 0)
-	for _, v := range player.(*gamecore.Player).BagInfo {
-		if v != nil {
-			equip := &protomsg.UnitEquip{}
-			equip.Pos = v.Index
-			equip.TypdID = v.TypeID
-			msg.Equips = append(msg.Equips, equip)
-		}
-	}
-
-	player.(*gamecore.Player).SendMsgToClient("SC_BagInfo", msg)
+	a.SendBagInfo(player.(*gamecore.Player))
 
 }
 
-//DoGetUnitInfo
-func (a *GameScene1Agent) DoGetUnitInfo(data *protomsg.MsgBase) {
-
-	log.Info("---------DoGetUnitInfo")
-	h2 := &protomsg.CS_GetUnitInfo{}
-	err := proto.Unmarshal(data.Datas, h2)
-	if err != nil {
-		log.Info(err.Error())
-		return
-	}
-	log.Info("---------%d", h2.UnitID)
-	player := a.Players.Get(data.Uid)
-	if player == nil {
-		return
-	}
-	curscene := player.(*gamecore.Player).CurScene
-	if curscene == nil {
-		return
-	}
-	unit := curscene.FindUnitByID(h2.UnitID)
-	if unit == nil {
-		return
-	}
-
+func (a *GameScene1Agent) SendUnitInfo(unit *gamecore.Unit, player *gamecore.Player) {
 	unitdata := &protomsg.UnitBoardDatas{}
-	unitdata.ID = h2.UnitID
+	unitdata.ID = unit.ID
 	unitdata.Name = unit.Name
 	unitdata.AttributeStrength = unit.AttributeStrength
 	unitdata.AttributeAgility = unit.AttributeAgility
@@ -287,8 +293,33 @@ func (a *GameScene1Agent) DoGetUnitInfo(data *protomsg.MsgBase) {
 
 	msg := &protomsg.SC_UnitInfo{}
 	msg.UnitData = unitdata
-	player.(*gamecore.Player).SendMsgToClient("SC_UnitInfo", msg)
+	player.SendMsgToClient("SC_UnitInfo", msg)
+}
 
+//DoGetUnitInfo
+func (a *GameScene1Agent) DoGetUnitInfo(data *protomsg.MsgBase) {
+
+	log.Info("---------DoGetUnitInfo")
+	h2 := &protomsg.CS_GetUnitInfo{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	log.Info("---------%d", h2.UnitID)
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	curscene := player.(*gamecore.Player).CurScene
+	if curscene == nil {
+		return
+	}
+	unit := curscene.FindUnitByID(h2.UnitID)
+	if unit == nil {
+		return
+	}
+	a.SendUnitInfo(unit, player.(*gamecore.Player))
 }
 
 //DoPlayerSkill

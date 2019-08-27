@@ -14,6 +14,7 @@ import (
 )
 
 var UnitID int32 = 1000000
+var UnitEquitCount int32 = 6
 
 func (this *Unit) TestData() {
 	this.AttackRange = 2
@@ -1499,13 +1500,26 @@ func (this *Unit) FreshHaloInSkills() {
 	}
 }
 
-//添加道具在装备栏
-func (this *Unit) AddItem(index int, item *Item) bool {
+//删除道具 从装备栏
+func (this *Unit) RemoveItem(index int32) {
+	if int(index) >= len(this.Items) || int(index) < 0 {
+		return
+	}
+	item := this.Items[index]
 
-	if index >= len(this.Items) || index < 0 {
+	if item != nil {
+		item.Clear()
+		this.Items[index] = nil
+	}
+}
+
+//添加道具在装备栏
+func (this *Unit) AddItem(index int32, item *Item) bool {
+
+	if int(index) >= len(this.Items) || int(index) < 0 {
 		for k, v := range this.Items {
 			if v == nil {
-				index = k
+				index = int32(k)
 				break
 			}
 		}
@@ -1524,14 +1538,14 @@ func (this *Unit) AddItem(index int, item *Item) bool {
 }
 
 //刷新道具的作用
-func (this *Unit) FreshUseableItem() {
-	for _, v := range this.Items {
-		if v != nil {
-			v.Clear()
-			v.Add2Unit(this)
-		}
-	}
-}
+//func (this *Unit) FreshUseableItem() {
+//	for _, v := range this.Items {
+//		if v != nil {
+//			v.Clear()
+//			v.Add2Unit(this)
+//		}
+//	}
+//}
 
 //掉落道具
 func (this *Unit) DropItem() {
@@ -1679,7 +1693,7 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 	unitre.Init()
 
 	//创建道具
-	unitre.Items = make([]*Item, 6)
+	unitre.Items = make([]*Item, UnitEquitCount)
 	//	unitre.Items[0] = NewItemFromDB(characterinfo.Item1)
 	//	unitre.Items[1] = NewItemFromDB(characterinfo.Item2)
 	//	unitre.Items[2] = NewItemFromDB(characterinfo.Item3)

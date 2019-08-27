@@ -3,6 +3,7 @@ package gamecore
 import (
 	"dq/datamsg"
 	"dq/db"
+	"dq/log"
 	"dq/protobuf"
 	"dq/utils"
 	"strconv"
@@ -61,6 +62,8 @@ func CreatePlayer(uid int32, connectid int32, characterid int32) *Player {
 	re.ReInit()
 	return re
 }
+
+//载入背包信息 从数据库数据
 func (this *Player) LoadBagInfoFromDB(baginfo string) {
 	if len(baginfo) <= 0 {
 		return
@@ -126,6 +129,100 @@ func (this *Player) AddOtherUnit(unit *Unit) {
 
 //	return false
 //}
+
+//交换道具位置 背包位置
+func (this *Player) ChangeItemPos(data *protomsg.CS_ChangeItemPos) {
+	//1表示装备栏 2表示背包
+	if data.SrcType == 1 {
+		if data.SrcPos < 0 || data.SrcPos >= UnitEquitCount {
+			return
+		}
+	} else {
+		if data.SrcPos < 0 || data.SrcPos >= MaxBagCount {
+			return
+		}
+	}
+
+	if data.DestType == 1 {
+		if data.DestPos < 0 || data.DestPos >= UnitEquitCount {
+			return
+		}
+	} else {
+		if data.DestPos < 0 || data.DestPos >= MaxBagCount {
+			return
+		}
+	}
+	if this.MainUnit == nil {
+		return
+	}
+
+	log.Info("-------ChangeItemPos:%d  %d  %d  %d", data.SrcPos, data.DestPos, data.SrcType, data.DestType)
+
+	this.lock.Lock()
+	if data.SrcType == 1 {
+		src := this.MainUnit.Items[data.SrcPos]
+		if data.DestType == 1 {
+			dest := this.MainUnit.Items[data.DestPos]
+			//只交换位置
+			this.MainUnit.Items[data.SrcPos] = dest
+			this.MainUnit.Items[data.DestPos] = src
+		} else {
+			dest := this.BagInfo[data.DestPos]
+			//删除角色身上的装备
+			this.MainUnit.RemoveItem(data.SrcPos)
+			if dest != nil {
+				item := NewItem(dest.TypeID)
+				this.MainUnit.AddItem(data.SrcPos, item)
+			}
+			//删除背包道具
+			this.BagInfo[data.DestPos] = nil
+			if src != nil {
+				item := &BagItem{}
+				item.Index = data.DestPos
+				item.TypeID = src.TypeID
+				this.BagInfo[data.DestPos] = item
+			}
+
+		}
+
+	} else {
+		src := this.BagInfo[data.SrcPos]
+		if data.DestType == 1 {
+			dest := this.MainUnit.Items[data.DestPos]
+
+			//删除角色身上的装备
+			this.MainUnit.RemoveItem(data.DestPos)
+			if src != nil {
+				item := NewItem(src.TypeID)
+				this.MainUnit.AddItem(data.DestPos, item)
+			}
+			//删除背包道具
+			this.BagInfo[data.SrcPos] = nil
+			if dest != nil {
+				item := &BagItem{}
+				item.Index = data.SrcPos
+				item.TypeID = dest.TypeID
+				this.BagInfo[data.SrcPos] = item
+			}
+		} else {
+			dest := this.BagInfo[data.DestPos]
+			//只交换位置
+
+			this.BagInfo[data.SrcPos] = dest
+			if this.BagInfo[data.SrcPos] != nil {
+				this.BagInfo[data.SrcPos].Index = data.SrcPos
+			}
+			//src.Index = data.DestPos
+			this.BagInfo[data.DestPos] = src
+			if this.BagInfo[data.DestPos] != nil {
+				this.BagInfo[data.DestPos].Index = data.DestPos
+			}
+
+		}
+	}
+
+	this.lock.Unlock()
+}
 
 //拾取地面物品
 func (this *Player) SelectSceneItem(sceneitem *SceneItem) bool {
