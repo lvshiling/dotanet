@@ -182,7 +182,7 @@ func (this *Unit) HaveSkillCmd() bool {
 //检查目标释放在技能施法范围内
 func (this *Unit) IsInSkillRange(data *protomsg.CS_PlayerSkill) bool {
 	//检查本单位是否有这个技能
-	skilldata, ok := this.Skills[data.SkillID]
+	skilldata, ok := this.GetSkillFromTypeID(data.SkillID)
 	if ok == false {
 		return false
 	}
@@ -369,6 +369,131 @@ func (this *Unit) GetTriggerAttackFromAttackAnim() []int32 {
 	return re
 }
 
+//刷新技能CD 检查道具同CD技能
+func (this *Unit) FreshCDTime(skill *Skill, time float32) {
+
+	if skill == nil {
+		return
+	}
+	skill.FreshCDTime(time)
+
+	//刷新同种的道具技能CD
+	for _, v := range this.ItemSkills {
+		if skill.TypeID == v.TypeID && v != skill {
+			v.SameCD(skill)
+		}
+	}
+}
+
+func (this *Unit) CheckTriggerAttackOneSkill(b *Bullet, animattack []int32, v *Skill) {
+	if v == nil {
+		return
+	}
+	//CastType              int32   // 施法类型:  1:主动技能  2:被动技能
+	//TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
+	//主动技能
+	if v.CastType == 2 && v.TriggerTime == 1 {
+		//animattack
+		isTrigger := false
+		if v.AttackAnim > 0 {
+			for _, v1 := range animattack {
+				if v.TypeID == v1 {
+					isTrigger = true
+				}
+			}
+		} else {
+			if v.CheckCDTime() {
+				//检查 触发概率 和额外条件
+				if utils.CheckRandom(v.TriggerProbability) && this.CheckTriggerOtherRule(v.TriggerOtherRule, v.TriggerOtherRuleParam) {
+					isTrigger = true
+				}
+			}
+		}
+
+		//检查cd 魔法消耗
+		if isTrigger == true {
+			//检查 触发概率 和额外条件
+			//if utils.CheckRandom(v.TriggerProbability) && this.CheckTriggerOtherRule(v.TriggerOtherRule, v.TriggerOtherRuleParam) {
+			//触发
+			//添加自己的buff
+			this.AddBuffFromStr(v.MyBuff, v.Level, this)
+			//添加自己的halo
+			this.AddHaloFromStr(v.MyHalo, v.Level, nil)
+			//--
+			b.SetProjectileMode(v.BulletModeType, v.BulletSpeed)
+			//暴击
+			b.SetCrit(v.TriggerCrit)
+			b.AddNoCareDodge(v.NoCareDodge)
+			b.AddDoHurtPhysicalAmaorCV(v.PhysicalAmaorCV)
+			//额外伤害
+			if v.HurtValue > 0 {
+				//技能增强
+				if v.HurtType == 2 {
+					hurtvalue := (v.HurtValue + int32(float32(v.HurtValue)*this.MagicScale))
+					b.AddOtherHurt(HurtInfo{HurtType: v.HurtType, HurtValue: hurtvalue})
+				} else {
+					b.AddOtherHurt(HurtInfo{HurtType: v.HurtType, HurtValue: v.HurtValue})
+				}
+			}
+			//特殊情况处理
+			this.DoSkillException(v, b.DestUnit, b)
+			//弹射
+			b.SetEjection(v.EjectionCount, v.EjectionRange, v.EjectionDecay)
+
+			//召唤信息
+			b.BulletCallUnitInfo = BulletCallUnitInfo{v.CallUnitInfo, v.Level}
+			//目标buff
+			b.AddTargetBuff(v.TargetBuff, v.Level)
+			b.AddTargetHalo(v.TargetHalo, v.Level)
+			//强制移动
+			//if v.ForceMoveType == 1 {
+			b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel, v.ForceMoveType, v.ForceMoveBuff)
+			//}
+			b.PhysicalHurtAddHP += v.PhysicalHurtAddHP
+			b.MagicHurtAddHP += v.MagicHurtAddHP
+
+			cdtime := v.Cooldown - this.MagicCD*v.Cooldown
+			//v.FreshCDTime(cdtime)
+			this.FreshCDTime(v, cdtime)
+
+			//}
+		}
+	} else if v.CastType == 1 && v.CastTargetType == 4 && v.AttackAutoActive == 1 {
+		//主动技能 攻击时自动释放的攻击特效
+		if v.CheckCDTime() == false {
+			return
+		}
+		if this.SkillEnable != 1 {
+			return
+		}
+		if b.DestUnit == nil {
+			return
+		}
+		if b.DestUnit.MagicImmune == 1 {
+			if v.NoCareMagicImmune == 2 {
+				return
+			}
+		}
+		//目标buff
+		b.AddTargetBuff(v.TargetBuff, v.Level)
+		b.AddTargetHalo(v.TargetHalo, v.Level)
+
+		b.SetProjectileMode(v.BulletModeType, v.BulletSpeed)
+		//强制移动
+		//if v.ForceMoveType == 1 {
+		b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel, v.ForceMoveType, v.ForceMoveBuff)
+		//}
+
+		b.PhysicalHurtAddHP += v.PhysicalHurtAddHP
+		b.MagicHurtAddHP += v.MagicHurtAddHP
+
+		cdtime := v.Cooldown - this.MagicCD*v.Cooldown
+		//v.FreshCDTime(cdtime)
+		this.FreshCDTime(v, cdtime)
+
+	}
+}
+
 //检查攻击 触发攻击特效
 func (this *Unit) CheckTriggerAttackSkill(b *Bullet, animattack []int32) {
 	//溅射buff
@@ -392,107 +517,10 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet, animattack []int32) {
 	}
 
 	for _, v := range this.Skills {
-		//CastType              int32   // 施法类型:  1:主动技能  2:被动技能
-		//TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
-		//主动技能
-		if v.CastType == 2 && v.TriggerTime == 1 {
-			//animattack
-			isTrigger := false
-			if v.AttackAnim > 0 {
-				for _, v1 := range animattack {
-					if v.TypeID == v1 {
-						isTrigger = true
-					}
-				}
-			} else {
-				if v.CheckCDTime() {
-					//检查 触发概率 和额外条件
-					if utils.CheckRandom(v.TriggerProbability) && this.CheckTriggerOtherRule(v.TriggerOtherRule, v.TriggerOtherRuleParam) {
-						isTrigger = true
-					}
-				}
-			}
-
-			//检查cd 魔法消耗
-			if isTrigger == true {
-				//检查 触发概率 和额外条件
-				//if utils.CheckRandom(v.TriggerProbability) && this.CheckTriggerOtherRule(v.TriggerOtherRule, v.TriggerOtherRuleParam) {
-				//触发
-				//添加自己的buff
-				this.AddBuffFromStr(v.MyBuff, v.Level, this)
-				//添加自己的halo
-				this.AddHaloFromStr(v.MyHalo, v.Level, nil)
-				//--
-				b.SetProjectileMode(v.BulletModeType, v.BulletSpeed)
-				//暴击
-				b.SetCrit(v.TriggerCrit)
-				b.AddNoCareDodge(v.NoCareDodge)
-				b.AddDoHurtPhysicalAmaorCV(v.PhysicalAmaorCV)
-				//额外伤害
-				if v.HurtValue > 0 {
-					//技能增强
-					if v.HurtType == 2 {
-						hurtvalue := (v.HurtValue + int32(float32(v.HurtValue)*this.MagicScale))
-						b.AddOtherHurt(HurtInfo{HurtType: v.HurtType, HurtValue: hurtvalue})
-					} else {
-						b.AddOtherHurt(HurtInfo{HurtType: v.HurtType, HurtValue: v.HurtValue})
-					}
-				}
-				//特殊情况处理
-				this.DoSkillException(v, b.DestUnit, b)
-				//弹射
-				b.SetEjection(v.EjectionCount, v.EjectionRange, v.EjectionDecay)
-
-				//召唤信息
-				b.BulletCallUnitInfo = BulletCallUnitInfo{v.CallUnitInfo, v.Level}
-				//目标buff
-				b.AddTargetBuff(v.TargetBuff, v.Level)
-				b.AddTargetHalo(v.TargetHalo, v.Level)
-				//强制移动
-				//if v.ForceMoveType == 1 {
-				b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel, v.ForceMoveType, v.ForceMoveBuff)
-				//}
-				b.PhysicalHurtAddHP += v.PhysicalHurtAddHP
-				b.MagicHurtAddHP += v.MagicHurtAddHP
-
-				cdtime := v.Cooldown - this.MagicCD*v.Cooldown
-				v.FreshCDTime(cdtime)
-
-				//}
-			}
-		} else if v.CastType == 1 && v.CastTargetType == 4 && v.AttackAutoActive == 1 {
-			//主动技能 攻击时自动释放的攻击特效
-			if v.CheckCDTime() == false {
-				continue
-			}
-			if this.SkillEnable != 1 {
-				continue
-			}
-			if b.DestUnit == nil {
-				continue
-			}
-			if b.DestUnit.MagicImmune == 1 {
-				if v.NoCareMagicImmune == 2 {
-					continue
-				}
-			}
-			//目标buff
-			b.AddTargetBuff(v.TargetBuff, v.Level)
-			b.AddTargetHalo(v.TargetHalo, v.Level)
-
-			b.SetProjectileMode(v.BulletModeType, v.BulletSpeed)
-			//强制移动
-			//if v.ForceMoveType == 1 {
-			b.SetForceMove(v.ForceMoveTime, v.ForceMoveSpeedSize, v.ForceMoveLevel, v.ForceMoveType, v.ForceMoveBuff)
-			//}
-
-			b.PhysicalHurtAddHP += v.PhysicalHurtAddHP
-			b.MagicHurtAddHP += v.MagicHurtAddHP
-
-			cdtime := v.Cooldown - this.MagicCD*v.Cooldown
-			v.FreshCDTime(cdtime)
-
-		}
+		this.CheckTriggerAttackOneSkill(b, animattack, v)
+	}
+	for _, v := range this.ItemSkills {
+		this.CheckTriggerAttackOneSkill(b, animattack, v)
 	}
 }
 
@@ -751,10 +779,11 @@ func (this *Unit) CheckTriggerKillerSkill(target *Unit) {
 
 					//消耗 CD
 					namacost := skilldata.GetManaCost() - int32(this.ManaCost*float32(skilldata.GetManaCost()))
-					this.ChangeMP(-namacost)
+					this.ChangeMP(float32(-namacost))
 
 					cdtime := skilldata.Cooldown - this.MagicCD*skilldata.Cooldown
-					skilldata.FreshCDTime(cdtime)
+					//skilldata.FreshCDTime(cdtime)
+					this.FreshCDTime(skilldata, cdtime)
 
 				}
 			}
@@ -762,8 +791,13 @@ func (this *Unit) CheckTriggerKillerSkill(target *Unit) {
 	}
 }
 
-//检查攻击 触发攻击特效
+//检查被攻击 触发攻击特效
 func (this *Unit) CheckTriggerBeAttackSkill(target *Unit) {
+
+	//道具技能
+	for _, v := range this.ItemSkills {
+		v.DoBeHurt()
+	}
 
 	//禁止被动
 	if this.NoPassiveSkill == 1 {
@@ -823,10 +857,11 @@ func (this *Unit) CheckTriggerBeAttackSkill(target *Unit) {
 
 					//消耗 CD
 					namacost := skilldata.GetManaCost() - int32(this.ManaCost*float32(skilldata.GetManaCost()))
-					this.ChangeMP(-namacost)
+					this.ChangeMP(float32(-namacost))
 
 					cdtime := skilldata.Cooldown - this.MagicCD*skilldata.Cooldown
-					skilldata.FreshCDTime(cdtime)
+					//skilldata.FreshCDTime(cdtime)
+					this.FreshCDTime(skilldata, cdtime)
 
 				}
 			}
@@ -840,7 +875,7 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 		return
 	}
 	//检查本单位是否有这个技能
-	skilldata, ok := this.Skills[data.SkillID]
+	skilldata, ok := this.GetSkillFromTypeID(data.SkillID)
 	if ok == false {
 		return
 	}
@@ -864,10 +899,11 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 	//BlinkToTarget
 	if skilldata.BlinkToTarget == 1 {
 		if skilldata.CastTargetType == 1 {
-			//对自己施法
+			//对自己施法 分身的时候使用
 			this.Body.BlinkToPos(vec2d.Vec2{this.Body.Position.X + float64(utils.GetRandomFloat(2)),
 				this.Body.Position.Y + float64(utils.GetRandomFloat(2))}, 0)
 		} else {
+			log.Info("blinkpos:%v", targetpos)
 			this.Body.BlinkToPos(targetpos, 0)
 		}
 
@@ -912,10 +948,11 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 
 	//消耗 CD
 	namacost := skilldata.GetManaCost() - int32(this.ManaCost*float32(skilldata.GetManaCost()))
-	this.ChangeMP(-namacost)
+	this.ChangeMP(float32(-namacost))
 
 	cdtime := skilldata.Cooldown - this.MagicCD*skilldata.Cooldown
-	skilldata.FreshCDTime(cdtime)
+	//skilldata.FreshCDTime(cdtime)
+	this.FreshCDTime(skilldata, cdtime)
 
 	//删除技能命令
 	this.StopSkillCmd()
@@ -943,7 +980,7 @@ func (this *Unit) UseSkillEnable(data *protomsg.CS_PlayerSkill) bool {
 	}
 
 	//检查本单位是否有这个技能
-	skilldata, ok := this.Skills[data.SkillID]
+	skilldata, ok := this.GetSkillFromTypeID(data.SkillID)
 	if ok == false {
 		return false
 	}
@@ -962,7 +999,7 @@ func (this *Unit) UseSkillEnable(data *protomsg.CS_PlayerSkill) bool {
 	}
 	//魔法不足
 	shouldmp := skilldata.GetManaCost() - int32(this.ManaCost*float32(skilldata.GetManaCost()))
-	if shouldmp > this.MP {
+	if shouldmp > int32(this.MP) {
 		return false
 	}
 
@@ -986,12 +1023,27 @@ func (this *Unit) PlayerControl_SkillCmd(data *protomsg.CS_PlayerSkill) {
 	this.SkillCmd(data)
 }
 
+//通过typid获取技能 包括道具技能
+func (this *Unit) GetSkillFromTypeID(typeid int32) (*Skill, bool) {
+	skilldata, ok := this.Skills[typeid]
+	if ok == true {
+		return skilldata, ok
+	}
+	for _, v := range this.ItemSkills {
+		if v.TypeID == typeid {
+			return v, true
+		}
+	}
+
+	return nil, false
+}
+
 //技能行为命令
 func (this *Unit) SkillCmd(data *protomsg.CS_PlayerSkill) {
 
 	//如果是攻击特效技能(比如小黑的冰箭)
 	//检查本单位是否有这个技能
-	skilldata, ok := this.Skills[data.SkillID]
+	skilldata, ok := this.GetSkillFromTypeID(data.SkillID)
 	if ok == false {
 		return
 	}
@@ -1290,7 +1342,7 @@ func (this *Unit) InitHPandMP(hp float32, mp float32) {
 	this.MAX_HP = this.BaseHP
 	this.HP = int32(float32(this.MAX_HP) * hp)
 	this.MAX_MP = this.BaseMP
-	this.MP = int32(float32(this.MAX_MP) * mp)
+	this.MP = (float32(this.MAX_MP) * mp)
 	//log.Info("---hp:%d---mp:%d", this.HP, this.MP)
 }
 
@@ -1348,7 +1400,7 @@ type UnitProperty struct {
 	//复合数据 会随时变动的数据 比如受buff影响攻击力降低  (每帧动态计算)
 	HP            int32
 	MAX_HP        int32
-	MP            int32
+	MP            float32
 	MAX_MP        int32
 	Level         int32 //等级 会影响属性
 	Experience    int32
@@ -1442,6 +1494,8 @@ type Unit struct {
 
 	InitPosition vec2d.Vec2 //初始位置
 
+	ItemSkills []*Skill //所有道具技能
+
 	Skills map[int32]*Skill  //所有技能
 	Buffs  map[int32][]*Buff //所有buff 同typeID下可能有多个buff
 
@@ -1528,12 +1582,60 @@ func (this *Unit) AddItem(index int32, item *Item) bool {
 		this.Items[index] = item
 		if item != nil {
 			item.Clear()
-			item.Add2Unit(this)
+			item.Add2Unit(this, index)
 		}
 		return true
 	}
 
 	return false
+
+}
+
+//添加道具技能
+func (this *Unit) AddItemSkill(skill *Skill) {
+	//this.ItemSkills[skill] = skill //所有道具技能
+
+	//如果已经有此道具在身上 就同步身上道具的CD 否则同步数据库中的cd
+	isInBody := false
+	for _, v := range this.ItemSkills {
+		if v.TypeID == skill.TypeID {
+			skill.SameCD(v)
+			isInBody = true
+			break
+		}
+	}
+	if isInBody == false {
+		if this.MyPlayer != nil {
+			iscdinfo := this.MyPlayer.GetItemSkillCDInfo(skill.TypeID)
+
+			if iscdinfo != nil {
+				log.Info("---AddItemSkill-%d  %f", skill.TypeID, iscdinfo.RemainCDTime)
+				skill.ResetCDTime(iscdinfo.RemainCDTime)
+			}
+		}
+	}
+
+	this.ItemSkills = append(this.ItemSkills, skill)
+}
+
+//删除道具技能
+func (this *Unit) RemoveItemSkill(skill *Skill) {
+
+	if skill == nil {
+		return
+	}
+	//log.Info("---RemoveItemSkill-%d", skill.TypeID)
+	//保存CD
+	if this.MyPlayer != nil {
+		this.MyPlayer.SaveItemSkillCDInfo(skill)
+	}
+
+	for k, v := range this.ItemSkills {
+		if v == skill {
+			this.ItemSkills = append(this.ItemSkills[:k], this.ItemSkills[k+1:]...)
+			return
+		}
+	}
 
 }
 
@@ -1587,6 +1689,7 @@ func CreateUnit(scene *Scene, typeid int32) *Unit {
 	unitre.Level = 1
 
 	//初始化技能被动光环
+	unitre.ItemSkills = make([]*Skill, 0)  //所有道具技能
 	unitre.Skills = make(map[int32]*Skill) //所有技能
 	unitre.HaloInSkills = make(map[int32][]int32)
 	unitre.FreshHaloInSkills()
@@ -1627,6 +1730,7 @@ func CreateUnitByCopyUnit(unit *Unit, controlplayer *Player) *Unit {
 	unitre.Experience = unit.Experience
 
 	//继承被动技能
+	unitre.ItemSkills = make([]*Skill, 0)  //所有道具技能
 	unitre.Skills = make(map[int32]*Skill) //所有技能
 	for _, v := range unit.Skills {
 		if v.CastType == 2 {
@@ -1668,6 +1772,7 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 	utils.Bytes2Struct(datas, &characterinfo)
 	player.Characterid = characterinfo.Characterid
 	player.LoadBagInfoFromDB(characterinfo.BagInfo)
+	player.LoadItemSkillCDFromDB(characterinfo.ItemSkillCDInfo)
 
 	log.Info("---DB_CharacterInfo---%v", characterinfo)
 	//	文件数据
@@ -1681,6 +1786,7 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 	unitre.InitPosition = vec2d.Vec2{float64(characterinfo.X), float64(characterinfo.Y)}
 
 	//创建技能
+	unitre.ItemSkills = make([]*Skill, 0) //所有道具技能
 	skilldbdata := strings.Split(characterinfo.Skill, ";")
 	unitre.Skills = NewUnitSkills(skilldbdata, unitre.InitSkillsInfo, unitre) //所有技能
 	for _, v := range unitre.Skills {
@@ -1844,7 +1950,7 @@ func (this *Unit) EveryTimeDo(dt float64) {
 
 		//每秒回血
 		this.ChangeHP(int32(this.HPRegain))
-		this.ChangeMP(int32(this.MPRegain))
+		this.ChangeMP((this.MPRegain))
 
 		this.UpdateSkillAddBuff()
 
@@ -1884,6 +1990,10 @@ func (this *Unit) Update(dt float64) {
 		for _, v := range this.Skills {
 			v.Update(dt)
 		}
+	}
+	//道具技能更新
+	for _, v := range this.ItemSkills {
+		v.Update(dt)
 	}
 
 	//更新buff
@@ -2000,13 +2110,13 @@ func (this *Unit) ChangeHP(hp int32) int32 {
 }
 
 //改变MP
-func (this *Unit) ChangeMP(mp int32) {
+func (this *Unit) ChangeMP(mp float32) {
 	this.MP += mp
 	if this.MP <= 0 {
 		this.MP = 0
 	}
-	if this.MP >= this.MAX_MP {
-		this.MP = this.MAX_MP
+	if this.MP >= float32(this.MAX_MP) {
+		this.MP = float32(this.MAX_MP)
 	}
 }
 
@@ -2033,7 +2143,7 @@ func (this *Unit) CalMaxHP_MaxHP() {
 
 		changemp := float32(maxmp)/float32(this.MAX_MP)*float32(this.MP) - float32(this.MP)
 		this.MAX_MP = maxmp
-		this.ChangeMP(int32(changemp))
+		this.ChangeMP((changemp))
 
 	}
 }
@@ -2743,6 +2853,8 @@ func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 	physicAttack := int32(0)
 	if this.PhisicImmune != 1 {
 		physicAttack = bullet.GetAttackOfType(1) //物理攻击
+
+		physicAttack = physicAttack - this.CheckHurtBlock(physicAttack) //伤害格挡
 		//计算护甲抵消后伤害
 		if bullet.DoHurtPhysicalAmaorCV == 0 {
 			physicAttack = int32(utils.SetValueGreaterE(float32(physicAttack)*(1-this.PhysicalResist), 0))
@@ -2864,9 +2976,35 @@ func (this *Unit) CheckTriggerCreateBuff(v1 *Buff) {
 	}
 }
 
+//被攻击时 格挡处理 返回格挡了的伤害值
+//伤害格挡
+//	HurtBlockProbability float32 //伤害格挡几率
+//	HurtBlockPhisicValue int32   //物理伤害格挡值
+func (this *Unit) CheckHurtBlock(physicAttack int32) int32 {
+	//遍历 可以优化  本体的buff
+	for _, v := range this.Buffs {
+		for _, v1 := range v {
+			//攻击时减少标记
+			if v1.HurtBlockProbability <= 0 || v1.HurtBlockPhisicValue <= 0 {
+				continue
+			}
+			if utils.CheckRandom(v1.HurtBlockProbability) {
+				log.Info("格挡:%d  -- %d", v1.HurtBlockPhisicValue, physicAttack)
+				if v1.HurtBlockPhisicValue >= physicAttack {
+
+					return physicAttack
+				}
+				return v1.HurtBlockPhisicValue
+			}
+		}
+	}
+
+	return 0
+}
+
 //被攻击时 buff异常处理
 func (this *Unit) CheckTriggerBeAttack(attacker *Unit, hurttype int32, hurtvalue int32) {
-	if attacker == nil || attacker.IsDisappear() {
+	if attacker == nil || attacker.IsDisappear() || hurtvalue <= 0 {
 		return
 	}
 	//物理攻击
@@ -3018,7 +3156,7 @@ func (this *Unit) FreshClientData() {
 
 	this.ClientData.HP = this.HP
 	this.ClientData.MaxHP = this.MAX_HP
-	this.ClientData.MP = this.MP
+	this.ClientData.MP = int32(this.MP)
 	this.ClientData.MaxMP = this.MAX_MP
 	this.ClientData.Name = this.Name
 	this.ClientData.Level = this.Level
@@ -3050,6 +3188,42 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.IsMirrorImage = this.IsMirrorImage
 	this.ClientData.AttackRange = this.AttackRange
 	this.ClientData.AttackAnim = this.AttackAnim
+
+	//道具技能
+	isds := make(map[int32]int32)
+	this.ClientData.ISD = make([]*protomsg.SkillDatas, 0)
+	for _, v := range this.ItemSkills {
+
+		if v.CastType != 1 {
+			continue
+		}
+
+		if _, ok := isds[v.TypeID]; ok {
+			continue
+		} else {
+			isds[v.TypeID] = v.TypeID
+		}
+
+		skdata := &protomsg.SkillDatas{}
+		skdata.TypeID = v.TypeID
+		skdata.Level = v.Level
+		skdata.RemainCDTime = v.RemainCDTime
+		skdata.CanUpgrade = int32(2) //v.CanUpgrade
+		skdata.Index = v.Index
+		skdata.CastType = v.CastType
+		skdata.CastTargetType = v.CastTargetType
+		skdata.UnitTargetTeam = v.UnitTargetTeam
+		skdata.UnitTargetCamp = v.UnitTargetCamp
+		skdata.NoCareMagicImmune = v.NoCareMagicImmune
+		skdata.CastRange = v.CastRange + this.AddedMagicRange
+		skdata.Cooldown = v.Cooldown
+		skdata.HurtRange = v.HurtRange
+		skdata.ManaCost = v.GetManaCost()
+		skdata.AttackAutoActive = v.AttackAutoActive
+		skdata.Visible = v.Visible
+		skdata.RemainSkillCount = v.RemainSkillCount
+		this.ClientData.ISD = append(this.ClientData.ISD, skdata)
+	}
 
 	//技能AttackAnim
 	this.ClientData.SD = make([]*protomsg.SkillDatas, 0)
@@ -3133,7 +3307,7 @@ func (this *Unit) FreshClientDataSub() {
 	//当前数据与上一次数据对比 相减 数值部分
 	this.ClientDataSub.HP = this.HP - this.ClientData.HP
 	this.ClientDataSub.MaxHP = this.MAX_HP - this.ClientData.MaxHP
-	this.ClientDataSub.MP = this.MP - this.ClientData.MP
+	this.ClientDataSub.MP = int32(this.MP) - this.ClientData.MP
 	this.ClientDataSub.MaxMP = this.MAX_MP - this.ClientData.MaxMP
 	this.ClientDataSub.Level = this.Level - this.ClientData.Level
 	this.ClientDataSub.Experience = this.Experience - this.ClientData.Experience
@@ -3164,6 +3338,50 @@ func (this *Unit) FreshClientDataSub() {
 	this.ClientDataSub.IsMirrorImage = this.IsMirrorImage - this.ClientData.IsMirrorImage
 	this.ClientDataSub.AttackRange = this.AttackRange - this.ClientData.AttackRange
 	this.ClientDataSub.AttackAnim = this.AttackAnim - this.ClientData.AttackAnim
+
+	//道具技能
+	isds := make(map[int32]int32)
+	this.ClientDataSub.ISD = make([]*protomsg.SkillDatas, 0)
+	for _, v := range this.ItemSkills {
+
+		if v.CastType != 1 {
+			continue
+		}
+		if _, ok := isds[v.TypeID]; ok {
+			continue
+		} else {
+			isds[v.TypeID] = v.TypeID
+		}
+
+		skdata := &protomsg.SkillDatas{}
+		skdata.TypeID = v.TypeID
+		//上次发送的数据
+		lastdata := &protomsg.SkillDatas{}
+		for _, v1 := range this.ClientData.ISD {
+			if v1.TypeID == v.TypeID {
+				lastdata = v1
+				break
+			}
+		}
+
+		skdata.Level = v.Level - lastdata.Level
+		skdata.RemainCDTime = v.RemainCDTime - lastdata.RemainCDTime
+		skdata.CanUpgrade = int32(2) - lastdata.CanUpgrade //v.CanUpgrade
+		skdata.Index = v.Index - lastdata.Index
+		skdata.CastType = v.CastType - lastdata.CastType
+		skdata.CastTargetType = v.CastTargetType - lastdata.CastTargetType
+		skdata.UnitTargetTeam = v.UnitTargetTeam - lastdata.UnitTargetTeam
+		skdata.UnitTargetCamp = v.UnitTargetCamp - lastdata.UnitTargetCamp
+		skdata.NoCareMagicImmune = v.NoCareMagicImmune - lastdata.NoCareMagicImmune
+		skdata.CastRange = v.CastRange + this.AddedMagicRange - lastdata.CastRange
+		skdata.Cooldown = v.Cooldown - lastdata.Cooldown
+		skdata.HurtRange = v.HurtRange - lastdata.HurtRange
+		skdata.ManaCost = v.GetManaCost() - lastdata.ManaCost
+		skdata.AttackAutoActive = v.AttackAutoActive - lastdata.AttackAutoActive
+		skdata.Visible = v.Visible - lastdata.Visible
+		skdata.RemainSkillCount = v.RemainSkillCount - lastdata.RemainSkillCount
+		this.ClientDataSub.ISD = append(this.ClientDataSub.ISD, skdata)
+	}
 
 	//技能
 	this.ClientDataSub.SD = make([]*protomsg.SkillDatas, 0)

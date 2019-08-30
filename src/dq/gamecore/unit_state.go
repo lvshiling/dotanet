@@ -581,7 +581,7 @@ func (this *ChantState) OnStart() {
 
 	this.ChantData = this.Parent.SkillCmdData
 
-	skilldata, ok := this.Parent.Skills[this.Parent.SkillCmdData.SkillID]
+	skilldata, ok := this.Parent.GetSkillFromTypeID(this.Parent.SkillCmdData.SkillID)
 	if ok == false {
 		this.IsDone = true
 		return
@@ -599,6 +599,7 @@ func (this *ChantState) OnStart() {
 		this.Parent.SetDirection(vec2d.Sub(target.Body.Position, this.Parent.Body.Position))
 	} else if skilldata.CastTargetType == 3 || skilldata.CastTargetType == 5 {
 		targetpos := vec2d.Vec2{X: float64(this.Parent.SkillCmdData.X), Y: float64(this.Parent.SkillCmdData.Y)}
+		log.Info("---chanttargetpos:%v", targetpos)
 		this.StartTargetPos = targetpos
 		this.Parent.SetDirection(vec2d.Sub(targetpos, this.Parent.Body.Position))
 	}

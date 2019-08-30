@@ -261,6 +261,40 @@ func (this *Skill) CheckCDTime() bool {
 	return false
 }
 
+//同步cd 把本技能的CD同步为 参数技能的CD
+func (this *Skill) SameCD(skill *Skill) {
+	if skill == nil {
+		return
+	}
+
+	this.RemainCDTime = skill.RemainCDTime
+	this.RemainSkillCount = skill.RemainSkillCount
+
+}
+
+//重置CD时间
+func (this *Skill) ResetCDTime(time float32) {
+	this.RemainCDTime = time
+	if time > 0 {
+		this.RemainSkillCount = 0
+	}
+}
+
+//被攻击打断技能CD
+func (this *Skill) DoBeHurt() {
+
+	//log.Info("---------%d----%f   %f", this.TypeID, this.BeHurtStopTime, this.RemainCDTime)
+	if this.BeHurtStopTime > 0 {
+
+		if this.BeHurtStopTime > this.RemainCDTime || this.RemainSkillCount >= 1 {
+			this.RemainCDTime = this.BeHurtStopTime
+			this.RemainSkillCount = 0
+		}
+
+		//log.Info("-------------%f", this.BeHurtStopTime)
+	}
+}
+
 //刷新CD
 func (this *Skill) FreshCDTime(time float32) {
 
@@ -268,6 +302,7 @@ func (this *Skill) FreshCDTime(time float32) {
 		this.RemainCDTime = time
 	}
 	this.RemainSkillCount--
+
 }
 
 //返回数据库字符串

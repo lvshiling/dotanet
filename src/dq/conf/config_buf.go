@@ -175,6 +175,10 @@ type BuffData struct {
 	InitTagNum                int32   //初始标记数量
 	ActiveTime                float32 //开始生效的时间 1.2表示 1.2秒后生效
 
+	//伤害格挡
+	HurtBlockProbability float32 //伤害格挡几率
+	HurtBlockPhisicValue int32   //物理伤害格挡值
+
 	//
 	HurtTimeInterval float32 //伤害时间间隔
 	HurtValue        float32 //伤害值
@@ -229,6 +233,10 @@ type BuffFileData struct {
 	DoAllHurtCV               string
 	InitTagNum                string //初始标记数量
 	ActiveTime                string //开始生效的时间 1.2表示 1.2秒后生效
+
+	//伤害格挡
+	HurtBlockProbability string //伤害格挡几率
+	HurtBlockPhisicValue string //物理伤害格挡值
 
 	//
 	HurtTimeInterval string //伤害时间间隔
@@ -285,6 +293,9 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 
 	InitTagNum := utils.GetInt32FromString2(this.InitTagNum)
 	ActiveTime := utils.GetFloat32FromString2(this.ActiveTime)
+
+	HurtBlockProbability := utils.GetFloat32FromString2(this.HurtBlockProbability)
+	HurtBlockPhisicValue := utils.GetInt32FromString2(this.HurtBlockPhisicValue)
 
 	HurtTimeInterval := utils.GetFloat32FromString2(this.HurtTimeInterval)
 	HurtValue := utils.GetFloat32FromString2(this.HurtValue)
@@ -479,6 +490,17 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 			ssd.ActiveTime = ActiveTime[len(ActiveTime)-1]
 		} else {
 			ssd.ActiveTime = ActiveTime[i]
+		}
+
+		if int32(len(HurtBlockProbability)) <= i {
+			ssd.HurtBlockProbability = HurtBlockProbability[len(HurtBlockProbability)-1]
+		} else {
+			ssd.HurtBlockProbability = HurtBlockProbability[i]
+		}
+		if int32(len(HurtBlockPhisicValue)) <= i {
+			ssd.HurtBlockPhisicValue = HurtBlockPhisicValue[len(HurtBlockPhisicValue)-1]
+		} else {
+			ssd.HurtBlockPhisicValue = HurtBlockPhisicValue[i]
 		}
 
 		if int32(len(HurtTimeInterval)) <= i {

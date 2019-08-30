@@ -25,6 +25,12 @@ type BagItem struct {
 	Index  int32 //位置索引
 }
 
+//道具技能CD
+type ItemSkillCDData struct {
+	TypeID       int32   //类型
+	RemainCDTime float32 //剩余CD时间
+}
+
 type Player struct {
 	Uid         int32
 	ConnectId   int32
@@ -35,6 +41,8 @@ type Player struct {
 	ServerAgent Server
 
 	BagInfo []*BagItem
+
+	ItemSkillCDDataInfo map[int32]*ItemSkillCDData
 
 	lock *sync.RWMutex //同步操作锁
 
@@ -61,6 +69,53 @@ func CreatePlayer(uid int32, connectid int32, characterid int32) *Player {
 	re.Characterid = characterid
 	re.ReInit()
 	return re
+}
+
+//获取道具技能CD信息
+func (this *Player) GetItemSkillCDInfo(typeid int32) *ItemSkillCDData {
+	if val, ok := this.ItemSkillCDDataInfo[typeid]; ok {
+		return val
+	}
+	return nil
+}
+
+//保存道具技能CD信息
+func (this *Player) SaveItemSkillCDInfo(skill *Skill) {
+	if skill == nil {
+		return
+	}
+
+	log.Info("---SaveItemSkillCDInfo-%d  %f", skill.TypeID, skill.RemainCDTime)
+
+	bagitem := &ItemSkillCDData{}
+	bagitem.TypeID = skill.TypeID
+	if skill.RemainSkillCount >= 1 {
+		bagitem.RemainCDTime = 0
+	} else {
+		bagitem.RemainCDTime = skill.RemainCDTime
+	}
+	this.ItemSkillCDDataInfo[bagitem.TypeID] = bagitem
+
+}
+
+//载入道具技能CD信息
+func (this *Player) LoadItemSkillCDFromDB(itemskillcd string) {
+	if len(itemskillcd) <= 0 {
+		return
+	}
+	itemskillcds := strings.Split(itemskillcd, ";")
+	for _, v := range itemskillcds {
+		itemskill := utils.GetFloat32FromString3(v, ",")
+		if len(itemskill) < 2 {
+			continue
+		}
+
+		bagitem := &ItemSkillCDData{}
+		bagitem.TypeID = int32(itemskill[0])
+		bagitem.RemainCDTime = itemskill[1]
+		this.ItemSkillCDDataInfo[bagitem.TypeID] = bagitem
+
+	}
 }
 
 //载入背包信息 从数据库数据
@@ -98,11 +153,14 @@ func (this *Player) ReInit() {
 
 	this.BagInfo = make([]*BagItem, MaxBagCount)
 
+	this.ItemSkillCDDataInfo = make(map[int32]*ItemSkillCDData)
+
 	//
 	this.OtherUnit = utils.NewBeeMap()
 	this.Msg = &protomsg.SC_Update{}
 }
 
+//添加其他可控制的单位
 func (this *Player) AddOtherUnit(unit *Unit) {
 	if unit == nil {
 		return
@@ -164,7 +222,15 @@ func (this *Player) ChangeItemPos(data *protomsg.CS_ChangeItemPos) {
 		if data.DestType == 1 {
 			dest := this.MainUnit.Items[data.DestPos]
 			//只交换位置
+			if dest != nil {
+				dest.SetIndex(data.SrcPos)
+			}
+
 			this.MainUnit.Items[data.SrcPos] = dest
+			if src != nil {
+				src.SetIndex(data.DestPos)
+			}
+
 			this.MainUnit.Items[data.DestPos] = src
 		} else {
 			dest := this.BagInfo[data.DestPos]
@@ -359,11 +425,28 @@ func (this *Player) GetDBData() *db.DB_CharacterInfo {
 		}
 	}
 	dbdata.BagInfo = baginfo
+
+	//道具技能CD信息
+	for _, v := range this.MainUnit.ItemSkills {
+		this.SaveItemSkillCDInfo(v)
+	}
+	itemskillcdinfo := ""
+	for _, v := range this.ItemSkillCDDataInfo {
+		if v != nil {
+			itemstr := strconv.Itoa(int(v.TypeID)) + "," + strconv.FormatFloat(float64(v.RemainCDTime), 'f', 4, 32) + ";"
+			itemskillcdinfo += itemstr
+		}
+	}
+	dbdata.ItemSkillCDInfo = itemskillcdinfo
+
 	return &dbdata
 }
 
 //存档数据
 func (this *Player) SaveDB() {
+
+	//if this.MainUnit != nil
+
 	dbdata := this.GetDBData()
 	db.DbOne.SaveCharacter(*dbdata)
 

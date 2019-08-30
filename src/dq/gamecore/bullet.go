@@ -845,11 +845,13 @@ func (this *Bullet) HurtUnit(unit *Unit) int32 {
 		}
 		//吸血
 		addhp := float32(0)
-		if this.PhysicalHurtAddHP > 0 {
-			addhp += this.PhysicalHurtAddHP * float32(-physichurt)
+		pahp := this.PhysicalHurtAddHP + this.SrcUnit.PhysicalHurtAddHP
+		if pahp > 0 {
+			addhp += pahp * float32(-physichurt)
 		}
-		if this.MagicHurtAddHP > 0 {
-			addhp += this.MagicHurtAddHP * float32(-magichurt)
+		mahp := this.MagicHurtAddHP + this.SrcUnit.MagicHurtAddHP
+		if mahp > 0 {
+			addhp += mahp * float32(-magichurt)
 		}
 		if addhp > 0 {
 			this.SrcUnit.ChangeHP(int32(addhp))

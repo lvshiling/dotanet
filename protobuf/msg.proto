@@ -183,6 +183,7 @@ message UnitDatas{
     int32   AttackAnim = 32;//攻击动画
     repeated SkillDatas SD = 33;//技能数据
     repeated BuffDatas BD = 34;//buff数据
+    repeated SkillDatas ISD = 35;//道具技能数据
 
     //单位状态(idle walk attack skill die)
     //各种buff状态(单位身上的buff 包括剩余时间)

@@ -125,6 +125,7 @@ type SkillBaseData struct {
 	MyClearLevel           int32   //释放时 对自己的驱散等级  能驱散 驱散等级 小于等于该值的buff
 	TargetClearLevel       int32   //释放时 对目标的驱散等级  能驱散 驱散等级 小于等于该值的buff
 	AwaysHurt              int32   //总是造成伤害 1:是 2:否
+	BeHurtStopTime         float32 //受伤时打断技能CD时间
 	CallUnitInfo                   //召唤信息
 
 	//被动技能相关参数
