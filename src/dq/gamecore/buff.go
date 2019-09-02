@@ -26,6 +26,8 @@ type Buff struct {
 	IsUseable     bool  //是否起作用 对特定单位其中有功能
 	UseableUnitID int32 //起作用的单位ID
 
+	MagicHurtBlockCurValue int32 //当前吸收的魔法伤害量
+
 	LastPos          vec2d.Vec2 //载体上次计算的位置 血魔大招
 	PathHaloLastTime float64    //上次的路径光环时间
 
@@ -207,11 +209,37 @@ func (this *Buff) GetHurtValue(src *Unit, dest *Unit) int32 {
 
 }
 
+//魔法伤害吸收
+func (this *Buff) BlockMagicHurt(hurt int32) int32 {
+	if this.MagicHurtBlockAllValue > 0 {
+		maxblockvalue := this.MagicHurtBlockAllValue - this.MagicHurtBlockCurValue
+		log.Info("--BlockMagicHurt-:%d   %d", this.MagicHurtBlockAllValue, this.MagicHurtBlockCurValue)
+		if maxblockvalue > 0 {
+			if maxblockvalue > hurt {
+				this.MagicHurtBlockCurValue = this.MagicHurtBlockCurValue + hurt
+				return 0
+			} else {
+				this.MagicHurtBlockCurValue = this.MagicHurtBlockAllValue
+				return hurt - maxblockvalue
+			}
+		}
+	}
+	return hurt
+}
+
 //更新
 func (this *Buff) Update(dt float64) {
 	//CD时间减少
 	if this.IsActive {
 		this.RemainTime -= float32(dt)
+
+		//魔法伤害吸收完成
+		if this.MagicHurtBlockAllValue > 0 {
+			if this.MagicHurtBlockCurValue >= this.MagicHurtBlockAllValue {
+				this.IsEnd = true
+			}
+		}
+
 		if this.RemainTime <= 0.00001 {
 			this.RemainTime = 0
 			this.IsEnd = true

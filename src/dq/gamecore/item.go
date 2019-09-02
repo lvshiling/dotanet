@@ -13,7 +13,9 @@ type Item struct {
 
 	//ScenePosition vec2d.Vec2 //场景里的位置
 	UnitSkills []*Skill //
-	Index      int32    //位置索引
+
+	UnitHalos []*Halo //单位身上的halo
+	Index     int32   //位置索引
 }
 
 //删除道具的属性到单位身上
@@ -31,6 +33,14 @@ func (this *Item) Clear() {
 		this.Parent.RemoveItemSkill(v)
 	}
 	this.UnitSkills = make([]*Skill, 0)
+
+	//消除halo this.InScene.RemoveHalo(v1)
+	for _, v := range this.UnitHalos {
+		if this.Parent.InScene != nil {
+			this.Parent.InScene.RemoveHalo(v.ID)
+		}
+	}
+	this.UnitHalos = make([]*Halo, 0)
 
 	this.Parent = nil
 }
@@ -60,6 +70,11 @@ func (this *Item) Add2Unit(unit *Unit, index int32) {
 			this.UnitSkills = append(this.UnitSkills, skill)
 		}
 	}
+
+	//光环
+	this.UnitHalos = unit.AddHaloFromStr(this.Halos, 1, nil)
+
+	//
 
 	log.Info("NewItembuf %s ", this.Buffs)
 }

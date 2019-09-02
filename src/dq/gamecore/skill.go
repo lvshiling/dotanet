@@ -98,6 +98,7 @@ func (this *Skill) SetBulletProperty(b *Bullet, unit *Unit) {
 	if this.AddHPTarget == 2 {
 		b.SetAddHP(this.AddHPType, this.AddHPValue)
 	}
+	b.AddMPValue += this.AddMPValue
 	b.PhysicalHurtAddHP += this.PhysicalHurtAddHP
 	b.MagicHurtAddHP += this.MagicHurtAddHP
 

@@ -122,6 +122,7 @@ type Bullet struct {
 	//加血相关
 	AddHPType  int32   //加血类型 0:不加 1:以AddHPValue为固定值 2:以AddHPValue为时间 加单位在此时间内受到的伤害值
 	AddHPValue float32 //加血值
+	AddMPValue float32 //加魔值
 
 	PhysicalHurtAddHP float32 //物理伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
 	MagicHurtAddHP    float32 //魔法伤害吸血 0.1表示 增加攻击造成伤害的10%的HP
@@ -218,6 +219,7 @@ func (this *Bullet) Init() {
 
 	this.AddHPType = 0
 	this.AddHPValue = 0
+	this.AddMPValue = 0
 
 	this.SetPathHalo("", 10)
 
@@ -436,11 +438,17 @@ func (this *Bullet) DoMove(dt float32) {
 
 //增加目标buff
 func (this *Bullet) AddTargetBuff(buff string, level int32) {
+	if len(buff) <= 0 {
+		return
+	}
 	this.TargetBuff = append(this.TargetBuff, BuffInfo{buff, level})
 }
 
 //增加目标buff
 func (this *Bullet) AddTargetHalo(buff string, level int32) {
+	if len(buff) <= 0 {
+		return
+	}
 	this.TargetHalo = append(this.TargetHalo, HaloInfo{buff, level})
 	log.Info("---AddTargetHalo:%s   %d", buff, level)
 }
@@ -765,6 +773,10 @@ func (this *Bullet) HurtUnit(unit *Unit) int32 {
 			}
 		}
 
+	}
+	//对目标加魔
+	if this.AddMPValue != 0 {
+		unit.ChangeMP(this.AddMPValue)
 	}
 
 	//伤害

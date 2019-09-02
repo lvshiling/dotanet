@@ -117,7 +117,12 @@ func (this *Scene) Init() {
 	//场景分区数据 创建100个单位
 	createunitdata := conf.GetCreateUnitData(this.CreateUnit)
 	for _, v := range createunitdata.Units {
-		this.CreateUnitByConf(v)
+		oneunit := this.CreateUnitByConf(v)
+		if oneunit != nil {
+			item := NewItem(20)
+			oneunit.AddItem(-1, item)
+		}
+
 		//log.Info("createunity :%v", v)
 	}
 	//传送门显示

@@ -404,6 +404,7 @@ func (this *Unit) CheckTriggerAttackOneSkill(b *Bullet, animattack []int32, v *S
 		} else {
 			if v.CheckCDTime() {
 				//检查 触发概率 和额外条件
+				//log.Info("CheckRandom %f", v.TriggerProbability)
 				if utils.CheckRandom(v.TriggerProbability) && this.CheckTriggerOtherRule(v.TriggerOtherRule, v.TriggerOtherRuleParam) {
 					isTrigger = true
 				}
@@ -431,6 +432,8 @@ func (this *Unit) CheckTriggerAttackOneSkill(b *Bullet, animattack []int32, v *S
 				if v.HurtType == 2 {
 					hurtvalue := (v.HurtValue + int32(float32(v.HurtValue)*this.MagicScale))
 					b.AddOtherHurt(HurtInfo{HurtType: v.HurtType, HurtValue: hurtvalue})
+
+					//log.Info("add hurtvalue %d", hurtvalue)
 				} else {
 					b.AddOtherHurt(HurtInfo{HurtType: v.HurtType, HurtValue: v.HurtValue})
 				}
@@ -1368,6 +1371,10 @@ type UnitBaseProperty struct {
 	HPRegain       float32 //生命恢复
 	AddHPEffect    float32 //加血效果变化
 
+	//hp---mp---
+	AddHP int32 //增加血量
+	AddMP int32 //增加蓝量
+
 	NoCareDodge     float32 //无视闪避几率
 	AddedMagicRange float32 //额外施法距离
 	ManaCost        float32 //魔法消耗降低 (0.1)表示降低 10%
@@ -1695,6 +1702,8 @@ func CreateUnit(scene *Scene, typeid int32) *Unit {
 	unitre.FreshHaloInSkills()
 
 	unitre.Init()
+	//创建道具
+	unitre.Items = make([]*Item, UnitEquitCount)
 	unitre.InitHPandMP(1.0, 1.0)
 	unitre.IsMain = 2
 	//unitre.UnitType = 2 //单位类型(1:英雄 2:普通单位 3:远古 4:boss)
@@ -1748,6 +1757,8 @@ func CreateUnitByCopyUnit(unit *Unit, controlplayer *Player) *Unit {
 
 	//初始化
 	unitre.Init()
+	//创建道具
+	unitre.Items = make([]*Item, UnitEquitCount)
 	unitre.IsMain = 0
 	unitre.IsMirrorImage = 1
 
@@ -2121,8 +2132,14 @@ func (this *Unit) ChangeMP(mp float32) {
 }
 
 //计算MAX_HP和MAX_MP
-func (this *Unit) CalMaxHP_MaxHP() {
-	maxhp := this.BaseHP + int32(this.AttributeStrength*conf.StrengthAddHP)
+func (this *Unit) CalMaxHP_MaxHP(add *UnitBaseProperty) {
+	AddHP := int32(0) //增加血量
+	AddMP := int32(0) //增加蓝量
+	if add != nil {
+		AddHP = add.AddHP //增加血量
+		AddMP = add.AddMP //增加蓝量
+	}
+	maxhp := this.BaseHP + AddHP + int32(this.AttributeStrength*conf.StrengthAddHP)
 	//装备
 	//技能
 	//buff
@@ -2138,7 +2155,7 @@ func (this *Unit) CalMaxHP_MaxHP() {
 	}
 
 	//MP
-	maxmp := this.BaseMP + int32(this.AttributeIntelligence*conf.IntelligenceAddMP)
+	maxmp := this.BaseMP + AddMP + int32(this.AttributeIntelligence*conf.IntelligenceAddMP)
 	if maxmp != this.MAX_MP {
 
 		changemp := float32(maxmp)/float32(this.MAX_MP)*float32(this.MP) - float32(this.MP)
@@ -2397,6 +2414,9 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 	add.AttackRange += v1.AttackRangeCV
 	add.AddHPEffect += v1.AddHPEffectCV
 
+	add.AddHP += v1.AddHP
+	add.AddMP += v1.AddMP //增加血量//增加蓝量
+
 	this.MagicScale = utils.NoLinerAdd(this.MagicScale, v1.MagicScaleCV)
 	this.MagicAmaor = utils.NoLinerAdd(this.MagicAmaor, v1.MagicAmaorCV)
 	this.Dodge = utils.NoLinerAdd(this.Dodge, v1.DodgeCV)
@@ -2519,6 +2539,9 @@ func (this *Unit) CalPropertyByBuffs() {
 	}
 	this.AddBuffProperty(add)
 
+	////hp---mp---
+	this.CalMaxHP_MaxHP(add)
+
 	//物理伤害抵挡
 	this.PhysicalResist = utils.UnitPhysicalAmaor2PhysicalResist(this.PhysicalAmaor)
 
@@ -2537,7 +2560,7 @@ func (this *Unit) CalProperty() {
 	//计算buff对属性的影响
 	this.CalPropertyByBuffsFirst()
 	//计算MAXHP MP
-	this.CalMaxHP_MaxHP()
+	//this.CalMaxHP_MaxHP()
 	//计算攻击速度
 	this.CalAttackSpeed()
 	//计算攻击力
@@ -2718,7 +2741,7 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 
 		} else if buff.OverlyingType == 2 {
 			this.Buffs[buff.TypeID] = append(bf, buff)
-			log.Info("--111111133:%d", buff.TypeID)
+			//log.Info("--111111133:%d", buff.TypeID)
 			this.CheckTriggerCreateBuff(buff)
 			return buff
 		} else if buff.OverlyingType == 3 {
@@ -2761,7 +2784,7 @@ func (this *Unit) AddBuffFromStr(buffsstr string, level int32, castunit *Unit) [
 	re := make([]*Buff, 0)
 	for _, v := range buffs {
 		buff := NewBuff(v, level, this)
-		//log.Info("----------buff:", buff.TypeID)
+		//log.Info("----------buff:%d", buff.TypeID)
 		if buff != nil {
 			buff = this.AddBuffFromBuff(buff, castunit)
 			if buff != nil {
@@ -2854,7 +2877,7 @@ func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 	if this.PhisicImmune != 1 {
 		physicAttack = bullet.GetAttackOfType(1) //物理攻击
 
-		physicAttack = physicAttack - this.CheckHurtBlock(physicAttack) //伤害格挡
+		physicAttack = physicAttack - this.CheckPhisicHurtBlock(physicAttack) //伤害格挡
 		//计算护甲抵消后伤害
 		if bullet.DoHurtPhysicalAmaorCV == 0 {
 			physicAttack = int32(utils.SetValueGreaterE(float32(physicAttack)*(1-this.PhysicalResist), 0))
@@ -2865,8 +2888,10 @@ func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 		}
 
 	}
-	magicAttack := bullet.GetAttackOfType(2) //魔法攻击
-	pureAttack := bullet.GetAttackOfType(3)  //纯粹攻击
+	magicAttack := bullet.GetAttackOfType(2)            //魔法攻击CheckMagicHurtBlock
+	magicAttack = this.CheckMagicHurtBlock(magicAttack) //伤害格挡
+	log.Info("---------magicAttack:%d", magicAttack)
+	pureAttack := bullet.GetAttackOfType(3) //纯粹攻击
 
 	//计算魔抗抵消后伤害
 	magicAttack = int32(utils.SetValueGreaterE(float32(magicAttack)*(1-this.MagicAmaor), 0))
@@ -2980,7 +3005,7 @@ func (this *Unit) CheckTriggerCreateBuff(v1 *Buff) {
 //伤害格挡
 //	HurtBlockProbability float32 //伤害格挡几率
 //	HurtBlockPhisicValue int32   //物理伤害格挡值
-func (this *Unit) CheckHurtBlock(physicAttack int32) int32 {
+func (this *Unit) CheckPhisicHurtBlock(physicAttack int32) int32 {
 	//遍历 可以优化  本体的buff
 	for _, v := range this.Buffs {
 		for _, v1 := range v {
@@ -2989,7 +3014,7 @@ func (this *Unit) CheckHurtBlock(physicAttack int32) int32 {
 				continue
 			}
 			if utils.CheckRandom(v1.HurtBlockProbability) {
-				log.Info("格挡:%d  -- %d", v1.HurtBlockPhisicValue, physicAttack)
+				//log.Info("格挡:%d  -- %d", v1.HurtBlockPhisicValue, physicAttack)
 				if v1.HurtBlockPhisicValue >= physicAttack {
 
 					return physicAttack
@@ -3000,6 +3025,23 @@ func (this *Unit) CheckHurtBlock(physicAttack int32) int32 {
 	}
 
 	return 0
+}
+
+//魔法伤害吸收 返回吸收后剩下的魔法伤害值
+func (this *Unit) CheckMagicHurtBlock(magicAttack int32) int32 {
+	//遍历 可以优化  本体的buff
+	for _, v := range this.Buffs {
+		for _, v1 := range v {
+			//log.Info("CheckMagicHurtBlock:%d", v1.TypeID)
+			magicblock := v1.BlockMagicHurt(magicAttack)
+			if magicblock != magicAttack {
+				return magicblock
+			}
+			//return v1.BlockMagicHurt(magicAttack)
+		}
+	}
+
+	return magicAttack
 }
 
 //被攻击时 buff异常处理

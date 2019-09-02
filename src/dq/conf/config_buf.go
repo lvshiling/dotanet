@@ -178,6 +178,12 @@ type BuffData struct {
 	//伤害格挡
 	HurtBlockProbability float32 //伤害格挡几率
 	HurtBlockPhisicValue int32   //物理伤害格挡值
+	//魔法伤害吸收量
+	MagicHurtBlockAllValue int32
+
+	//hp---mp---
+	AddHP int32 //增加血量
+	AddMP int32 //增加蓝量
 
 	//
 	HurtTimeInterval float32 //伤害时间间隔
@@ -235,8 +241,13 @@ type BuffFileData struct {
 	ActiveTime                string //开始生效的时间 1.2表示 1.2秒后生效
 
 	//伤害格挡
-	HurtBlockProbability string //伤害格挡几率
-	HurtBlockPhisicValue string //物理伤害格挡值
+	HurtBlockProbability   string //伤害格挡几率
+	HurtBlockPhisicValue   string //物理伤害格挡值
+	MagicHurtBlockAllValue string
+
+	//hp---mp---
+	AddHP string //增加血量
+	AddMP string //增加蓝量
 
 	//
 	HurtTimeInterval string //伤害时间间隔
@@ -296,6 +307,11 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 
 	HurtBlockProbability := utils.GetFloat32FromString2(this.HurtBlockProbability)
 	HurtBlockPhisicValue := utils.GetInt32FromString2(this.HurtBlockPhisicValue)
+
+	MagicHurtBlockAllValue := utils.GetInt32FromString2(this.MagicHurtBlockAllValue)
+
+	AddHP := utils.GetInt32FromString2(this.AddHP)
+	AddMP := utils.GetInt32FromString2(this.AddMP)
 
 	HurtTimeInterval := utils.GetFloat32FromString2(this.HurtTimeInterval)
 	HurtValue := utils.GetFloat32FromString2(this.HurtValue)
@@ -501,6 +517,23 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 			ssd.HurtBlockPhisicValue = HurtBlockPhisicValue[len(HurtBlockPhisicValue)-1]
 		} else {
 			ssd.HurtBlockPhisicValue = HurtBlockPhisicValue[i]
+		}
+
+		if int32(len(MagicHurtBlockAllValue)) <= i {
+			ssd.MagicHurtBlockAllValue = MagicHurtBlockAllValue[len(MagicHurtBlockAllValue)-1]
+		} else {
+			ssd.MagicHurtBlockAllValue = MagicHurtBlockAllValue[i]
+		}
+
+		if int32(len(AddHP)) <= i {
+			ssd.AddHP = AddHP[len(AddHP)-1]
+		} else {
+			ssd.AddHP = AddHP[i]
+		}
+		if int32(len(AddMP)) <= i {
+			ssd.AddMP = AddMP[len(AddMP)-1]
+		} else {
+			ssd.AddMP = AddMP[i]
 		}
 
 		if int32(len(HurtTimeInterval)) <= i {
