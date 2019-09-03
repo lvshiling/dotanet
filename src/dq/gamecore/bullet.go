@@ -135,6 +135,9 @@ type Bullet struct {
 	SwitchedPlaces     int32 //互换位置 1:是 2:否 只对目标为单位的情况生效
 	DestForceAttackSrc int32 //目标强制攻击施法者 1:是 2:否
 
+	//刷新技能
+	FreshSkillTime int32
+
 	//特殊情况处理 //3:风行束缚击
 	Exception      int32  //0表示没有特殊情况
 	ExceptionParam string //特殊情况处理参数
@@ -225,6 +228,7 @@ func (this *Bullet) Init() {
 
 	this.SwitchedPlaces = 2
 	this.DestForceAttackSrc = 2
+	this.FreshSkillTime = 2
 
 	this.Exception = 0
 	this.ExceptionParam = ""
@@ -763,6 +767,8 @@ func (this *Bullet) HurtUnit(unit *Unit) int32 {
 	//log.Info("33333333")
 	this.DoException(unit)
 
+	this.DoFreshSkillTime(unit)
+
 	this.HurtUnits[unit.ID] = unit
 
 	//对目标加血 目标为敌人则不能加血
@@ -785,7 +791,7 @@ func (this *Bullet) HurtUnit(unit *Unit) int32 {
 	//强制移动
 	if this.ForceMoveTime > 0 {
 
-		if this.ForceMoveType == 1 || this.ForceMoveType == 4 {
+		if this.ForceMoveType == 1 || this.ForceMoveType == 4 || this.ForceMoveType == 5 {
 			connectpoint := vec2d.Vec2{0, 0}
 			if this.ForceMoveType == 1 { //向后推
 				if this.HurtRange.RangeType == 1 {
@@ -818,6 +824,14 @@ func (this *Bullet) HurtUnit(unit *Unit) int32 {
 					unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel, float32(0))
 					connectpoint = this.GetPosition2D()
 				}
+			} else if this.ForceMoveType == 5 { //向目标朝向推开
+				//log.Info("-----向目标朝向推开------%v ",unit.Body.Direction)
+				dir := unit.Body.Direction
+				dir.Normalize()
+				dir.MulToFloat64(float64(this.ForceMoveSpeedSize))
+				log.Info("-----向目标朝向推开------%v %v %f", unit.Body.Direction, dir, this.ForceMoveSpeedSize)
+				unit.SetForceMove(this.ForceMoveTime, dir, this.ForceMoveLevel, float32(0))
+				connectpoint = this.GetPosition2D()
 			}
 
 			//更改buff时间
@@ -993,6 +1007,16 @@ func (this *Bullet) DoSwitchedPlaces() {
 	srcpos := this.SrcUnit.Body.Position
 	this.SrcUnit.Body.Position = this.DestUnit.Body.Position
 	this.DestUnit.Body.Position = srcpos
+}
+
+//初始刷新技能CD
+func (this *Bullet) DoFreshSkillTime(unit *Unit) {
+	if unit == nil || this.FreshSkillTime != 1 {
+		return
+	}
+
+	unit.DoFreshSkillTime(this.SkillID)
+
 }
 
 //处理弹射

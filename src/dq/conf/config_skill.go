@@ -128,6 +128,8 @@ type SkillBaseData struct {
 	BeHurtStopTime         float32 //受伤时打断技能CD时间
 	CallUnitInfo                   //召唤信息
 
+	FreshSkillTime int32 //刷新技能CD  1:是 2:否
+
 	//被动技能相关参数
 	TriggerTime      int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
 	TriggerOtherRule int32 //触发需满足的额外条件 0:表示没有额外条件 1:表示范围内地方英雄不超过几个

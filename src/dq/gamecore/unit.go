@@ -1860,6 +1860,7 @@ func (this *Unit) Init() {
 func (this *Unit) SetForceMove(time float32, speed vec2d.Vec2, level int32, height float32) {
 
 	//direction.Normalize()
+	log.Info("SetForceMove--%f  %v  %d %f  %d  %f", time, speed, level, height, this.ForceMoveLevel, this.ForceMoveRemainTime)
 
 	if this.ForceMoveRemainTime <= 0 {
 		this.ForceMoveRemainTime = time
@@ -3180,6 +3181,23 @@ func (this *Unit) CheckTriggerDie(killer *Unit) {
 		}
 
 	}
+}
+
+//初始刷新技能CD  不能刷新自己的CD
+func (this *Unit) DoFreshSkillTime(skillid int32) {
+	for _, v := range this.Skills {
+		if v.TypeID == skillid {
+			continue
+		}
+		v.FreshSkill()
+	}
+	for _, v := range this.ItemSkills {
+		if v.TypeID == skillid {
+			continue
+		}
+		v.FreshSkill()
+	}
+
 }
 
 //创建子弹

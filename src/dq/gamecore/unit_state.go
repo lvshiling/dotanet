@@ -596,7 +596,10 @@ func (this *ChantState) OnStart() {
 			return
 		}
 		this.StartTargetPos = target.Body.Position
-		this.Parent.SetDirection(vec2d.Sub(target.Body.Position, this.Parent.Body.Position))
+		if this.Parent.SkillCmdData.TargetUnitID != this.Parent.ID {
+			this.Parent.SetDirection(vec2d.Sub(target.Body.Position, this.Parent.Body.Position))
+		}
+
 	} else if skilldata.CastTargetType == 3 || skilldata.CastTargetType == 5 {
 		targetpos := vec2d.Vec2{X: float64(this.Parent.SkillCmdData.X), Y: float64(this.Parent.SkillCmdData.Y)}
 		log.Info("---chanttargetpos:%v", targetpos)

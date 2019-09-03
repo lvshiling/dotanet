@@ -94,6 +94,7 @@ func (this *Skill) SetBulletProperty(b *Bullet, unit *Unit) {
 	//}
 	b.SwitchedPlaces = this.SwitchedPlaces
 	b.DestForceAttackSrc = this.DestForceAttackSrc
+	b.FreshSkillTime = this.FreshSkillTime
 	//加血
 	if this.AddHPTarget == 2 {
 		b.SetAddHP(this.AddHPType, this.AddHPValue)
@@ -296,7 +297,13 @@ func (this *Skill) DoBeHurt() {
 	}
 }
 
-//刷新CD
+//使技能重新可用 (刷新球功能)
+func (this *Skill) FreshSkill() {
+	this.RemainCDTime = 0
+	this.RemainSkillCount = this.SkillCount
+}
+
+//使用技能后刷新CD
 func (this *Skill) FreshCDTime(time float32) {
 
 	if this.RemainSkillCount == this.SkillCount {
