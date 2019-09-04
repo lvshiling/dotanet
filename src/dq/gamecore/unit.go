@@ -502,27 +502,47 @@ func (this *Unit) CheckTriggerAttackSkill(b *Bullet, animattack []int32) {
 	//溅射buff
 	for _, v := range this.Buffs {
 		if len(v) > 0 {
-			if v[0].SpurtingRadius > 0 {
-				//溅射相关
-				log.Info("--SpurtingRadius---:%f:%f:%f:%d",
-					v[0].SpurtingHurtRatio, v[0].SpurtingRadius, v[0].SpurtingRadian, v[0].SpurtingNoCareMagicImmune)
-				b.AddSputtering(BulletSputtering{
-					HurtRatio:         v[0].SpurtingHurtRatio,
-					Radius:            v[0].SpurtingRadius,
-					Radian:            v[0].SpurtingRadian,
-					NoCareMagicImmune: v[0].SpurtingNoCareMagicImmune})
-				if len(v[0].SpurtingBulletModeType) > 0 {
-					b.SetProjectileMode(v[0].SpurtingBulletModeType, 0)
-				}
+			for _, v1 := range v {
+				if v1.SpurtingRadius > 0 {
+					//溅射相关
+					//				log.Info("--SpurtingRadius---:%f:%f:%f:%d",
+					//					v.SpurtingHurtRatio, v.SpurtingRadius, v.SpurtingRadian, v.SpurtingNoCareMagicImmune)
 
+					b.AddSputtering(BulletSputtering{
+						HurtRatio:         v1.SpurtingHurtRatio,
+						Radius:            v1.SpurtingRadius,
+						Radian:            v1.SpurtingRadian,
+						NoCareMagicImmune: v1.SpurtingNoCareMagicImmune})
+					if len(v1.SpurtingBulletModeType) > 0 {
+						b.SetProjectileMode(v1.SpurtingBulletModeType, 0)
+					}
+
+				}
 			}
+
 		}
 	}
-
+	checkindex := make(map[int32]int32)
 	for _, v := range this.Skills {
+		if v.NoReCheckTriggerIndex != 0 {
+			if _, ok := checkindex[v.NoReCheckTriggerIndex]; ok {
+				//log.Info("recheck")
+				continue
+			}
+			checkindex[v.NoReCheckTriggerIndex] = v.NoReCheckTriggerIndex
+		}
+
 		this.CheckTriggerAttackOneSkill(b, animattack, v)
 	}
 	for _, v := range this.ItemSkills {
+		if v.NoReCheckTriggerIndex != 0 {
+			if _, ok := checkindex[v.NoReCheckTriggerIndex]; ok {
+				//log.Info("recheck")
+				continue
+			}
+			//log.Info("recheck----: %d", v.NoReCheckTriggerIndex)
+			checkindex[v.NoReCheckTriggerIndex] = v.NoReCheckTriggerIndex
+		}
 		this.CheckTriggerAttackOneSkill(b, animattack, v)
 	}
 }
@@ -1385,6 +1405,8 @@ type UnitBaseProperty struct {
 
 	AllHurtCV   float32 //受到总伤害变化率 0.1表示 增加10%的总伤害 -0.1表示减少10%总伤害
 	DoAllHurtCV float32 //造成总伤害变化率 0.1表示 增加10%的总伤害 -0.1表示减少10%总伤害
+
+	RecoverHurt float32 //反弹伤害系数 0表示不反弹 1表示反弹100%
 }
 
 //------------------单位本体------------------
@@ -1599,8 +1621,16 @@ func (this *Unit) AddItem(index int32, item *Item) bool {
 }
 
 //添加道具技能
-func (this *Unit) AddItemSkill(skill *Skill) {
+func (this *Unit) AddItemSkill(skill *Skill) bool {
 	//this.ItemSkills[skill] = skill //所有道具技能
+	if skill.ActiveUnitAcpabilities == 1 && this.AttackAcpabilities != 1 {
+		log.Info("no AddItemSkill Acpabilities %d", skill.TypeID)
+		return false
+	}
+	if skill.ActiveUnitAcpabilities == 2 && this.AttackAcpabilities != 2 {
+		log.Info("no AddItemSkill Acpabilities %d", skill.TypeID)
+		return false
+	}
 
 	//如果已经有此道具在身上 就同步身上道具的CD 否则同步数据库中的cd
 	isInBody := false
@@ -1623,6 +1653,8 @@ func (this *Unit) AddItemSkill(skill *Skill) {
 	}
 
 	this.ItemSkills = append(this.ItemSkills, skill)
+
+	return true
 }
 
 //删除道具技能
@@ -2342,6 +2374,8 @@ func (this *Unit) CalControlState() {
 	this.AllHurtCV = 0
 	this.DoAllHurtCV = 0
 
+	this.RecoverHurt = 0
+
 	this.Body.IsCollisoin = true
 	this.Body.TurnDirection = true
 	this.Body.CollisoinLevel = 1
@@ -2414,6 +2448,7 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 	add.DoAllHurtCV += v1.DoAllHurtCV
 	add.AttackRange += v1.AttackRangeCV
 	add.AddHPEffect += v1.AddHPEffectCV
+	add.RecoverHurt += v1.RecoverHurt
 
 	add.AddHP += v1.AddHP
 	add.AddMP += v1.AddMP //增加血量//增加蓝量
@@ -2499,6 +2534,7 @@ func (this *Unit) AddBuffProperty(add *UnitBaseProperty) {
 	this.DoAllHurtCV += add.DoAllHurtCV
 	this.AttackRange += add.AttackRange
 	this.AddHPEffect += add.AddHPEffect
+	this.RecoverHurt += add.RecoverHurt
 
 }
 
@@ -2836,7 +2872,7 @@ func (this *Unit) BeAttackedFromValue(value int32, attackunit *Unit) {
 	this.ChangeHP(value)
 
 	//
-	this.CheckTriggerBeAttack(attackunit, 1, value)
+	this.CheckTriggerBeAttackAfter(attackunit, 1, value)
 
 	//客户端显示自己受伤数字
 	this.CreateShowHurt(value)
@@ -2847,6 +2883,28 @@ func (this *Unit) BeAttackedFromValue(value int32, attackunit *Unit) {
 	}
 
 	this.SaveTimeAndHurt(value)
+}
+
+func (this *Unit) CheckRecover(bullet *Bullet) {
+	if bullet == nil || bullet.SrcUnit == nil {
+		return
+	}
+	//RecoverHurt
+	if this.RecoverHurt > 0.0001 && bullet.IsRecoverHurt != 1 {
+		physicAttack := bullet.GetAttackOfType(1) //物理攻击
+		magicAttack := bullet.GetAttackOfType(2)
+		pureAttack := bullet.GetAttackOfType(3) //纯粹攻击
+
+		b := NewBullet1(this, bullet.SrcUnit)
+		//(1:物理伤害 2:魔法伤害 3:纯粹伤害)
+		b.AddOtherHurt(HurtInfo{HurtType: 1, HurtValue: physicAttack})
+		b.AddOtherHurt(HurtInfo{HurtType: 2, HurtValue: magicAttack})
+		b.AddOtherHurt(HurtInfo{HurtType: 3, HurtValue: pureAttack})
+		b.IsRecoverHurt = 1
+		//特殊情况处理
+		this.AddBullet(b)
+	}
+
 }
 
 //受到来自子弹的伤害 calcmiss是否计算miss 溅射不会miss
@@ -2873,6 +2931,9 @@ func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 			return true, 0, 0, 0
 		}
 	}
+
+	this.CheckRecover(bullet)
+
 	//计算伤害
 	physicAttack := int32(0)
 	if this.PhisicImmune != 1 {
@@ -2891,7 +2952,7 @@ func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 	}
 	magicAttack := bullet.GetAttackOfType(2)            //魔法攻击CheckMagicHurtBlock
 	magicAttack = this.CheckMagicHurtBlock(magicAttack) //伤害格挡
-	log.Info("---------magicAttack:%d", magicAttack)
+	//log.Info("---------magicAttack:%d", magicAttack)
 	pureAttack := bullet.GetAttackOfType(3) //纯粹攻击
 
 	//计算魔抗抵消后伤害
@@ -2928,7 +2989,7 @@ func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 		maxhurttype = 3
 	}
 
-	this.CheckTriggerBeAttack(bullet.SrcUnit, maxhurttype, hurtvalue)
+	this.CheckTriggerBeAttackAfter(bullet.SrcUnit, maxhurttype, hurtvalue)
 	//被攻击死亡
 	if this.HP <= 0 && lasthp > 0 {
 		this.CheckTriggerDie(bullet.SrcUnit)
@@ -3046,7 +3107,7 @@ func (this *Unit) CheckMagicHurtBlock(magicAttack int32) int32 {
 }
 
 //被攻击时 buff异常处理
-func (this *Unit) CheckTriggerBeAttack(attacker *Unit, hurttype int32, hurtvalue int32) {
+func (this *Unit) CheckTriggerBeAttackAfter(attacker *Unit, hurttype int32, hurtvalue int32) {
 	if attacker == nil || attacker.IsDisappear() || hurtvalue <= 0 {
 		return
 	}

@@ -84,6 +84,7 @@ type CallUnitInfo struct {
 	CallUnitBuff      string  //召唤出来的单位携带额外buff
 	CallUnitHalo      string  //召唤出来的单位携带额外halo
 	CallUnitOffsetPos float32 //召唤出来的单位在目标位置的随机偏移位置
+	CallUnitAI        int32   //召唤出来的单位使用的AI  0表示不使用
 	//CallUnitAliveTime float32 //召唤单位的生存时间
 }
 
@@ -131,8 +132,9 @@ type SkillBaseData struct {
 	FreshSkillTime int32 //刷新技能CD  1:是 2:否
 
 	//被动技能相关参数
-	TriggerTime      int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
-	TriggerOtherRule int32 //触发需满足的额外条件 0:表示没有额外条件 1:表示范围内地方英雄不超过几个
+	TriggerTime           int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
+	TriggerOtherRule      int32 //触发需满足的额外条件 0:表示没有额外条件 1:表示范围内地方英雄不超过几个
+	NoReCheckTriggerIndex int32 //不重复检测触发索引(如果索引不等于0 且相同的多个被动技能 只会检测一次触发情况)
 
 	ForceMoveType int32  //强制移动类型 0:表示不强制移动 1:表示用子弹向后推开目标(小黑) 2:强制移动自己到指定位置
 	ForceMoveBuff string //强制移动时的buff 随着移动结束消失
@@ -144,6 +146,8 @@ type SkillBaseData struct {
 	//互换位置
 	SwitchedPlaces     int32 //互换位置 1:是 2:否 只对目标为单位的情况生效
 	DestForceAttackSrc int32 //目标强制攻击施法者 1:是 2:否
+
+	ActiveUnitAcpabilities int32 //生效的单位攻击类型(1:近程攻击 2:远程攻击 3:都生效)
 
 	//特殊情况处理 //1:混沌间隙的目标和自己的瞬移
 	Exception int32 //0表示没有特殊情况

@@ -138,6 +138,9 @@ type Bullet struct {
 	//刷新技能
 	FreshSkillTime int32
 
+	//是否是反弹伤害
+	IsRecoverHurt int32 //1表示是   2表示否
+
 	//特殊情况处理 //3:风行束缚击
 	Exception      int32  //0表示没有特殊情况
 	ExceptionParam string //特殊情况处理参数
@@ -229,6 +232,7 @@ func (this *Bullet) Init() {
 	this.SwitchedPlaces = 2
 	this.DestForceAttackSrc = 2
 	this.FreshSkillTime = 2
+	this.IsRecoverHurt = 2
 
 	this.Exception = 0
 	this.ExceptionParam = ""
@@ -500,7 +504,9 @@ func (this *Bullet) DoCallUnit() {
 		unit.AddBuffFromStr(this.CallUnitBuff, this.CallUnitInfoSkillLevel, unit)
 		unit.AddHaloFromStr(this.CallUnitHalo, this.CallUnitInfoSkillLevel, nil)
 
-		unit.SetAI(NewNormalAI(unit))
+		if this.CallUnitAI == 1 {
+			unit.SetAI(NewNormalAI(unit))
+		}
 
 		scene.NextAddUnit.Set(unit.ID, unit)
 	}

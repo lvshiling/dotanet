@@ -66,8 +66,10 @@ func (this *Item) Add2Unit(unit *Unit, index int32) {
 		skill := NewOneSkill(v, 1, unit)
 		if skill != nil {
 			skill.Index = index
-			unit.AddItemSkill(skill)
-			this.UnitSkills = append(this.UnitSkills, skill)
+			ok := unit.AddItemSkill(skill)
+			if ok == true {
+				this.UnitSkills = append(this.UnitSkills, skill)
+			}
 		}
 	}
 

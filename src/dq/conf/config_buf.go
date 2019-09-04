@@ -131,6 +131,9 @@ type BuffBaseData struct {
 	SpurtingRadian            float32 //弧度(扇形) π度为圆形
 	SpurtingNoCareMagicImmune int32   //溅射是否无视魔免 1:是 2:否
 	SpurtingBulletModeType    string  //溅射特效
+
+	//反弹伤害系数 0表示不反弹 1表示反弹100%
+	RecoverHurt float32
 }
 
 //技能数据 (会根据等级变化的数据)

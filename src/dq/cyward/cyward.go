@@ -1179,8 +1179,8 @@ func (this *WardCore) CalcDetourPath(my *Body, collion *Body, targetPos vec2d.Ve
 	}
 }
 
-var gWardCore_ZoneWidth float64 = 4.0
-var gWardCore_ZoneHeight float64 = 4.0
+var gWardCore_ZoneWidth float64 = 8.0
+var gWardCore_ZoneHeight float64 = 8.0
 
 func CheckCalcCollisoin(v *Body, my *Body) bool {
 	if v == my {

@@ -107,10 +107,14 @@ func (this *IdleState) Update(dt float64) {
 	this.Parent.SetAnimotorState(1)
 }
 func (this *IdleState) OnEnd() {
-
+	//	if this.Parent.IsMirrorImage == 1 {
+	//		log.Info("IdleState OnEnd %d", this.Parent.ID)
+	//	}
 }
 func (this *IdleState) OnStart() {
-
+	//	if this.Parent.IsMirrorImage == 1 {
+	//		log.Info("IdleState OnStart %d", this.Parent.ID)
+	//	}
 }
 
 //------------------------------移动状态-------------------------
@@ -251,8 +255,14 @@ func (this *MoveState) Update(dt float64) {
 }
 func (this *MoveState) OnEnd() {
 	this.Parent.Body.ClearMoveDirAndMoveTarget()
+	//	if this.Parent.IsMirrorImage == 1 {
+	//		log.Info("MoveState OnEnd %d", this.Parent.ID)
+	//	}
 }
 func (this *MoveState) OnStart() {
+	//	if this.Parent.IsMirrorImage == 1 {
+	//		log.Info("MoveState OnStart %d", this.Parent.ID)
+	//	}
 
 	this.LastFindPathTarget = nil
 	this.LastFindPathTargetTime = 0
@@ -393,8 +403,14 @@ func (this *AttackState) OnEnd() {
 	//log.Info(" AttackState end%f", utils.GetCurTimeOfSecond())
 	this.Parent.AttackAnim = 0
 	this.Parent.FreshBuffsUseable(nil)
+	//	if this.Parent.IsMirrorImage == 1 {
+	//		log.Info("AttackState OnEnd %d", this.Parent.ID)
+	//	}
 }
 func (this *AttackState) OnStart() {
+	//	if this.Parent.IsMirrorImage == 1 {
+	//		log.Info("AttackState OnStart %d", this.Parent.ID)
+	//	}
 	this.Parent.SetAnimotorState(3)
 	this.AttackTarget = this.Parent.AttackCmdDataTarget
 	this.Parent.FreshBuffsUseable(this.Parent.AttackCmdDataTarget)
