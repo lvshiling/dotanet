@@ -19,9 +19,12 @@ type Skill struct {
 	RemainVisibleTime float32 //剩余显示时间
 	RemainSkillCount  int32   //剩余点数
 
+	RemainTriggerTime float32 //剩余触发的时间
+
 	Parent *Unit //载体
 
 	Param1 int32 //参数1
+
 }
 
 //激活与不激活
@@ -225,6 +228,8 @@ func (this *Skill) AddSkillCount() {
 	}
 }
 
+//
+
 //更新
 func (this *Skill) Update(dt float64) {
 	//CD时间减少
@@ -233,6 +238,19 @@ func (this *Skill) Update(dt float64) {
 		if this.RemainCDTime <= 0 {
 			this.RemainCDTime = 0
 			this.AddSkillCount()
+		}
+	}
+	//
+	if this.RemainSkillCount > 0 {
+		//4:每秒钟触发(龙心buff)
+		if this.CastType == 2 && this.TriggerTime == 4 {
+
+			this.RemainTriggerTime -= float32(dt)
+			if this.RemainTriggerTime <= 0 {
+				this.RemainTriggerTime += 1.0
+				//skilldata.MyBuff, skilldata.Level, this
+				this.Parent.AddBuffFromStr(this.MyBuff, this.Level, this.Parent)
+			}
 		}
 	}
 

@@ -817,7 +817,7 @@ func (this *Unit) CheckTriggerKillerSkill(target *Unit) {
 //检查被攻击 触发攻击特效
 func (this *Unit) CheckTriggerBeAttackSkill(target *Unit) {
 
-	//道具技能
+	//道具技能 受伤打断
 	for _, v := range this.ItemSkills {
 		v.DoBeHurt()
 	}
@@ -994,9 +994,6 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 
 //检查是否能使用技能
 func (this *Unit) UseSkillEnable(data *protomsg.CS_PlayerSkill) bool {
-	if this.SkillEnable == 2 {
-		return false
-	}
 
 	if this.IsDisappear() == true {
 		return false
@@ -1007,6 +1004,15 @@ func (this *Unit) UseSkillEnable(data *protomsg.CS_PlayerSkill) bool {
 	if ok == false {
 		return false
 	}
+	//英雄技能禁用
+	if this.SkillEnable == 2 && skilldata.IsItemSkill != 1 {
+		return false
+	}
+	//道具技能禁用
+	if this.ItemEnable == 2 && skilldata.IsItemSkill == 1 {
+		return false
+	}
+
 	//技能等级
 	if skilldata.Level <= 0 {
 		return false
@@ -2112,10 +2118,17 @@ func (this *Unit) CalAttribute() {
 //加血
 func (this *Unit) DoAddHP(addType int32, addval float32) int32 {
 	re := int32(0)
+	//1:以AddHPValue为固定值 2:以AddHPValue为时间 加单位在此时间内受到的伤害值
+	//3:以AddHPValue为最大魔法值的比例加血（血晶石）
 	if addType == 1 {
 		re = this.ChangeHP(int32(addval))
 	} else if addType == 2 {
 		re = this.ChangeHP(0 - this.GetTimeAndHurt(addval))
+	} else if addType == 3 {
+
+		addhp := int32(float32(this.MAX_MP) * addval)
+		log.Info("AddHPType---------------------:%d", addhp)
+		re = this.ChangeHP(addhp)
 	}
 	//客户端显示
 	if this.MyPlayer != nil {
@@ -2885,6 +2898,7 @@ func (this *Unit) BeAttackedFromValue(value int32, attackunit *Unit) {
 	this.SaveTimeAndHurt(value)
 }
 
+//检测伤害反弹
 func (this *Unit) CheckRecover(bullet *Bullet) {
 	if bullet == nil || bullet.SrcUnit == nil {
 		return
@@ -2931,7 +2945,7 @@ func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 			return true, 0, 0, 0
 		}
 	}
-
+	//检测伤害反弹
 	this.CheckRecover(bullet)
 
 	//计算伤害

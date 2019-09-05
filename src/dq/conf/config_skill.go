@@ -131,15 +131,17 @@ type SkillBaseData struct {
 
 	FreshSkillTime int32 //刷新技能CD  1:是 2:否
 
+	IsItemSkill int32 // 是否是道具技能 1是 2否
+
 	//被动技能相关参数
-	TriggerTime           int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
+	TriggerTime           int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时 4:每秒钟触发(龙心buff)
 	TriggerOtherRule      int32 //触发需满足的额外条件 0:表示没有额外条件 1:表示范围内地方英雄不超过几个
 	NoReCheckTriggerIndex int32 //不重复检测触发索引(如果索引不等于0 且相同的多个被动技能 只会检测一次触发情况)
 
 	ForceMoveType int32  //强制移动类型 0:表示不强制移动 1:表示用子弹向后推开目标(小黑) 2:强制移动自己到指定位置
 	ForceMoveBuff string //强制移动时的buff 随着移动结束消失
 
-	//加血相关
+	//加血相关 3:以AddHPValue为最大魔法值的比例加血（血晶石）
 	AddHPType   int32 //加血类型 0:不加 1:以AddHPValue为固定值 2:以AddHPValue为时间 加单位在此时间内受到的伤害值
 	AddHPTarget int32 //加血的目标 1:表示自己 2:表示目标
 
