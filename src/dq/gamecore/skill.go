@@ -73,6 +73,7 @@ func (this *Skill) SetBulletProperty(b *Bullet, unit *Unit) {
 	} else {
 		b.AddOtherHurt(HurtInfo{HurtType: this.HurtType, HurtValue: this.HurtValue})
 	}
+	b.MagicValueHurt2PhisicHurtCR = this.MagicValueHurt2PhisicHurtCR
 	b.AddTargetBuff(this.TargetBuff, this.Level)
 	b.AddTargetHalo(this.TargetHalo, this.Level)
 	b.SkillID = this.TypeID
@@ -87,7 +88,7 @@ func (this *Skill) SetBulletProperty(b *Bullet, unit *Unit) {
 		b.IsDoHurtOnMove = 1
 	}
 	//弹射
-	b.SetEjection(this.EjectionCount, this.EjectionRange, this.EjectionDecay)
+	b.SetEjection(this.EjectionCount, this.EjectionRange, this.EjectionDecay, this.EjectionRepeat)
 	//伤害范围 和目标关系
 	b.SetRange(this.HurtRange)
 	b.UnitTargetTeam = this.UnitTargetTeam

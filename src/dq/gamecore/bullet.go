@@ -39,12 +39,13 @@ type BulletEjection struct {
 	EjectionCount    int32           //弹射次数
 	EjectionRange    float32         //弹射范围
 	EjectionDecay    float32         //弹射衰减
+	EjectionRepeat   int32           //是否能重复弹射相同单位  1表示可以 2表示不行
 	EjectionedTarget map[int32]*Unit //弹射过的目标 不能重复弹射
 }
 
 //伤害信息
 type HurtInfo struct {
-	HurtType  int32 //伤害类型 (1:物理伤害 2:魔法伤害 3:纯粹伤害)
+	HurtType  int32 //伤害类型 (1:物理伤害 2:魔法伤害 3:纯粹伤害 10:魔法消除)
 	HurtValue int32 //伤害值
 }
 
@@ -99,10 +100,11 @@ type Bullet struct {
 
 	HurtRange BulletRange //范围
 
-	Crit                  float32 //暴击倍数
-	ClearLevel            int32   //驱散等级
-	NoCareDodge           float32 //无视闪避几率
-	DoHurtPhysicalAmaorCV float32 //计算伤害时的护甲变化量
+	Crit                        float32 //暴击倍数
+	ClearLevel                  int32   //驱散等级
+	NoCareDodge                 float32 //无视闪避几率
+	DoHurtPhysicalAmaorCV       float32 //计算伤害时的护甲变化量
+	MagicValueHurt2PhisicHurtCR float32 //
 
 	//召唤信息
 	BulletCallUnitInfo
@@ -212,7 +214,7 @@ func (this *Bullet) Init() {
 	this.UnitTargetTeam = 2
 	this.EveryDoHurtChangeHurtCR = 1
 
-	this.Ejection = BulletEjection{0, 0, 1, make(map[int32]*Unit)}
+	this.Ejection = BulletEjection{0, 0, 1, 1, make(map[int32]*Unit)}
 
 	this.HurtRange.RangeType = 1 //单体攻击范围
 	this.MoveType = 1            //瞬间移动
@@ -222,6 +224,7 @@ func (this *Bullet) Init() {
 	this.ClearLevel = 0
 	this.NoCareDodge = 0
 	this.DoHurtPhysicalAmaorCV = 0
+	this.MagicValueHurt2PhisicHurtCR = 0
 
 	this.AddHPType = 0
 	this.AddHPValue = 0
@@ -241,10 +244,11 @@ func (this *Bullet) Init() {
 }
 
 //设置弹射
-func (this *Bullet) SetEjection(count int32, ejrange float32, ejdecay float32) {
+func (this *Bullet) SetEjection(count int32, ejrange float32, ejdecay float32, repeat int32) {
 	this.Ejection.EjectionCount = count
 	this.Ejection.EjectionRange = ejrange
 	this.Ejection.EjectionDecay = ejdecay
+	this.Ejection.EjectionRepeat = repeat
 	if this.DestUnit != nil {
 		this.Ejection.EjectionedTarget[this.DestUnit.ID] = this.DestUnit
 	}
@@ -1051,7 +1055,7 @@ func (this *Bullet) DoEjection() {
 		}
 		//已经弹射过了
 		_, ok := this.Ejection.EjectionedTarget[v.ID]
-		if ok {
+		if ok && this.Ejection.EjectionRepeat != 1 {
 			continue
 		}
 
@@ -1059,6 +1063,7 @@ func (this *Bullet) DoEjection() {
 		if dis <= this.Ejection.EjectionRange {
 			//可以弹射
 			b := NewBullet1(this.SrcUnit, v)
+			this.Ejection.EjectionedTarget[v.ID] = v
 			//设置坐标
 
 			b.SetStartPosition(this.Position)
@@ -1070,11 +1075,14 @@ func (this *Bullet) DoEjection() {
 				b.AddOtherHurt(HurtInfo{otherhurt.HurtType, int32(float32(otherhurt.HurtValue) * this.Ejection.EjectionDecay)})
 			}
 			//重新设置弹射信息
-			//b.Ejection.EjectionedTarget = this.Ejection.EjectionedTarget
-			b.SetEjection(this.Ejection.EjectionCount-1, this.Ejection.EjectionRange, this.Ejection.EjectionDecay)
+			b.Ejection.EjectionedTarget = this.Ejection.EjectionedTarget
+			b.SetEjection(this.Ejection.EjectionCount-1, this.Ejection.EjectionRange, this.Ejection.EjectionDecay, this.Ejection.EjectionRepeat)
 
 			//设置弹道
 			b.SetProjectileMode(this.ModeType, this.Speed)
+			//设置SkillID
+			b.SkillID = this.SkillID
+			b.SkillLevel = this.SkillLevel
 
 			this.SrcUnit.AddBullet(b)
 			return

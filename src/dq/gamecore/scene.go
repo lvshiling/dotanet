@@ -119,8 +119,8 @@ func (this *Scene) Init() {
 	for _, v := range createunitdata.Units {
 		oneunit := this.CreateUnitByConf(v)
 		if oneunit != nil {
-			//			item := NewItem(20)
-			//			oneunit.AddItem(-1, item)
+			//item := NewItem(77)
+			//oneunit.AddItem(-1, item)
 			log.Info("createunity")
 		}
 

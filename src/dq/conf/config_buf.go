@@ -134,6 +134,8 @@ type BuffBaseData struct {
 
 	//反弹伤害系数 0表示不反弹 1表示反弹100%
 	RecoverHurt float32
+	//是否计算状态抗性
+	IsCalStatusAmaor int32 //1表示要计算 2表示不计算
 }
 
 //技能数据 (会根据等级变化的数据)

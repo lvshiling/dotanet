@@ -100,7 +100,7 @@ type SkillBaseData struct {
 	BulletModeType         string  //子弹模型
 	UseUnitProjectilePos   int32   //是否使用单位攻击弹道起始点 1:是 2:否
 	AttackAnim             int32   //攻击动画id 0表示没有攻击动画
-	HurtType               int32   //伤害类型(1:物理伤害 2:魔法伤害 3:纯粹伤害)
+	HurtType               int32   //伤害类型(1:物理伤害 2:魔法伤害 3:纯粹伤害 10:魔法消除)
 	TriggerAttackEffect    int32   //能否触发普通攻击特效 (1:触发 2:不触发)
 	CastPoint              float32 //施法前摇(以施法时间为比列 0.5表示 施法的中间时间点触发)
 	CastTime               float32 //施法时间(以秒为单位的时间 比如1秒)
@@ -134,7 +134,7 @@ type SkillBaseData struct {
 	IsItemSkill int32 // 是否是道具技能 1是 2否
 
 	//被动技能相关参数
-	TriggerTime           int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时 4:每秒钟触发(龙心buff)
+	TriggerTime           int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时 4:每秒钟触发(龙心buff) 5:命中后触发
 	TriggerOtherRule      int32 //触发需满足的额外条件 0:表示没有额外条件 1:表示范围内地方英雄不超过几个
 	NoReCheckTriggerIndex int32 //不重复检测触发索引(如果索引不等于0 且相同的多个被动技能 只会检测一次触发情况)
 
@@ -150,6 +150,10 @@ type SkillBaseData struct {
 	DestForceAttackSrc int32 //目标强制攻击施法者 1:是 2:否
 
 	ActiveUnitAcpabilities int32 //生效的单位攻击类型(1:近程攻击 2:远程攻击 3:都生效)
+
+	EjectionRepeat int32 //是否能重复弹射相同单位  1表示可以 2表示不行
+
+	MagicValueHurt2PhisicHurtCR float32 //魔法消除造成的物理伤害比例
 
 	//特殊情况处理 //1:混沌间隙的目标和自己的瞬移
 	Exception int32 //0表示没有特殊情况

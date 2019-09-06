@@ -438,10 +438,11 @@ func (this *Unit) CheckTriggerAttackOneSkill(b *Bullet, animattack []int32, v *S
 					b.AddOtherHurt(HurtInfo{HurtType: v.HurtType, HurtValue: v.HurtValue})
 				}
 			}
+			b.MagicValueHurt2PhisicHurtCR = v.MagicValueHurt2PhisicHurtCR
 			//特殊情况处理
 			this.DoSkillException(v, b.DestUnit, b)
 			//弹射
-			b.SetEjection(v.EjectionCount, v.EjectionRange, v.EjectionDecay)
+			b.SetEjection(v.EjectionCount, v.EjectionRange, v.EjectionDecay, v.EjectionRepeat)
 
 			//召唤信息
 			b.BulletCallUnitInfo = BulletCallUnitInfo{v.CallUnitInfo, v.Level}
@@ -2167,7 +2168,8 @@ func (this *Unit) ChangeHP(hp int32) int32 {
 }
 
 //改变MP
-func (this *Unit) ChangeMP(mp float32) {
+func (this *Unit) ChangeMP(mp float32) int32 {
+	lastmp := int32(this.MP)
 	this.MP += mp
 	if this.MP <= 0 {
 		this.MP = 0
@@ -2175,6 +2177,7 @@ func (this *Unit) ChangeMP(mp float32) {
 	if this.MP >= float32(this.MAX_MP) {
 		this.MP = float32(this.MAX_MP)
 	}
+	return int32(this.MP) - lastmp
 }
 
 //计算MAX_HP和MAX_MP
@@ -2468,6 +2471,8 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 
 	this.MagicScale = utils.NoLinerAdd(this.MagicScale, v1.MagicScaleCV)
 	this.MagicAmaor = utils.NoLinerAdd(this.MagicAmaor, v1.MagicAmaorCV)
+	this.StatusAmaor = utils.NoLinerAdd(this.StatusAmaor, v1.StatusAmaorCV)
+
 	this.Dodge = utils.NoLinerAdd(this.Dodge, v1.DodgeCV)
 	this.NoCareDodge = utils.NoLinerAdd(this.NoCareDodge, v1.NoCareDodgeCV)
 	this.ManaCost = utils.NoLinerAdd(this.ManaCost, v1.ManaCostCV)
@@ -2768,7 +2773,14 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 	}
 	buff.CastUnit = castunit
 
+	//状态抗性 减状态时间
+	if buff.BuffType == 2 && buff.IsCalStatusAmaor == 1 && this.StatusAmaor != 0 {
+		buff.Time = buff.Time - buff.Time*this.StatusAmaor
+		buff.RemainTime = buff.Time
+	}
+
 	bf, ok := this.Buffs[buff.TypeID]
+
 	//叠加机制
 	//		OverlyingType          int32 //叠加类型 1:只更新最大时间 2:完美叠加(小鱼的偷属性)
 	//	OverlyingAddTag        int32 //叠加时是否增加标记数字 1:表示增加 2:表示不增加 3:最大标记覆盖原值
@@ -2921,6 +2933,104 @@ func (this *Unit) CheckRecover(bullet *Bullet) {
 
 }
 
+//检测攻击命中后 技能触发(小电锤)
+func (this *Unit) CheckAttackSucAllSkillTrigger(bullet *Bullet) {
+
+	if bullet == nil || bullet.DestUnit == nil || bullet.DestUnit.IsDisappear() {
+		return
+	}
+
+	for _, v := range this.ItemSkills {
+		this.CheckAttackSucOneSkillTrigger(v, bullet)
+	}
+}
+
+//检测攻击命中后 技能触发(小电锤)
+func (this *Unit) CheckAttackSucOneSkillTrigger(v *Skill, bullet *Bullet) {
+	//CastType              int32   // 施法类型:  1:主动技能  2:被动技能
+	//TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时 5:命中后触发
+
+	//主动技能
+	if v.CastType == 2 && v.TriggerTime == 5 {
+		//animattack
+		isTrigger := false
+
+		if v.CheckCDTime() {
+			//检查 触发概率 和额外条件
+			//log.Info("CheckRandom %f", v.TriggerProbability)
+			if utils.CheckRandom(v.TriggerProbability) && this.CheckTriggerOtherRule(v.TriggerOtherRule, v.TriggerOtherRuleParam) {
+				isTrigger = true
+			}
+		}
+
+		//检查cd 魔法消耗
+		if isTrigger == true {
+			skilldata := v
+			target := bullet.DestUnit
+
+			data := &protomsg.CS_PlayerSkill{}
+			data.TargetUnitID = bullet.DestUnit.ID
+			data.SkillID = v.TypeID
+			data.X = float32(target.Body.Position.X)
+			data.Y = float32(target.Body.Position.Y)
+			targetpos := vec2d.Vec2{X: float64(data.X), Y: float64(data.Y)}
+
+			//驱散自己的buff
+			this.ClearBuffForTarget(this, skilldata.MyClearLevel)
+
+			//MyBuff
+			buffs := this.AddBuffFromStr(skilldata.MyBuff, skilldata.Level, this)
+			for _, v := range buffs {
+				v.UseableUnitID = data.TargetUnitID
+			}
+			//MyHalo
+			this.AddHaloFromStr(skilldata.MyHalo, skilldata.Level, nil)
+
+			//BlinkToTarget
+			if skilldata.BlinkToTarget == 1 {
+				if skilldata.CastTargetType == 1 {
+					//对自己施法 分身的时候使用
+					this.Body.BlinkToPos(vec2d.Vec2{this.Body.Position.X + float64(utils.GetRandomFloat(2)),
+						this.Body.Position.Y + float64(utils.GetRandomFloat(2))}, 0)
+				} else {
+					log.Info("blinkpos:%v", targetpos)
+					this.Body.BlinkToPos(targetpos, 0)
+				}
+			}
+
+			//创建子弹
+			bullets := skilldata.CreateBullet(this, data)
+			if len(bullets) > 0 {
+				for _, v := range bullets {
+					if skilldata.TriggerAttackEffect == 1 {
+						this.CheckTriggerAttackSkill(v, make([]int32, 0))
+					}
+					this.AddBullet(v)
+				}
+
+			}
+
+			//加血
+			if skilldata.AddHPTarget == 1 {
+				this.DoAddHP(skilldata.AddHPType, skilldata.AddHPValue)
+			}
+			//特殊处理
+			targetunit := this.InScene.FindUnitByID(data.TargetUnitID)
+			this.DoSkillException(skilldata, targetunit, bullets[0])
+
+			//消耗 CD
+			namacost := skilldata.GetManaCost() - int32(this.ManaCost*float32(skilldata.GetManaCost()))
+			this.ChangeMP(float32(-namacost))
+
+			cdtime := skilldata.Cooldown - this.MagicCD*skilldata.Cooldown
+			//skilldata.FreshCDTime(cdtime)
+			this.FreshCDTime(skilldata, cdtime)
+
+			//}
+		}
+	}
+}
+
 //受到来自子弹的伤害 calcmiss是否计算miss 溅射不会miss
 func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 	//计算闪避
@@ -2944,14 +3054,33 @@ func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 			this.ShowMiss(true)
 			return true, 0, 0, 0
 		}
+
+		//触发攻击命中
+		if bullet.SrcUnit != nil && bullet.SrcUnit.IsDisappear() == false && bullet.IsRecoverHurt != 1 {
+			bullet.SrcUnit.CheckAttackSucAllSkillTrigger(bullet)
+		}
 	}
 	//检测伤害反弹
 	this.CheckRecover(bullet)
 
+	//计算魔法消除
+	magicdeletephisichurt := int32(0)
+	magicdelete := bullet.GetAttackOfType(10) //魔法消除
+	if magicdelete > 0 {
+
+		magicdelete = this.ChangeMP(float32(-magicdelete))
+		//魔法消除造成的物理伤害
+		if bullet.MagicValueHurt2PhisicHurtCR > 0 {
+			magicdeletephisichurt = int32(float32(-magicdelete) * bullet.MagicValueHurt2PhisicHurtCR)
+		}
+
+	}
+
 	//计算伤害
 	physicAttack := int32(0)
 	if this.PhisicImmune != 1 {
-		physicAttack = bullet.GetAttackOfType(1) //物理攻击
+		physicAttack = bullet.GetAttackOfType(1) + magicdeletephisichurt //物理攻击
+		//log.Info("  physicAttack:%d    %d", physicAttack, magicdeletephisichurt)
 
 		physicAttack = physicAttack - this.CheckPhisicHurtBlock(physicAttack) //伤害格挡
 		//计算护甲抵消后伤害
@@ -2964,6 +3093,7 @@ func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
 		}
 
 	}
+
 	magicAttack := bullet.GetAttackOfType(2)            //魔法攻击CheckMagicHurtBlock
 	magicAttack = this.CheckMagicHurtBlock(magicAttack) //伤害格挡
 	//log.Info("---------magicAttack:%d", magicAttack)
