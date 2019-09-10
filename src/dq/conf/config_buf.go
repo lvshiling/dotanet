@@ -120,6 +120,9 @@ type BuffBaseData struct {
 	//伤害相关  剧毒类buff
 	HurtType int32 //伤害类型(1:物理伤害 2:魔法伤害 3:纯粹伤害 4:不造成伤害)
 
+	//改变单位的z轴高度(吹风)
+	ChangeZ float32
+
 	PathHalo        string  //路径光环 在路径上创建光环
 	PathHaloMinTime float32 //路径光环的最短时间 1表示 相差1秒才创建光环
 

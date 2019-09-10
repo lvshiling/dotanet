@@ -244,6 +244,7 @@ func (this *Buff) Update(dt float64) {
 			this.RemainTime = 0
 			this.IsEnd = true
 		}
+
 		//		if this.TypeID == 70 {
 		//			log.Info("buffupdate:%f  TypeID:%d", this.RemainTime, this.TypeID)
 		//		}

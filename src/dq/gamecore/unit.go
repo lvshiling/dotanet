@@ -2396,6 +2396,8 @@ func (this *Unit) CalControlState() {
 	this.Body.TurnDirection = true
 	this.Body.CollisoinLevel = 1
 	this.Body.MoveDir = vec2d.Vec2{}
+
+	this.Z = 0
 }
 
 //计算单个buff对属性的影响
@@ -2530,6 +2532,9 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 	}
 	if v1.NoPlayerControl == 1 {
 		this.PlayerControlEnable = 2
+	}
+	if v1.ChangeZ > 0 {
+		this.Z = v1.ChangeZ
 	}
 
 }
