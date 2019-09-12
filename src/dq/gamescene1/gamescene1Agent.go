@@ -62,6 +62,7 @@ func (a *GameScene1Agent) Init() {
 	a.handles["CS_GetUnitInfo"] = a.DoGetUnitInfo
 	a.handles["CS_GetBagInfo"] = a.DoGetBagInfo
 	a.handles["CS_ChangeItemPos"] = a.DoChangeItemPos
+	a.handles["CS_PlayerUpgradeSkill"] = a.DoPlayerUpgradeSkill
 
 	//创建场景
 	allscene := conf.GetAllScene()
@@ -196,6 +197,26 @@ func (a *GameScene1Agent) DoMsgUserEnterScene(data *protomsg.MsgBase) {
 	}
 
 	a.DoUserEnterScene(h2)
+
+}
+
+//升级技能
+//DoPlayerUpgradeSkill
+func (a *GameScene1Agent) DoPlayerUpgradeSkill(data *protomsg.MsgBase) {
+
+	log.Info("---------DoPlayerUpgradeSkill")
+	h2 := &protomsg.CS_PlayerUpgradeSkill{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	player.(*gamecore.Player).UpgradeSkill(h2)
 
 }
 

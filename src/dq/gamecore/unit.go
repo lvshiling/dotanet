@@ -167,6 +167,9 @@ type UnitCmd struct {
 	AttackCmdDataTarget *Unit
 	//技能命令
 	SkillCmdData *protomsg.CS_PlayerSkill
+
+	//升级技能命令
+	UpgradeSkillData *protomsg.CS_PlayerUpgradeSkill
 }
 
 //-----------------------技能命令--------------------
@@ -1051,6 +1054,36 @@ func (this *Unit) PlayerControl_SkillCmd(data *protomsg.CS_PlayerSkill) {
 		return
 	}
 	this.SkillCmd(data)
+}
+
+//玩家操作技能行为命令
+func (this *Unit) UpgradeSkill(data *protomsg.CS_PlayerUpgradeSkill) {
+	this.UpgradeSkillData = data
+}
+
+func (this *Unit) DoUpgradeSkill() {
+	if this.UpgradeSkillData != nil {
+
+		skilldata, ok := this.Skills[this.UpgradeSkillData.TypeID]
+		if !ok {
+			this.UpgradeSkillData = nil
+			return
+		}
+
+		allLevel := int32(0)
+		for _, v := range this.Skills {
+			allLevel += v.Level
+		}
+		if allLevel < this.Level {
+			nextlevel_needunitlevel := skilldata.RequiredLevel + skilldata.LevelsBetweenUpgrades*skilldata.Level
+			if nextlevel_needunitlevel <= this.Level && skilldata.Level < skilldata.MaxLevel {
+				//升级技能
+				this.AddSkill(this.UpgradeSkillData.TypeID, skilldata.Level+1)
+			}
+		}
+
+		this.UpgradeSkillData = nil
+	}
 }
 
 //通过typid获取技能 包括道具技能
@@ -2029,6 +2062,9 @@ func (this *Unit) PreUpdate(dt float64) {
 	if this.IsDisappear() {
 		return
 	}
+
+	this.DoUpgradeSkill()
+
 	this.ShowMiss(false)
 }
 
@@ -3492,6 +3528,7 @@ func (this *Unit) FreshClientData() {
 		skdata.AttackAutoActive = v.AttackAutoActive
 		skdata.Visible = v.Visible
 		skdata.RemainSkillCount = v.RemainSkillCount
+		skdata.MaxLevel = v.MaxLevel
 		this.ClientData.ISD = append(this.ClientData.ISD, skdata)
 	}
 
@@ -3516,6 +3553,9 @@ func (this *Unit) FreshClientData() {
 		skdata.AttackAutoActive = v.AttackAutoActive
 		skdata.Visible = v.Visible
 		skdata.RemainSkillCount = v.RemainSkillCount
+		skdata.MaxLevel = v.MaxLevel
+		skdata.RequiredLevel = v.RequiredLevel
+		skdata.LevelsBetweenUpgrades = v.LevelsBetweenUpgrades
 		this.ClientData.SD = append(this.ClientData.SD, skdata)
 	}
 	//Buffs  map[int32][]*Buff //所有buff 同typeID下可能有多个buff
@@ -3650,6 +3690,7 @@ func (this *Unit) FreshClientDataSub() {
 		skdata.AttackAutoActive = v.AttackAutoActive - lastdata.AttackAutoActive
 		skdata.Visible = v.Visible - lastdata.Visible
 		skdata.RemainSkillCount = v.RemainSkillCount - lastdata.RemainSkillCount
+		skdata.MaxLevel = v.MaxLevel - lastdata.MaxLevel
 		this.ClientDataSub.ISD = append(this.ClientDataSub.ISD, skdata)
 	}
 
@@ -3683,6 +3724,9 @@ func (this *Unit) FreshClientDataSub() {
 		skdata.AttackAutoActive = v.AttackAutoActive - lastdata.AttackAutoActive
 		skdata.Visible = v.Visible - lastdata.Visible
 		skdata.RemainSkillCount = v.RemainSkillCount - lastdata.RemainSkillCount
+		skdata.MaxLevel = v.MaxLevel - lastdata.MaxLevel
+		skdata.RequiredLevel = v.RequiredLevel - lastdata.RequiredLevel
+		skdata.LevelsBetweenUpgrades = v.LevelsBetweenUpgrades - lastdata.LevelsBetweenUpgrades
 		this.ClientDataSub.SD = append(this.ClientDataSub.SD, skdata)
 	}
 

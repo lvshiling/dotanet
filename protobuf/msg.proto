@@ -90,7 +90,10 @@ message SC_BagInfo  {
     repeated UnitEquip Equips = 1;//装备
 }
 
-
+//玩家升级技能
+message CS_PlayerUpgradeSkill{
+    int32 TypeID = 1;//技能id
+}
 
 //玩家移动操作
 message CS_PlayerMove {
@@ -133,6 +136,9 @@ message SkillDatas{
     int32 AttackAutoActive = 15;////攻击时自动释放 是否激活 1:激活 2:否
     int32 Visible = 16;////技能是否显示 1:是 2:否
     int32 RemainSkillCount = 17;//技能剩余点数
+    int32 MaxLevel = 18;//技能最大等级
+    int32 RequiredLevel = 19;//需要多少级可以学习该技能
+    int32 LevelsBetweenUpgrades = 20;//学习该技能的等级步长
 }
 //buff数据
 message BuffDatas{

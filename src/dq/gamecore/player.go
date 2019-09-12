@@ -188,6 +188,14 @@ func (this *Player) AddOtherUnit(unit *Unit) {
 //	return false
 //}
 
+func (this *Player) UpgradeSkill(data *protomsg.CS_PlayerUpgradeSkill) {
+	if this.MainUnit == nil {
+		return
+	}
+
+	this.MainUnit.UpgradeSkill(data)
+}
+
 //交换道具位置 背包位置
 func (this *Player) ChangeItemPos(data *protomsg.CS_ChangeItemPos) {
 	//1表示装备栏 2表示背包
