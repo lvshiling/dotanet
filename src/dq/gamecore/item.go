@@ -64,6 +64,10 @@ func (this *Item) Add2Unit(unit *Unit, index int32) {
 	skills := utils.GetInt32FromString3(this.Skills, ",")
 	for _, v := range skills {
 		skill := NewOneSkill(v, 1, unit)
+		//幻象且幻象不基础技能
+		if unit.IsMirrorImage == 1 && skill.MirrorUsed != 1 {
+			continue
+		}
 		if skill != nil {
 			skill.Index = index
 			ok := unit.AddItemSkill(skill)
@@ -71,6 +75,7 @@ func (this *Item) Add2Unit(unit *Unit, index int32) {
 				this.UnitSkills = append(this.UnitSkills, skill)
 			}
 		}
+
 	}
 
 	//光环

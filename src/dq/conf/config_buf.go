@@ -272,6 +272,7 @@ func (this *BuffFileData) Trans2BuffData(re *[]BuffData) {
 	if this.MaxLevel <= 0 {
 		this.MaxLevel = 1
 	}
+	//log.Info("---buf:%d", this.TypeID)
 
 	BuffRange := utils.GetFloat32FromString2(this.BuffRange)
 	Time := utils.GetFloat32FromString2(this.Time)

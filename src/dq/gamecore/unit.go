@@ -1790,6 +1790,20 @@ func (this *Unit) AddSkill(id int32, level int32) {
 	}
 	this.FreshHaloInSkills()
 }
+
+//幻象复制主体道具
+func (this *Unit) CopyItem(unit *Unit) {
+	if unit == nil {
+		return
+	}
+	this.Items = make([]*Item, UnitEquitCount)
+	for _, v := range unit.Items {
+		if v != nil {
+			this.AddItem(v.Index, NewItem(v.TypeID))
+		}
+	}
+
+}
 func CreateUnitByCopyUnit(unit *Unit, controlplayer *Player) *Unit {
 	if unit == nil || unit.InScene == nil {
 		return nil
@@ -1823,7 +1837,6 @@ func CreateUnitByCopyUnit(unit *Unit, controlplayer *Player) *Unit {
 	}
 	//初始化技能被动光环
 	unitre.HaloInSkills = make(map[int32][]int32)
-	unitre.FreshHaloInSkills()
 
 	unitre.Death2RemoveTime = 0
 
@@ -1831,8 +1844,13 @@ func CreateUnitByCopyUnit(unit *Unit, controlplayer *Player) *Unit {
 	unitre.Init()
 	//创建道具
 	unitre.Items = make([]*Item, UnitEquitCount)
+	//拷贝道具
+
+	unitre.FreshHaloInSkills()
 	unitre.IsMain = 0
 	unitre.IsMirrorImage = 1
+	//复制主体道具
+	unitre.CopyItem(unit)
 
 	controlplayer.AddOtherUnit(unitre)
 
