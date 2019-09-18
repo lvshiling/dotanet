@@ -216,13 +216,13 @@ func (this *MoveState) Update(dt float64) {
 		if this.Parent.SkillCmdData.TargetUnitID > 0 {
 			targetunit := this.Parent.InScene.FindUnitByID(this.Parent.SkillCmdData.TargetUnitID)
 			if targetunit != nil && this.Parent.GetCanMove() {
-				this.Parent.Body.SetTarget(targetunit.Body.Position)
+				this.Parent.Body.SetTarget(targetunit.Body.Position, this.Parent.GetSkillRange(this.Parent.SkillCmdData.SkillID))
 				this.LastFindPathTarget = targetunit
 				this.LastFindPathTargetTime = utils.GetCurTimeOfSecond()
 			}
 		} else {
 			targetpos := vec2d.Vec2{X: float64(this.Parent.SkillCmdData.X), Y: float64(this.Parent.SkillCmdData.Y)}
-			this.Parent.Body.SetTarget(targetpos)
+			this.Parent.Body.SetTarget(targetpos, this.Parent.GetSkillRange(this.Parent.SkillCmdData.SkillID))
 			this.Parent.RemoveBuffForMoved()
 		}
 		return
@@ -238,7 +238,7 @@ func (this *MoveState) Update(dt float64) {
 		}
 		//
 		if this.Parent.AttackCmdDataTarget.Body != nil && this.Parent.GetCanMove() {
-			this.Parent.Body.SetTarget(this.Parent.AttackCmdDataTarget.Body.Position)
+			this.Parent.Body.SetTarget(this.Parent.AttackCmdDataTarget.Body.Position, float64(this.Parent.AttackRange))
 			this.Parent.RemoveBuffForMoved()
 			this.LastFindPathTarget = this.Parent.AttackCmdDataTarget
 			this.LastFindPathTargetTime = utils.GetCurTimeOfSecond()

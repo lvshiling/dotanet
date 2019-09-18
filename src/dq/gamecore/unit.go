@@ -11,6 +11,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var UnitID int32 = 1000000
@@ -180,6 +181,19 @@ func (this *Unit) HaveSkillCmd() bool {
 		return true
 	}
 	return false
+}
+
+//获取技能施法距离
+func (this *Unit) GetSkillRange(skillid int32) float64 {
+	skillrange := float64(0)
+	skilldata, ok := this.GetSkillFromTypeID(skillid)
+	if ok == false {
+		return skillrange
+	}
+
+	skillrange = float64(skilldata.CastRange) + float64(this.AddedMagicRange)
+
+	return skillrange
 }
 
 //检查目标释放在技能施法范围内
@@ -1072,7 +1086,7 @@ func (this *Unit) DoUpgradeSkill() {
 
 		allLevel := int32(0)
 		for _, v := range this.Skills {
-			allLevel += v.Level
+			allLevel += v.Level - v.InitLevel
 		}
 		if allLevel < this.Level {
 			nextlevel_needunitlevel := skilldata.RequiredLevel + skilldata.LevelsBetweenUpgrades*skilldata.Level
@@ -1467,13 +1481,16 @@ type UnitProperty struct {
 	Name    string
 
 	//复合数据 会随时变动的数据 比如受buff影响攻击力降低  (每帧动态计算)
-	HP            int32
-	MAX_HP        int32
-	MP            float32
-	MAX_MP        int32
-	Level         int32 //等级 会影响属性
-	Experience    int32
-	MaxExperience int32
+	HP               int32
+	MAX_HP           int32
+	MP               float32
+	MAX_MP           int32
+	Level            int32 //等级 会影响属性
+	Experience       int32
+	MaxExperience    int32
+	Gold             int32  //金币
+	GetExperienceDay string //获取经验的日期
+	RemainExperience int32  //今天还能获取的经验值
 
 	UnitBaseProperty
 
@@ -1766,6 +1783,10 @@ func CreateUnit(scene *Scene, typeid int32) *Unit {
 	unitre.UnitFileData = *(conf.GetUnitFileData(typeid))
 	unitre.Name = unitre.UnitName
 	unitre.Level = 1
+	leveldata := conf.GetLevelFileData(unitre.Level)
+	if leveldata != nil {
+		unitre.MaxExperience = leveldata.UpgradeExperience
+	}
 
 	//初始化技能被动光环
 	unitre.ItemSkills = make([]*Skill, 0)  //所有道具技能
@@ -1823,6 +1844,10 @@ func CreateUnitByCopyUnit(unit *Unit, controlplayer *Player) *Unit {
 	unitre.Name = unit.Name
 	unitre.Level = unit.Level
 	unitre.Experience = unit.Experience
+	leveldata := conf.GetLevelFileData(unitre.Level)
+	if leveldata != nil {
+		unitre.MaxExperience = leveldata.UpgradeExperience
+	}
 
 	//继承被动技能
 	unitre.ItemSkills = make([]*Skill, 0)  //所有道具技能
@@ -1884,7 +1909,15 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 	unitre.Name = characterinfo.Name
 	unitre.Level = characterinfo.Level
 	unitre.Experience = characterinfo.Experience
+	unitre.Gold = characterinfo.Gold
+	unitre.GetExperienceDay = characterinfo.GetExperienceDay //获取经验的日期
+	unitre.RemainExperience = characterinfo.RemainExperience //今天还能获取的经验值
 	unitre.InitPosition = vec2d.Vec2{float64(characterinfo.X), float64(characterinfo.Y)}
+
+	leveldata := conf.GetLevelFileData(unitre.Level)
+	if leveldata != nil {
+		unitre.MaxExperience = leveldata.UpgradeExperience
+	}
 
 	//创建技能
 	unitre.ItemSkills = make([]*Skill, 0) //所有道具技能
@@ -2038,6 +2071,21 @@ func (this *Unit) UpdateSkillAddBuff() {
 	}
 }
 
+//检查剩余获取经验值日期
+func (this *Unit) CheckGetExperienceDay() {
+	today := time.Now().Format("2006-01-02")
+	if today != this.GetExperienceDay {
+		this.GetExperienceDay = today
+		leveldata := conf.GetLevelFileData(this.Level)
+		if leveldata != nil {
+			this.RemainExperience = leveldata.MaxExperienceOneDay
+		} else {
+			this.RemainExperience = 1000
+		}
+
+	}
+}
+
 //
 func (this *Unit) EveryTimeDo(dt float64) {
 
@@ -2057,6 +2105,9 @@ func (this *Unit) EveryTimeDo(dt float64) {
 		this.UpdateSkillAddBuff()
 
 		this.AutoRemoveTimeAndHurt()
+
+		this.CheckGetExperienceDay()
+		//
 	}
 }
 
@@ -3377,11 +3428,66 @@ func (this *Unit) CheckTriggerBeAttackAfter(attacker *Unit, hurttype int32, hurt
 	}
 }
 
+//获得经验
+func (this *Unit) AddExperience(add int32) {
+	//检查今天是否还能获取超过add的经验值
+	if this.RemainExperience < add {
+		add = this.RemainExperience
+
+	}
+	this.RemainExperience -= add
+
+	this.Experience += add
+	if this.Experience >= this.MaxExperience {
+		//升级
+		this.Level += 1
+		this.Experience -= this.MaxExperience
+		//下一级需要的经验值
+		leveldata := conf.GetLevelFileData(this.Level)
+		if leveldata != nil {
+			this.MaxExperience = leveldata.UpgradeExperience
+		}
+
+		//-----------
+		//today := time.Now().Format("2006-01-02")
+	}
+}
+
+//击杀单位获得经验 金币奖励
+func (this *Unit) GetRewardForKill(deathunit *Unit) {
+	if deathunit == nil {
+		return
+	}
+	//阵营(1:玩家 2:NPC)  玩家的召唤物和幻象camp也是 玩家
+	if deathunit.Camp == 2 {
+
+		if deathunit.InScene == nil {
+			return
+		}
+
+		this.Gold += deathunit.InScene.UnitGold
+		this.AddExperience(deathunit.InScene.UnitExperience)
+
+		//显示奖励的金币
+		mph := &protomsg.MsgPlayerHurt{HurtUnitID: deathunit.ID, GetGold: deathunit.InScene.UnitGold}
+		log.Info("get gold:%d", deathunit.InScene.UnitGold)
+		if this.MyPlayer != nil {
+			log.Info("get gold succ")
+			this.MyPlayer.AddHurtValue(mph)
+		}
+
+		//组队时 需要平分
+
+	}
+}
+
 //被杀死时 buff异常处理
 func (this *Unit) CheckTriggerDie(killer *Unit) {
 	if killer == nil || killer.IsDisappear() {
 		return
 	}
+	//击杀者获得奖励
+	killer.GetRewardForKill(this)
 
 	killer.RemoveBuffForKilled()
 	killer.RemoveHaloForKilled()
@@ -3574,6 +3680,7 @@ func (this *Unit) FreshClientData() {
 		skdata.MaxLevel = v.MaxLevel
 		skdata.RequiredLevel = v.RequiredLevel
 		skdata.LevelsBetweenUpgrades = v.LevelsBetweenUpgrades
+		skdata.InitLevel = v.InitLevel
 		this.ClientData.SD = append(this.ClientData.SD, skdata)
 	}
 	//Buffs  map[int32][]*Buff //所有buff 同typeID下可能有多个buff
@@ -3745,6 +3852,7 @@ func (this *Unit) FreshClientDataSub() {
 		skdata.MaxLevel = v.MaxLevel - lastdata.MaxLevel
 		skdata.RequiredLevel = v.RequiredLevel - lastdata.RequiredLevel
 		skdata.LevelsBetweenUpgrades = v.LevelsBetweenUpgrades - lastdata.LevelsBetweenUpgrades
+		skdata.InitLevel = v.InitLevel - lastdata.InitLevel
 		this.ClientDataSub.SD = append(this.ClientDataSub.SD, skdata)
 	}
 

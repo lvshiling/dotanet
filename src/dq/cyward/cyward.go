@@ -107,6 +107,8 @@ type Body struct {
 
 	Tag int //标记
 
+	TargetPosMinDistanse float64 //离目标点的最近距离
+
 	IsRect       bool         //是否是标准矩形
 	OffsetPoints []vec2d.Vec2 //相对偏移位置 坐标 左上 右上 右下 左下
 	M_MyPolygon  *MyPolygon
@@ -164,13 +166,16 @@ func (this *Body) Update(dt float64) {
 		//检查碰撞
 		collisionOne := this.CheckPositionCollisoin(dt)
 		if collisionOne != nil {
-			//log.Info("collisionOne:%d", collisionOne.Tag)
+			log.Info("collisionOne:%d   ", collisionOne.Tag)
 			if collisionOne.CurSpeedSize > 0 {
 				this.CollisoinStopTime = 0.5
 				this.CurSpeedSize = 0
 				this.NextPosition = this.Position
 				this.TargetIndex = 0
+
+				log.Info("CurSpeedSize > 0:%d   ", collisionOne.Tag)
 			} else {
+				log.Info("CurSpeedSize <= 0:%d   %v", collisionOne.Tag, this.TargetPosition[0])
 
 				this.Core.CalcDetourPath(this, collisionOne, this.TargetPosition[0], &this.DetourPath)
 				if len(this.DetourPath) <= 0 {
@@ -327,9 +332,10 @@ func (this *Body) BlinkToPos(pos vec2d.Vec2, rotate float64) {
 }
 
 //设置目的地
-func (this *Body) SetTarget(pos vec2d.Vec2) {
+func (this *Body) SetTarget(pos vec2d.Vec2, mindistanse float64) {
 
 	//log.Info("SetTarget %f  %f", pos.X, pos.Y)
+	this.TargetPosMinDistanse = mindistanse
 	if len(this.TargetPosition) > 0 {
 		//
 		t1 := vec2d.Sub(this.TargetPosition[len(this.TargetPosition)-1], pos)
@@ -358,13 +364,15 @@ func (this *Body) SetTarget(pos vec2d.Vec2) {
 
 	bodys := make([]*Body, 0)
 	this.Core.GetStaticBodysNoTarget(&bodys, this.Position, pos, this)
+
 	if this.Core.CheckDetourPathNodeT(dpNode, &bodys, &this.DetourPath) {
-		//log.Info("SetTarget %d", this.Tag)
-		//		for i := 0; i < len(this.DetourPath); i++ {
-		//			log.Info("x: %f  y:%f", this.DetourPath[i].X, this.DetourPath[i].Y)
-		//		}
+		log.Info("SetTarget %d", this.Tag)
+		for i := 0; i < len(this.DetourPath); i++ {
+			log.Info("x: %f  y:%f", this.DetourPath[i].X, this.DetourPath[i].Y)
+		}
+		//log.Info("SetTarget suc :%d", len(bodys))
 	} else {
-		//log.Info("SetTarget 222")
+		log.Info("SetTarget faild :%d", len(bodys))
 	}
 
 	t2 := time.Now().UnixNano()
@@ -872,6 +880,15 @@ func (this *WardCore) CheckDetourPathNode2(dpnode *DetourPathNode, staticbodys *
 		isbreakpath := false
 
 		for pathindex := dpnode.serachIndex; pathindex < len(dpnodepath1)-1; pathindex++ {
+
+			//如果进入最近距离之内了 就成功
+			//			tt := vec2d.Sub(dpnodepath1[len(dpnodepath1)-1], dpnodepath1[pathindex])
+			//			mindis := tt.Length()
+			//			if dpnode.my.TargetPosMinDistanse >= mindis {
+			//				log.Info("---------TargetPosMinDistanse:%f  %f", mindis, dpnode.my.TargetPosMinDistanse)
+			//				return true
+			//			}
+
 			p1 := dpnodepath1[pathindex]
 			p2 := dpnodepath1[pathindex+1]
 
@@ -1018,6 +1035,15 @@ func (this *WardCore) CheckDetourPathNode1(dpnode *DetourPathNode, staticbodys *
 		isbreakpath := false
 
 		for pathindex := dpnode.serachIndex; pathindex < len(dpnodepath1)-1; pathindex++ {
+
+			//如果进入最近距离之内了 就成功
+			//			tt := vec2d.Sub(dpnodepath1[len(dpnodepath1)-1], dpnodepath1[pathindex])
+			//			mindis := tt.Length()
+			//			if dpnode.my.TargetPosMinDistanse >= mindis {
+			//				log.Info("---------TargetPosMinDistanse:%f  %f", mindis, dpnode.my.TargetPosMinDistanse)
+			//				return true
+			//			}
+
 			p1 := dpnodepath1[pathindex]
 			p2 := dpnodepath1[pathindex+1]
 
@@ -1151,6 +1177,7 @@ func (this *WardCore) CalcDetourPath(my *Body, collion *Body, targetPos vec2d.Ve
 	//R := vec2d.Add(collion.R, my.R)
 	mypolygon1 := collion.GetMyPolygon(my)
 	if mypolygon1.IsInMyPolygon(targetPos) {
+		log.Info("---CalcDetourPath--:%d", my.Tag)
 		return
 	}
 
@@ -1174,13 +1201,18 @@ func (this *WardCore) CalcDetourPath(my *Body, collion *Body, targetPos vec2d.Ve
 	this.GetStaticBodysNoTarget(&bodys, my.Position, targetPos, my)
 	if this.CheckDetourPathNodeT(&dpNode, &bodys, path) {
 		//log.Info("1111111111111")
+		//log.Info("CalcDetourPath suc :%d", len(bodys))
+		log.Info("CalcDetourPath suc %d", my.Tag)
+		for i := 0; i < len(*path); i++ {
+			log.Info("--:%v", *path)
+		}
 	} else {
-		//log.Info("2222222222222")
+		log.Info("CalcDetourPath:%d", len(bodys))
 	}
 }
 
-var gWardCore_ZoneWidth float64 = 8.0
-var gWardCore_ZoneHeight float64 = 8.0
+var gWardCore_ZoneWidth float64 = 4.0
+var gWardCore_ZoneHeight float64 = 4.0
 
 func CheckCalcCollisoin(v *Body, my *Body) bool {
 	if v == my {
@@ -1219,6 +1251,7 @@ func (this *WardCore) GetStaticBodysNoTarget(bodys *[]*Body, mypos vec2d.Vec2, t
 			//遍历区域中的单位
 			for _, v := range this.ZoneBodys[vzone] {
 				if v.CurSpeedSize <= 0 && CheckCalcCollisoin(v, mybody) {
+					//mypolygon1 := v.GetMyPolygon(mybody)
 					mypolygon1 := v.GetMyPolygon(nil)
 					if mypolygon1.IsInMyPolygon(target) {
 						continue

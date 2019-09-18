@@ -20,34 +20,29 @@ import (
 )
 
 var (
-	SceneFileDatas = make(map[interface{}]interface{})
+	LevelFileDatas = make(map[interface{}]interface{})
 )
 
 //场景配置文件
-func LoadSceneFileData() {
-	_, SceneFileDatas = utils.ReadXlsxData("bin/conf/scenes.xlsx", (*SceneFileData)(nil))
+func LoadLevelFileData() {
+	_, LevelFileDatas = utils.ReadXlsxData("bin/conf/level.xlsx", (*LevelFileData)(nil))
 
 }
-func GetSceneFileData(typeid int32) *SceneFileData {
+func GetLevelFileData(level int32) *LevelFileData {
 	//log.Info("find unitfile:%d", typeid)
 
-	re := (SceneFileDatas[int(typeid)])
+	re := (LevelFileDatas[int(level)])
 	if re == nil {
-		log.Info("not find Scenefile:%d", typeid)
+		log.Info("not find LevelFileDatas:%d", level)
 		return nil
 	}
-	return (SceneFileDatas[int(typeid)]).(*SceneFileData)
-}
-func GetAllScene() map[interface{}]interface{} {
-	return SceneFileDatas
+	return (LevelFileDatas[int(level)]).(*LevelFileData)
 }
 
 //单位配置文件数据
-type SceneFileData struct {
+type LevelFileData struct {
 	//配置文件数据
-	TypeID         int32  //类型ID
-	ScenePath      string //场景路径
-	CreateUnit     string //创建单位
-	UnitExperience int32  //击杀单位获得经验
-	UnitGold       int32  //击杀单位获得金币
+	Level               int32 //等级
+	UpgradeExperience   int32 //升级所需要的经验
+	MaxExperienceOneDay int32 //一天中能获取到的最大经验值
 }

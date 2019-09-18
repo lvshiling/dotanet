@@ -365,9 +365,11 @@ func (this *Player) GetDBData() *db.DB_CharacterInfo {
 	dbdata.Typeid = this.MainUnit.TypeID
 	dbdata.Level = this.MainUnit.Level
 	dbdata.Experience = this.MainUnit.Experience
-	//dbdata.Gold = this.MainUnit.Gold
+	dbdata.Gold = this.MainUnit.Gold
 	dbdata.HP = float32(this.MainUnit.HP) / float32(this.MainUnit.MAX_HP)
 	dbdata.MP = float32(this.MainUnit.MP) / float32(this.MainUnit.MAX_MP)
+	dbdata.RemainExperience = this.MainUnit.RemainExperience
+	dbdata.GetExperienceDay = this.MainUnit.GetExperienceDay
 	if this.CurScene != nil {
 		dbdata.SceneID = this.CurScene.TypeID
 	} else {
@@ -565,7 +567,7 @@ func (this *Player) AddBulletData(bullet *Bullet) {
 
 }
 func (this *Player) AddHurtValue(hv *protomsg.MsgPlayerHurt) {
-	if hv == nil || hv.HurtAllValue == 0 {
+	if hv == nil || (hv.HurtAllValue == 0 && hv.GetGold == 0) {
 		return
 	}
 

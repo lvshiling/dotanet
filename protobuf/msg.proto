@@ -64,7 +64,10 @@ message UnitBoardDatas{
     float   StatusAmaor = 15;//状态抗性
     float   Dodge = 16;//闪避(0)
     float   HPRegain = 17;//生命恢复
-    repeated UnitEquip Equips = 18;//装备
+    int32   AttributePrimary = 18;//主属性(1:力量 2:敏捷 3:智力)
+    string  DropItems = 19;//掉落道具
+    int32   RemainExperience = 20;//今天剩余可以获取到的经验值
+    repeated UnitEquip Equips = 21;//装备
 }
 
 
@@ -139,6 +142,7 @@ message SkillDatas{
     int32 MaxLevel = 18;//技能最大等级
     int32 RequiredLevel = 19;//需要多少级可以学习该技能
     int32 LevelsBetweenUpgrades = 20;//学习该技能的等级步长
+    int32 InitLevel = 21;//技能初始等级
 }
 //buff数据
 message BuffDatas{
@@ -245,6 +249,7 @@ message MsgPlayerHurt{
     int32 HurtAllValue = 2; //总伤害值
     int32 HurtMagicValue = 3;//魔法伤害值
     int32 IsCrit = 4;   //是否暴击
+    int32 GetGold = 5;//获取到的金币数量
 }
 
 //每帧更新单位数据

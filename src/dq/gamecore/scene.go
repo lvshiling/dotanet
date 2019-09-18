@@ -638,6 +638,7 @@ func (this *Scene) DoAddAndRemoveUnit() {
 		pos := vec2d.Vec2{0, 0}
 		r := vec2d.Vec2{v.(*Unit).CollisionR, v.(*Unit).CollisionR}
 		v.(*Unit).Body = this.MoveCore.CreateBody(pos, r, 0, 1)
+		v.(*Unit).Body.Tag = int(v.(*Unit).ID)
 		v.(*Unit).Body.BlinkToPos(v.(*Unit).InitPosition, 0)
 
 		this.Units[k.(int32)] = v.(*Unit)

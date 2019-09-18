@@ -298,7 +298,9 @@ func (a *GameScene1Agent) SendUnitInfo(unit *gamecore.Unit, player *gamecore.Pla
 	unitdata.StatusAmaor = unit.StatusAmaor
 	unitdata.Dodge = unit.Dodge
 	unitdata.HPRegain = unit.HPRegain
-
+	unitdata.AttributePrimary = int32(unit.AttributePrimary)
+	unitdata.DropItems = unit.NPCItemDropInfo
+	unitdata.RemainExperience = unit.RemainExperience
 	//道具栏
 	unitdata.Equips = make([]*protomsg.UnitEquip, 0)
 	for k, v := range unit.Items {
