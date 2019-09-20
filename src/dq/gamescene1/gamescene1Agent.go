@@ -178,6 +178,7 @@ func (a *GameScene1Agent) DoUserEnterScene(h2 *protomsg.MsgUserEnterScene) {
 		msg.LogicFps = int32(scene.(*gamecore.Scene).SceneFrame)
 		msg.CurFrame = scene.(*gamecore.Scene).CurFrame
 		msg.ServerName = a.ServerName
+		msg.SceneID = scene.(*gamecore.Scene).TypeID
 		player.(*gamecore.Player).SendMsgToClient("SC_NewScene", msg)
 
 		log.Info("SendMsgToClient SC_NewScene")

@@ -280,6 +280,7 @@ message SC_NewScene{
     int32  LogicFps = 2;//逻辑帧率 (20即每秒20帧)
     int32  CurFrame = 3;//当前帧 (客户端通过当前帧和本地时间匹配计算延时逻辑)
     string ServerName = 4;//服务器名字
+    int32  SceneID = 5;//场景ID
 }
 
 

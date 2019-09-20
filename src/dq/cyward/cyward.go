@@ -166,16 +166,16 @@ func (this *Body) Update(dt float64) {
 		//检查碰撞
 		collisionOne := this.CheckPositionCollisoin(dt)
 		if collisionOne != nil {
-			log.Info("collisionOne:%d   ", collisionOne.Tag)
+			//log.Info("collisionOne:%d   ", collisionOne.Tag)
 			if collisionOne.CurSpeedSize > 0 {
 				this.CollisoinStopTime = 0.5
 				this.CurSpeedSize = 0
 				this.NextPosition = this.Position
 				this.TargetIndex = 0
 
-				log.Info("CurSpeedSize > 0:%d   ", collisionOne.Tag)
+				//log.Info("CurSpeedSize > 0:%d   ", collisionOne.Tag)
 			} else {
-				log.Info("CurSpeedSize <= 0:%d   %v", collisionOne.Tag, this.TargetPosition[0])
+				//log.Info("CurSpeedSize <= 0:%d   %v", collisionOne.Tag, this.TargetPosition[0])
 
 				this.Core.CalcDetourPath(this, collisionOne, this.TargetPosition[0], &this.DetourPath)
 				if len(this.DetourPath) <= 0 {
