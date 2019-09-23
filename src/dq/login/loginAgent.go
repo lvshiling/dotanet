@@ -49,8 +49,15 @@ func (a *LoginAgent) Init() {
 	a.registerDataHandle("CS_SelectCharacter", a.DoSelectCharacter)
 
 	a.registerDataHandle("LoginOut", a.DoLoginOut)
+	a.registerDataHandle("Disconnect", a.DoDisconnect)
 
 	rand.Seed(time.Now().UnixNano())
+}
+
+//--DoDisconnect
+func (a *LoginAgent) DoDisconnect(data *protomsg.MsgBase) {
+	a.LoginPlayers.Delete(data.Uid)
+	log.Info("-------DoDisconnect :%d", data.Uid)
 }
 
 //DoLoginOut
@@ -172,10 +179,16 @@ func (a *LoginAgent) DoSelectCharacter(data *protomsg.MsgBase) {
 		log.Info(err.Error())
 		return
 	}
+	if h2.SelectCharacter == nil {
+		return
+	}
 
 	characterid := h2.SelectCharacter.Characterid
+
+	isNewCharacter := false
 	//检查是否是新创建角色
 	if h2.SelectCharacter.Characterid < 0 {
+		isNewCharacter = true
 		err, characterid = db.DbOne.CreateCharacter(data.Uid, h2.SelectCharacter.Name, h2.SelectCharacter.Typeid)
 		if err != nil {
 			//回复客户端
@@ -217,6 +230,12 @@ func (a *LoginAgent) DoSelectCharacter(data *protomsg.MsgBase) {
 	//初始场景名字
 	if players[0].SceneID <= 0 {
 		players[0].SceneID = 1
+	}
+	//新创建的角色初始位置
+	if isNewCharacter == true {
+		players[0].SceneID = 1
+		players[0].X = 16
+		players[0].Y = 25
 	}
 
 	//通知进入场景

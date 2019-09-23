@@ -140,7 +140,10 @@ func (a *GameScene1Agent) DoUserEnterScene(h2 *protomsg.MsgUserEnterScene) {
 	if h2 == nil {
 		return
 	}
-	log.Info("---------datas:%d---%s", len(h2.Datas), string(h2.Datas))
+
+	//	characterinfo := db.DB_CharacterInfo{}
+	//	utils.Bytes2Struct(h2.Datas, &characterinfo)
+	//	log.Info("---------datas:%v", characterinfo)
 
 	//如果目的地服务器是本服务器
 	if h2.DestServerName == a.ServerName {
