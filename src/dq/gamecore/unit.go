@@ -403,7 +403,7 @@ func (this *Unit) FreshCDTime(skill *Skill, time float32) {
 }
 
 func (this *Unit) CheckTriggerAttackOneSkill(b *Bullet, animattack []int32, v *Skill) {
-	if v == nil {
+	if v == nil || v.Level <= 0 {
 		return
 	}
 	//CastType              int32   // 施法类型:  1:主动技能  2:被动技能
@@ -1623,6 +1623,10 @@ func (this *Unit) FreshHaloInSkills() {
 			}
 			//---------------
 			//log.Info("111111111111")
+			if v.Level <= 0 {
+				continue
+			}
+
 			halos := utils.GetInt32FromString2(v.InitHalo)
 			re := make([]int32, 0)
 			for _, v1 := range halos {
@@ -3618,6 +3622,7 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.IsMirrorImage = this.IsMirrorImage
 	this.ClientData.AttackRange = this.AttackRange
 	this.ClientData.AttackAnim = this.AttackAnim
+	this.ClientData.TypeID = this.TypeID
 
 	//道具技能
 	isds := make(map[int32]int32)
@@ -3773,6 +3778,7 @@ func (this *Unit) FreshClientDataSub() {
 	this.ClientDataSub.IsMirrorImage = this.IsMirrorImage - this.ClientData.IsMirrorImage
 	this.ClientDataSub.AttackRange = this.AttackRange - this.ClientData.AttackRange
 	this.ClientDataSub.AttackAnim = this.AttackAnim - this.ClientData.AttackAnim
+	this.ClientDataSub.TypeID = this.TypeID - this.ClientData.TypeID
 
 	//道具技能
 	isds := make(map[int32]int32)
