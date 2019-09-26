@@ -332,39 +332,51 @@ func (this *AttackState) OnTransform() {
 		return
 	}
 
+	////有攻击指令 却脱离攻击范围内
+	if this.Parent.IsOutAttackRangeBuffer(this.AttackTarget) {
+
+		this.OnEnd()
+		this.Parent.SetState(NewMoveState(this.Parent))
+		return
+	}
+	//目标不能被攻击
+	if this.AttackTarget.IsCanBeAttack() == false {
+		this.OnEnd()
+		this.Parent.SetState(NewIdleState(this.Parent))
+		return
+	}
 	//攻击命令
 	if this.Parent.HaveAttackCmd() {
-		////有攻击指令 却脱离攻击范围内
-		if this.Parent.IsOutAttackRangeBuffer(this.AttackTarget) {
-
-			this.OnEnd()
-			this.Parent.SetState(NewMoveState(this.Parent))
-			return
-		}
-		//目标不能被攻击
-		if this.AttackTarget.IsCanBeAttack() == false {
-			this.OnEnd()
-			this.Parent.SetState(NewIdleState(this.Parent))
-			return
-		}
 		//切换目标
 		if this.AttackTarget != this.Parent.AttackCmdDataTarget {
 			this.OnEnd()
 			this.Parent.SetState(NewIdleState(this.Parent))
 		}
-	} else {
-		//没有攻击命令 可以移动
+	}
+
+	//攻击弹道完成 如果有移动命令则中断攻击
+	if this.IsDoBullet == true {
 		if this.Parent.HaveMoveCmd() && this.Parent.GetCanMove() {
 			this.OnEnd()
+			this.Parent.StopAttackCmd()
 			this.Parent.SetState(NewMoveState(this.Parent))
-			return
-		} else {
-			//没有攻击命令 不能移动
-			this.OnEnd()
-			this.Parent.SetState(NewIdleState(this.Parent))
 			return
 		}
 	}
+
+	//	 else {
+	//		//没有攻击命令 可以移动
+	//		if this.Parent.HaveMoveCmd() && this.Parent.GetCanMove() {
+	//			this.OnEnd()
+	//			this.Parent.SetState(NewMoveState(this.Parent))
+	//			return
+	//		} else {
+	//			//没有攻击命令 不能移动
+	//			this.OnEnd()
+	//			this.Parent.SetState(NewIdleState(this.Parent))
+	//			return
+	//		}
+	//	}
 
 }
 func (this *AttackState) Update(dt float64) {

@@ -8,7 +8,7 @@ import (
 	"dq/protobuf"
 	"dq/utils"
 	"dq/vec2d"
-	"math"
+	//"math"
 	"strconv"
 	"strings"
 	"time"
@@ -166,6 +166,8 @@ type UnitCmd struct {
 	AttackCmdData *protomsg.CS_PlayerAttack
 	//攻击目标
 	AttackCmdDataTarget *Unit
+	//创建攻击命令时的时间
+	AttackCmdDataTime float64
 	//技能命令
 	SkillCmdData *protomsg.CS_PlayerSkill
 
@@ -1247,6 +1249,7 @@ func (this *Unit) AttackCmd(data *protomsg.CS_PlayerAttack) {
 	if this.CheckAttackEnable2Target(at) == true {
 		this.AttackCmdData = data
 		this.AttackCmdDataTarget = at
+		this.AttackCmdDataTime = utils.GetCurTimeOfSecond()
 		//		if this.AttackMode == 3 {
 		//			log.Info("---------AttackCmd")
 		//		}
@@ -1268,6 +1271,10 @@ func (this *Unit) CheckAttackCmd() {
 	if this.CheckAttackEnable2Target(this.AttackCmdDataTarget) == false {
 		//log.Info("---------tttt:%d", this.AttackCmdDataTarget.ID)
 		this.StopAttackCmd()
+	}
+	if utils.GetCurTimeOfSecond()-this.AttackCmdDataTime >= 1 && this.HaveMoveCmd() {
+		this.StopAttackCmd()
+		log.Info("---------StopAttackCmd:time 2")
 	}
 }
 
@@ -1312,6 +1319,13 @@ func (this *Unit) SetDirection(dir vec2d.Vec2) {
 
 //玩家操作行为命令
 func (this *Unit) PlayerControl_MoveCmd(data *protomsg.CS_PlayerMove) {
+
+	//移动结束命令可执行
+	if data.IsStart == false {
+		this.MoveCmdData = data
+		return
+	}
+
 	if this.PlayerControlEnable != 1 {
 		return
 	}
@@ -1337,27 +1351,31 @@ func (this *Unit) MoveCmd(data *protomsg.CS_PlayerMove) {
 	if this.MoveCmdData == nil {
 		log.Info("---------111111")
 		this.StopAttackCmd()
-		this.MoveCmdData = data
+		//this.MoveCmdData = data
 	} else {
 		if this.MoveCmdData.IsStart == false && data.IsStart == true {
 			log.Info("---------2222")
 			this.StopAttackCmd()
-			this.MoveCmdData = data
+			//this.MoveCmdData = data
 		}
 		if this.MoveCmdData.IsStart == true && data.IsStart == true {
-			v1 := vec2d.Vec2{X: float64(this.MoveCmdData.X), Y: float64(this.MoveCmdData.Y)}
-			v2 := vec2d.Vec2{X: float64(data.X), Y: float64(data.Y)}
+			//一直在移动中 如果超过2秒则中断攻击
 
-			angle := vec2d.Angle(v1, v2)
+			//			v1 := vec2d.Vec2{X: float64(this.MoveCmdData.X), Y: float64(this.MoveCmdData.Y)}
+			//			v2 := vec2d.Vec2{X: float64(data.X), Y: float64(data.Y)}
 
-			if math.Abs(angle) >= 0.4 {
+			//			angle := vec2d.Angle(v1, v2)
 
-				this.StopAttackCmd()
-				this.MoveCmdData = data
-				log.Info("---------angle:%f", angle)
-			}
+			//			if math.Abs(angle) >= 0.4 {
+
+			//				this.StopAttackCmd()
+			//				this.MoveCmdData = data
+			//				log.Info("---------angle:%f", angle)
+			//			}
 		}
 	}
+
+	this.MoveCmdData = data
 
 	log.Info("---------MoveCmd")
 }
