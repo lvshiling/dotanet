@@ -44,7 +44,7 @@ var (
 	//每一点敏捷增加 攻击速度 白字
 	AgilityAddAttackSpeed float32 = 1
 	//每一点敏捷增加 移动速度比率 绿字
-	AgilityAddMoveSpeed float32 = 0.0005
+	AgilityAddMoveSpeed float32 = 0.0006
 )
 
 //场景配置文件
@@ -109,6 +109,7 @@ type UnitFileData struct {
 
 	InitSkillsInfo   string  //初始技能信息 逗号分隔
 	CollisionR       float64 //碰撞半径
+	CollisoinLevel   int32   //碰撞等级
 	Death2RemoveTime float64 //死亡到删除的时间
 
 	NPCItemDropInfo string //NPC道具掉落信息 逗号分隔概率 分号分隔种类 1,0.02;2,0.03

@@ -490,6 +490,7 @@ func (this *DeathState) Update(dt float64) {
 	if dotime >= this.Parent.Death2RemoveTime {
 		this.Parent.InScene.RemoveUnit(this.Parent)
 	}
+
 }
 func (this *DeathState) OnEnd() {
 

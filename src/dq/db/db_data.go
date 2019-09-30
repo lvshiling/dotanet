@@ -25,4 +25,5 @@ type DB_CharacterInfo struct {
 	ItemSkillCDInfo  string  `json:"itemskillcd"`
 	GetExperienceDay string  `json:"getexperienceday"`
 	RemainExperience int32   `json:"remainexperience"`
+	RemainReviveTime float32 `json:"remainerevivetime"`
 }

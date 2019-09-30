@@ -50,4 +50,10 @@ type SceneFileData struct {
 	CreateUnit     string //创建单位
 	UnitExperience int32  //击杀单位获得经验
 	UnitGold       int32  //击杀单位获得金币
+	StartX         float32
+	StartY         float32
+	EndX           float32
+	EndY           float32
+	//StartX	StartY	EndX	EndY
+
 }

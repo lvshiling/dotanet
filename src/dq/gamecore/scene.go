@@ -70,7 +70,7 @@ func CreateScene(data *conf.SceneFileData, parent ChangeSceneFunc) *Scene {
 
 //初始化
 func (this *Scene) Init() {
-	this.SceneFrame = 40
+	this.SceneFrame = 30
 	this.CurFrame = 0
 	this.EveryTimeDoRemainTime = 1
 
@@ -155,15 +155,15 @@ func (this *Scene) Init() {
 	//		this.Units[hero1.ID] = hero1
 	//	}
 
-	//	//创建英雄2
+	//创建英雄2
 	//	hero2 := CreateUnit(this, 15)
 	//	hero2.AttackMode = 1 //和平攻击模式
 	//	hero2.SetAI(NewNormalAI(hero2))
 	//	//hero2.AddSkill(52, 4)
 	//	//设置移动核心body
-	//	pos2 := vec2d.Vec2{float64(10), float64(5)}
+	//	pos2 := vec2d.Vec2{float64(15), float64(15)}
 	//	r2 := vec2d.Vec2{hero2.CollisionR, hero2.CollisionR}
-	//	hero2.Body = this.MoveCore.CreateBody(pos2, r2, 0, 1)
+	//	hero2.Body = this.MoveCore.CreateBody(pos2, r2, 0, 2)
 	//	this.Units[hero2.ID] = hero2
 
 }

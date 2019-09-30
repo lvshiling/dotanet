@@ -196,6 +196,19 @@ func (this *Player) UpgradeSkill(data *protomsg.CS_PlayerUpgradeSkill) {
 	this.MainUnit.UpgradeSkill(data)
 }
 
+func (this *Player) ChangeAttackMode(data *protomsg.CS_ChangeAttackMode) {
+	if this.MainUnit == nil {
+		return
+	}
+	this.MainUnit.ChangeAttackMode(data)
+
+	this.CheckOtherUnit()
+	items := this.OtherUnit.Items()
+	for _, v1 := range items {
+		v1.(*Unit).ChangeAttackMode(data)
+	}
+}
+
 //交换道具位置 背包位置
 func (this *Player) ChangeItemPos(data *protomsg.CS_ChangeItemPos) {
 	//1表示装备栏 2表示背包
@@ -370,6 +383,7 @@ func (this *Player) GetDBData() *db.DB_CharacterInfo {
 	dbdata.MP = float32(this.MainUnit.MP) / float32(this.MainUnit.MAX_MP)
 	dbdata.RemainExperience = this.MainUnit.RemainExperience
 	dbdata.GetExperienceDay = this.MainUnit.GetExperienceDay
+	dbdata.RemainReviveTime = this.MainUnit.RemainReviveTime
 	if this.CurScene != nil {
 		dbdata.SceneID = this.CurScene.TypeID
 	} else {

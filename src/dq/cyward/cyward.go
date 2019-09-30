@@ -366,10 +366,10 @@ func (this *Body) SetTarget(pos vec2d.Vec2, mindistanse float64) {
 	this.Core.GetStaticBodysNoTarget(&bodys, this.Position, pos, this)
 
 	if this.Core.CheckDetourPathNodeT(dpNode, &bodys, &this.DetourPath) {
-		log.Info("SetTarget %d", this.Tag)
-		for i := 0; i < len(this.DetourPath); i++ {
-			log.Info("x: %f  y:%f", this.DetourPath[i].X, this.DetourPath[i].Y)
-		}
+		//		log.Info("SetTarget %d", this.Tag)
+		//		for i := 0; i < len(this.DetourPath); i++ {
+		//			log.Info("x: %f  y:%f", this.DetourPath[i].X, this.DetourPath[i].Y)
+		//		}
 		//log.Info("SetTarget suc :%d", len(bodys))
 	} else {
 		log.Info("SetTarget faild :%d", len(bodys))
@@ -1221,7 +1221,8 @@ func CheckCalcCollisoin(v *Body, my *Body) bool {
 	if v.IsCollisoin == false {
 		return false
 	}
-	if v.CollisoinLevel <= my.CollisoinLevel && my.IsCollisoin == false {
+	//if v.CollisoinLevel <= my.CollisoinLevel && my.IsCollisoin == false {
+	if v.CollisoinLevel < my.CollisoinLevel {
 
 		return false
 
@@ -1388,7 +1389,7 @@ func (this *WardCore) CreateBody(position vec2d.Vec2, r vec2d.Vec2, speedsize fl
 	body.IsRect = true
 	body.M_MyPolygon = &MyPolygon{}
 	body.MoveDir = vec2d.Vec2{X: 0, Y: 0}
-	//CollisoinLevel int32      // 碰撞等级 障碍物石头为2 普通单位为1
+	//CollisoinLevel int32      // 碰撞等级 无碰撞10 边界4 障碍物石头为3 英雄2 普通单位为1
 	body.CollisoinLevel = level
 	body.IsCollisoin = true
 	body.TurnDirection = true

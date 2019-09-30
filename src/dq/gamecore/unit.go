@@ -173,6 +173,9 @@ type UnitCmd struct {
 
 	//升级技能命令
 	UpgradeSkillData *protomsg.CS_PlayerUpgradeSkill
+
+	//切换攻击技能命令
+	ChangeAttackModeData *protomsg.CS_ChangeAttackMode
 }
 
 //-----------------------技能命令--------------------
@@ -486,6 +489,11 @@ func (this *Unit) CheckTriggerAttackOneSkill(b *Bullet, animattack []int32, v *S
 		if v.CheckCDTime() == false {
 			return
 		}
+		//魔法不足
+		shouldmp := v.GetManaCost() - int32(this.ManaCost*float32(v.GetManaCost()))
+		if shouldmp > int32(this.MP) {
+			return
+		}
 		if this.SkillEnable != 1 {
 			return
 		}
@@ -509,6 +517,9 @@ func (this *Unit) CheckTriggerAttackOneSkill(b *Bullet, animattack []int32, v *S
 
 		b.PhysicalHurtAddHP += v.PhysicalHurtAddHP
 		b.MagicHurtAddHP += v.MagicHurtAddHP
+
+		//消耗 CD
+		this.ChangeMP(float32(-shouldmp))
 
 		cdtime := v.Cooldown - this.MagicCD*v.Cooldown
 		//v.FreshCDTime(cdtime)
@@ -848,6 +859,9 @@ func (this *Unit) CheckTriggerBeAttackSkill(target *Unit) {
 	}
 
 	for _, v := range this.Skills {
+		if v.Level <= 0 {
+			continue
+		}
 		//CastType              int32   // 施法类型:  1:主动技能  2:被动技能
 		//TriggerTime int32 //触发时间 0:表示不触发 1:攻击时 2:被攻击时
 		//主动技能
@@ -1072,6 +1086,19 @@ func (this *Unit) PlayerControl_SkillCmd(data *protomsg.CS_PlayerSkill) {
 	this.SkillCmd(data)
 }
 
+//切换攻击模式命令
+func (this *Unit) ChangeAttackMode(data *protomsg.CS_ChangeAttackMode) {
+	this.ChangeAttackModeData = data
+}
+func (this *Unit) DoChangeAttackMode() {
+	if this.ChangeAttackModeData != nil {
+
+		this.AttackMode = this.ChangeAttackModeData.AttackMode
+
+		this.ChangeAttackModeData = nil
+	}
+}
+
 //玩家操作技能行为命令
 func (this *Unit) UpgradeSkill(data *protomsg.CS_PlayerUpgradeSkill) {
 	this.UpgradeSkillData = data
@@ -1272,7 +1299,7 @@ func (this *Unit) CheckAttackCmd() {
 		//log.Info("---------tttt:%d", this.AttackCmdDataTarget.ID)
 		this.StopAttackCmd()
 	}
-	if utils.GetCurTimeOfSecond()-this.AttackCmdDataTime >= 1 && this.HaveMoveCmd() {
+	if utils.GetCurTimeOfSecond()-this.AttackCmdDataTime >= 0.5 && this.HaveMoveCmd() {
 		this.StopAttackCmd()
 		log.Info("---------StopAttackCmd:time 2")
 	}
@@ -1506,9 +1533,10 @@ type UnitProperty struct {
 	Level            int32 //等级 会影响属性
 	Experience       int32
 	MaxExperience    int32
-	Gold             int32  //金币
-	GetExperienceDay string //获取经验的日期
-	RemainExperience int32  //今天还能获取的经验值
+	Gold             int32   //金币
+	GetExperienceDay string  //获取经验的日期
+	RemainExperience int32   //今天还能获取的经验值
+	RemainReviveTime float32 //剩余复活时间
 
 	UnitBaseProperty
 
@@ -1628,6 +1656,7 @@ func (this *Unit) SetReCreateInfo(recreateinfo *conf.Unit) {
 
 func (this *Unit) SetAI(ai UnitAI) {
 	this.AI = ai
+	ai.OnStart()
 
 }
 func (this *Unit) FreshHaloInSkills() {
@@ -1934,6 +1963,7 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 	unitre.Gold = characterinfo.Gold
 	unitre.GetExperienceDay = characterinfo.GetExperienceDay //获取经验的日期
 	unitre.RemainExperience = characterinfo.RemainExperience //今天还能获取的经验值
+	unitre.RemainReviveTime = characterinfo.RemainReviveTime
 	unitre.InitPosition = vec2d.Vec2{float64(characterinfo.X), float64(characterinfo.Y)}
 
 	leveldata := conf.GetLevelFileData(unitre.Level)
@@ -2032,7 +2062,7 @@ func (this *Unit) UpdateForceMove(dt float64) {
 		this.Body.SpeedSize = this.ForceMoveSpeed.Length()
 		this.Body.IsCollisoin = false
 		this.Body.TurnDirection = false
-		this.Body.CollisoinLevel = 2
+		this.Body.CollisoinLevel = 4
 		this.Body.SetMoveDir(this.ForceMoveSpeed)
 
 		//设置高度
@@ -2108,18 +2138,57 @@ func (this *Unit) CheckGetExperienceDay() {
 	}
 }
 
-//
-func (this *Unit) EveryTimeDo(dt float64) {
+//处理复活
+func (this *Unit) CheckAvive(dt float32) {
 
-	if this.IsDisappear() {
+	if this.RemainReviveTime <= 0 {
+		this.RemainReviveTime = 0
 		return
 	}
+	if this.HP > 0 {
+		return
+	}
+	//处理复活
+	if this.MyPlayer != nil && this == this.MyPlayer.MainUnit {
+		this.RemainReviveTime -= float32(dt)
+		if this.RemainReviveTime <= 0 {
+			//复活
+			this.DoAvive(2, 0.5, 0.5)
+		}
+	}
+}
+
+//复活 postype复活位置类型 1表示原地复活 2表示当前地图随机位置复活 hpmp复活状态百分比
+func (this *Unit) DoAvive(postype int32, hp float32, mp float32) {
+	mmp := mp
+	if mmp < this.MP/float32(this.MAX_MP) {
+		mmp = this.MP / float32(this.MAX_MP)
+	}
+	this.InitHPandMP(hp, mmp)
+
+	if this.InScene == nil {
+		return
+	}
+	if postype == 2 {
+		////StartX	StartY	EndX	EndY
+		x := utils.GetRandomFloatTwoNum(this.InScene.StartX, this.InScene.EndX)
+		y := utils.GetRandomFloatTwoNum(this.InScene.StartY, this.InScene.EndY)
+		targetpos := vec2d.Vec2{float64(x), float64(y)}
+		this.Body.BlinkToPos(targetpos, 0)
+	}
+}
+
+//
+func (this *Unit) EveryTimeDo(dt float64) {
 
 	this.EveryTimeDoRemainTime -= float32(dt)
 	if this.EveryTimeDoRemainTime <= 0 {
 		//do
 		this.EveryTimeDoRemainTime += 1
-
+		this.CheckAvive(1)
+		if this.IsDisappear() {
+			return
+		}
 		//每秒回血
 		this.ChangeHP(int32(this.HPRegain))
 		this.ChangeMP((this.MPRegain))
@@ -2129,6 +2198,7 @@ func (this *Unit) EveryTimeDo(dt float64) {
 		this.AutoRemoveTimeAndHurt()
 
 		this.CheckGetExperienceDay()
+
 		//
 	}
 }
@@ -2155,6 +2225,7 @@ func (this *Unit) PreUpdate(dt float64) {
 	}
 
 	this.DoUpgradeSkill()
+	this.DoChangeAttackMode()
 
 	this.ShowMiss(false)
 }
@@ -2521,7 +2592,7 @@ func (this *Unit) CalControlState() {
 
 	this.Body.IsCollisoin = true
 	this.Body.TurnDirection = true
-	this.Body.CollisoinLevel = 1
+	this.Body.CollisoinLevel = this.CollisoinLevel
 	this.Body.MoveDir = vec2d.Vec2{}
 
 	this.Z = 0
@@ -2654,7 +2725,7 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 	if v1.IsCollisoin == 2 {
 		this.Body.IsCollisoin = false
 	}
-	if v1.CollisoinLevel > this.Body.CollisoinLevel {
+	if v1.CollisoinLevel >= 0 {
 		this.Body.CollisoinLevel = v1.CollisoinLevel
 	}
 	if v1.NoPlayerControl == 1 {
@@ -3387,6 +3458,12 @@ func (this *Unit) CheckTriggerBeAttackAfter(attacker *Unit, hurttype int32, hurt
 	if attacker == nil || attacker.IsDisappear() || hurtvalue <= 0 {
 		return
 	}
+
+	//AI增加仇恨值
+	if this.AI != nil {
+		this.AI.AddEnemies(attacker, hurtvalue)
+	}
+
 	//物理攻击
 	//if hurttype == 1 {
 	this.CheckTriggerBeAttackSkill(attacker)
@@ -3505,6 +3582,17 @@ func (this *Unit) GetRewardForKill(deathunit *Unit) {
 
 //被杀死时 buff异常处理
 func (this *Unit) CheckTriggerDie(killer *Unit) {
+
+	//处理死亡单位
+	//重置死亡复活时间
+	leveldata := conf.GetLevelFileData(this.Level)
+	if leveldata != nil {
+		this.RemainReviveTime = leveldata.ReviveTime
+	} else {
+		this.RemainReviveTime = 100
+	}
+
+	//处理击杀者相关逻辑
 	if killer == nil || killer.IsDisappear() {
 		return
 	}
@@ -3641,6 +3729,7 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.AttackRange = this.AttackRange
 	this.ClientData.AttackAnim = this.AttackAnim
 	this.ClientData.TypeID = this.TypeID
+	this.ClientData.RemainReviveTime = this.RemainReviveTime
 
 	//道具技能
 	isds := make(map[int32]int32)
@@ -3797,6 +3886,7 @@ func (this *Unit) FreshClientDataSub() {
 	this.ClientDataSub.AttackRange = this.AttackRange - this.ClientData.AttackRange
 	this.ClientDataSub.AttackAnim = this.AttackAnim - this.ClientData.AttackAnim
 	this.ClientDataSub.TypeID = this.TypeID - this.ClientData.TypeID
+	this.ClientDataSub.RemainReviveTime = this.RemainReviveTime - this.ClientData.RemainReviveTime
 
 	//道具技能
 	isds := make(map[int32]int32)

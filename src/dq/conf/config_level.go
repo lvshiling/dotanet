@@ -42,7 +42,8 @@ func GetLevelFileData(level int32) *LevelFileData {
 //单位配置文件数据
 type LevelFileData struct {
 	//配置文件数据
-	Level               int32 //等级
-	UpgradeExperience   int32 //升级所需要的经验
-	MaxExperienceOneDay int32 //一天中能获取到的最大经验值
+	Level               int32   //等级
+	UpgradeExperience   int32   //升级所需要的经验
+	MaxExperienceOneDay int32   //一天中能获取到的最大经验值
+	ReviveTime          float32 //复活时间
 }

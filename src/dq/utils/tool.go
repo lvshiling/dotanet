@@ -62,6 +62,15 @@ func GetRandomFloat(fanwei float32) float32 {
 	return re
 }
 
+//获取在一个范围内的随机数
+func GetRandomFloatTwoNum(start float32, end float32) float32 {
+	if start >= end {
+		return start
+	}
+	re := rand.Float32()*(end-start) + start
+	return re
+}
+
 //从字符串中获取数据 逗号分隔
 func GetFloat32FromString(str string, params ...(*float32)) {
 	str1 := strings.Split(str, ",")

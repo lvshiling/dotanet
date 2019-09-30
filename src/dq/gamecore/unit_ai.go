@@ -1,7 +1,7 @@
 package gamecore
 
 import (
-	//"dq/log"
+	"dq/log"
 	"dq/protobuf"
 	"dq/utils"
 	//"dq/vec2d"
@@ -53,12 +53,13 @@ func (this *NormalAI) Update(dt float64) {
 	this.UpdateEnemies()
 
 	//通过仇恨值攻击目标
-	//	bigEnemies := this.GetBigEnemies()
-	//	if bigEnemies != nil {
-	//		this.AttackTarget = bigEnemies.Target
-	//		this.CreateAttackCmd(bigEnemies.Target)
-	//		return
-	//	}
+	bigEnemies := this.GetBigEnemies()
+	if bigEnemies != nil {
+		this.AttackTarget = bigEnemies.Target
+		this.CreateAttackCmd(this.AttackTarget)
+		log.Info("bigEnemies:%d", this.AttackTarget.ID)
+		return
+	}
 	//获取最近的敌人
 	nearestEnemies := this.GetNearestEnemies(this.AttackTarget)
 	if nearestEnemies != this.AttackTarget {

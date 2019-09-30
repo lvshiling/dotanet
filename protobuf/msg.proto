@@ -119,6 +119,10 @@ message CS_PlayerSkill {
     float Y = 4;//移动的Y方向 技能的目标点Y或目标方向
     int32 TargetUnitID = 5;//攻击对象id 或者技能对象ID
 }
+//玩家切换攻击模式
+message CS_ChangeAttackMode {
+    int32 AttackMode = 1;//切换后的攻击模式
+}
 
 //技能数据
 message SkillDatas{
@@ -192,9 +196,10 @@ message UnitDatas{
     float   AttackRange = 31;//攻击距离
     int32   AttackAnim = 32;//攻击动画
     int32   TypeID = 33; //类型id
-    repeated SkillDatas SD = 34;//技能数据
-    repeated BuffDatas BD = 35;//buff数据
-    repeated SkillDatas ISD = 36;//道具技能数据
+    float   RemainReviveTime = 34;//剩余复活时间
+    repeated SkillDatas SD = 35;//技能数据
+    repeated BuffDatas BD = 36;//buff数据
+    repeated SkillDatas ISD = 37;//道具技能数据
 
     //单位状态(idle walk attack skill die)
     //各种buff状态(单位身上的buff 包括剩余时间)
