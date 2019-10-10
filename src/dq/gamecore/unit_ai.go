@@ -1,7 +1,7 @@
 package gamecore
 
 import (
-	"dq/log"
+	//"dq/log"
 	"dq/protobuf"
 	"dq/utils"
 	//"dq/vec2d"
@@ -57,7 +57,7 @@ func (this *NormalAI) Update(dt float64) {
 	if bigEnemies != nil {
 		this.AttackTarget = bigEnemies.Target
 		this.CreateAttackCmd(this.AttackTarget)
-		log.Info("bigEnemies:%d", this.AttackTarget.ID)
+		//log.Info("bigEnemies:%d", this.AttackTarget.ID)
 		return
 	}
 	//获取最近的敌人

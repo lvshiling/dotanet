@@ -974,6 +974,12 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 		}
 	}
 
+	//加血
+	if skilldata.AddHPTarget == 1 {
+		this.DoAddHP(skilldata.AddHPType, skilldata.AddHPValue)
+	}
+	targetunit := this.InScene.FindUnitByID(data.TargetUnitID)
+
 	//创建子弹
 	bullets := skilldata.CreateBullet(this, data)
 	if len(bullets) > 0 {
@@ -984,15 +990,12 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 			this.AddBullet(v)
 		}
 
-	}
+		this.DoSkillException(skilldata, targetunit, bullets[0])
 
-	//加血
-	if skilldata.AddHPTarget == 1 {
-		this.DoAddHP(skilldata.AddHPType, skilldata.AddHPValue)
+	} else {
+
 	}
 	//特殊处理
-	targetunit := this.InScene.FindUnitByID(data.TargetUnitID)
-	this.DoSkillException(skilldata, targetunit, bullets[0])
 
 	//检查关联
 	if skilldata.VisibleRelationSkillID > 0 && skilldata.UseToHide == 1 {
@@ -3569,9 +3572,9 @@ func (this *Unit) GetRewardForKill(deathunit *Unit) {
 
 		//显示奖励的金币
 		mph := &protomsg.MsgPlayerHurt{HurtUnitID: deathunit.ID, GetGold: deathunit.InScene.UnitGold}
-		log.Info("get gold:%d", deathunit.InScene.UnitGold)
+		//log.Info("get gold:%d", deathunit.InScene.UnitGold)
 		if this.MyPlayer != nil {
-			log.Info("get gold succ")
+			//log.Info("get gold succ")
 			this.MyPlayer.AddHurtValue(mph)
 		}
 
