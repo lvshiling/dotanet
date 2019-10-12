@@ -726,15 +726,18 @@ func (this *Unit) DoForceMove(skilldata *Skill, targetpos vec2d.Vec2) bool {
 		//查找3米内的随机一个单位 如果找不到则失败
 		var touzhiunit *Unit = nil
 		allunit := this.InScene.FindVisibleUnits(this)
+
+		minDis := float32(3.0)
 		for _, v := range allunit {
 			//魔免
 			if v.MagicImmune == 1 || v.IsDisappear() || v == this {
 				continue
 			}
 			dis := float32(vec2d.Distanse(this.Body.Position, v.Body.Position))
-			if dis <= 3 {
+			if dis <= minDis {
 				touzhiunit = v
-				break
+				minDis = dis
+				//break
 			}
 		}
 		if touzhiunit == nil {
@@ -3544,6 +3547,9 @@ func (this *Unit) AddExperience(add int32) {
 		//升级
 		this.Level += 1
 		this.Experience -= this.MaxExperience
+		//满血满蓝
+		this.InitHPandMP(1, 1)
+
 		//下一级需要的经验值
 		leveldata := conf.GetLevelFileData(this.Level)
 		if leveldata != nil {
