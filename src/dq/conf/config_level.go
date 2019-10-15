@@ -21,6 +21,8 @@ import (
 
 var (
 	LevelFileDatas = make(map[interface{}]interface{})
+
+	MaxLevel = int32(20)
 )
 
 //场景配置文件

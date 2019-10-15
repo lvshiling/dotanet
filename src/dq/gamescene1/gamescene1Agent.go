@@ -45,6 +45,9 @@ func (a *GameScene1Agent) GetModeType() string {
 
 func (a *GameScene1Agent) Init() {
 
+	//初始化 组队信息
+	gamecore.TeamManagerObj.Init(a)
+
 	a.ServerName = datamsg.GameScene1
 
 	a.Scenes = utils.NewBeeMap()
@@ -64,6 +67,11 @@ func (a *GameScene1Agent) Init() {
 	a.handles["CS_ChangeItemPos"] = a.DoChangeItemPos
 	a.handles["CS_PlayerUpgradeSkill"] = a.DoPlayerUpgradeSkill
 	a.handles["CS_ChangeAttackMode"] = a.DoChangeAttackMode
+
+	a.handles["CS_LodingScene"] = a.DoLodingScene
+
+	a.handles["CS_OrganizeTeam"] = a.DoOrganizeTeam
+	a.handles["CS_ResponseOrgTeam"] = a.DoResponseOrgTeam
 
 	//创建场景
 	allscene := conf.GetAllScene()
@@ -91,6 +99,8 @@ func (a *GameScene1Agent) DoDisconnect(data *protomsg.MsgBase) {
 		if player.(*gamecore.Player).ConnectId == data.ConnectId {
 
 			log.Info("---------DoDisconnect--delete")
+
+			gamecore.TeamManagerObj.LeaveTeam(player.(*gamecore.Player))
 
 			player.(*gamecore.Player).SaveDB()
 
@@ -135,6 +145,13 @@ func (a *GameScene1Agent) PlayerChangeScene(player *gamecore.Player, doorway con
 		Datas:          utils.Struct2Bytes(dbdata), //数据库中的角色信息
 	}
 	a.DoUserEnterScene(h2)
+}
+func (a *GameScene1Agent) GetPlayerByID(uid int32) *gamecore.Player {
+	player := a.Players.Get(uid)
+	if player == nil {
+		return nil
+	}
+	return player.(*gamecore.Player)
 }
 
 func (a *GameScene1Agent) DoUserEnterScene(h2 *protomsg.MsgUserEnterScene) {
@@ -407,6 +424,52 @@ func (a *GameScene1Agent) DoPlayerAttack(data *protomsg.MsgBase) {
 	}
 
 	player.(*gamecore.Player).AttackCmd(h2)
+
+}
+
+func (a *GameScene1Agent) DoOrganizeTeam(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_OrganizeTeam{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player1 := a.Players.Get(h2.Player1)
+	player2 := a.Players.Get(h2.Player2)
+	if player1 == nil || player2 == nil {
+		return
+	}
+	if h2.Player1 == h2.Player2 {
+		return
+	}
+
+	gamecore.TeamManagerObj.OrganizeTeam(player1.(*gamecore.Player), player2.(*gamecore.Player))
+}
+func (a *GameScene1Agent) DoResponseOrgTeam(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_ResponseOrgTeam{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	gamecore.TeamManagerObj.ResponseOrgTeam(h2, player.(*gamecore.Player))
+}
+
+//CS_LodingScene
+func (a *GameScene1Agent) DoLodingScene(data *protomsg.MsgBase) {
+
+	//log.Info("---------DoPlayerOperate")
+
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+
+	player.(*gamecore.Player).IsLoadedSceneSucc = true
 
 }
 

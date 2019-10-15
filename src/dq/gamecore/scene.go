@@ -629,6 +629,16 @@ func (this *Scene) DoAddAndRemoveUnit() {
 	//增加
 	itemsadd := this.NextAddUnit.Items()
 	for k, v := range itemsadd {
+
+		player := v.(*Unit).MyPlayer
+		if player != nil {
+			if player.IsLoadedSceneSucc == false {
+				continue
+			}
+		}
+
+		log.Info("----add player!!!!")
+
 		if v.(*Unit).Body != nil {
 			this.MoveCore.RemoveBody(v.(*Unit).Body)
 			v.(*Unit).Body = nil
@@ -665,6 +675,14 @@ func (this *Scene) DoAddAndRemoveUnit() {
 	//增加玩家
 	playeradd := this.NextAddPlayer.Items()
 	for k, v := range playeradd {
+
+		player := v.(*Player)
+		if player != nil {
+			if player.IsLoadedSceneSucc == false {
+				continue
+			}
+		}
+
 		this.Players[k.(int32)] = v.(*Player)
 
 		this.NextAddPlayer.Delete(k)
@@ -733,10 +751,14 @@ func (this *Scene) PlayerGoout(player *Player) {
 	//删除主单位
 	//this.NextRemoveUnit.Set(player.MainUnit.ID, player.MainUnit)
 	this.RemoveUnit(player.MainUnit)
+	this.NextAddUnit.Delete(player.MainUnit.ID)
 	items := player.OtherUnit.Items()
 	for _, v := range items {
 		this.RemoveUnit(v.(*Unit))
+		this.NextAddUnit.Delete(v.(*Unit).ID)
 	}
 
 	this.NextRemovePlayer.Set(player.Uid, player)
+	this.NextAddPlayer.Delete(player.Uid)
+
 }

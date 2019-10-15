@@ -32,13 +32,16 @@ type ItemSkillCDData struct {
 }
 
 type Player struct {
-	Uid         int32
-	ConnectId   int32
-	Characterid int32         //角色id
-	MainUnit    *Unit         //主单位
-	OtherUnit   *utils.BeeMap //其他单位
-	CurScene    *Scene
-	ServerAgent Server
+	Uid               int32
+	ConnectId         int32
+	Characterid       int32         //角色id
+	MainUnit          *Unit         //主单位
+	OtherUnit         *utils.BeeMap //其他单位
+	CurScene          *Scene
+	ServerAgent       Server
+	IsLoadedSceneSucc bool //是否loading成功
+
+	TeamID int32 //组队信息
 
 	BagInfo []*BagItem
 
@@ -158,6 +161,8 @@ func (this *Player) ReInit() {
 	//
 	this.OtherUnit = utils.NewBeeMap()
 	this.Msg = &protomsg.SC_Update{}
+
+	this.IsLoadedSceneSucc = false
 }
 
 //添加其他可控制的单位

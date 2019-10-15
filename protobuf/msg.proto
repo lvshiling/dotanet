@@ -39,6 +39,11 @@ message CS_SelectCharacter {
     CharacterBaseDatas SelectCharacter = 1;//选择角色
 }
 
+//loading界面加载完成
+message CS_LodingScene{
+    int32  SceneID = 1;//场景ID
+}
+
 //装备栏
 message UnitEquip{
     int32 Pos = 1;//位置
@@ -123,6 +128,29 @@ message CS_PlayerSkill {
 message CS_ChangeAttackMode {
     int32 AttackMode = 1;//切换后的攻击模式
 }
+
+
+//组队操作
+message CS_OrganizeTeam {
+    int32 Player1 = 1;//玩家1的id
+    int32 Player2 = 2;//玩家2的id
+}
+//组队请求
+message SC_RequestTeam{
+    int32 SrcPlayerUID = 1;//来源uid
+    string SrcName = 2;//名字
+    int32 SrcUnitTypeID = 3;//单位类型
+    int32 SrcLevel = 4;//单位等级
+    int32 RequestType = 5;// 组队类型 1:请求加入战队 2:邀请目标加入战队
+
+}
+//回复组队请求
+message CS_ResponseOrgTeam {
+    int32 SrcPlayerUID = 1;//来源uid
+    int32 IsAgree = 2;//是否同意  1同意 2不同意
+    int32 RequestType = 3;// 组队类型 1:请求加入战队 2:邀请目标加入战队
+}
+
 
 //技能数据
 message SkillDatas{

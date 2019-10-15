@@ -3535,6 +3535,11 @@ func (this *Unit) CheckTriggerBeAttackAfter(attacker *Unit, hurttype int32, hurt
 
 //获得经验
 func (this *Unit) AddExperience(add int32) {
+
+	if this.Level >= conf.MaxLevel {
+		return
+	}
+
 	//检查今天是否还能获取超过add的经验值
 	if this.RemainExperience < add {
 		add = this.RemainExperience
