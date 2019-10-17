@@ -3,8 +3,10 @@ package gamecore
 import (
 	"dq/log"
 	"dq/protobuf"
+	"dq/timer"
 	"dq/utils"
 	"sync"
+	"time"
 )
 
 var (
@@ -47,6 +49,49 @@ func (this *TeamInfo) Dismiss() {
 	this.Players.DeleteAll()
 	this.IsDismiss = true
 	log.Info("   解散队伍  ")
+}
+func (this *TeamInfo) SendData() {
+	this.OperateLock.Lock()
+	defer this.OperateLock.Unlock()
+	msg := &protomsg.SC_UpdateTeamInfo{}
+	msg.TeamID = this.ID
+	if this.MainPlayer != nil {
+		msg.MainUID = this.MainPlayer.Uid
+	}
+	msg.TPInfo = make([]*protomsg.TeamPlayerInfo, 0)
+	playeritem := this.Players.Items()
+	for _, v := range playeritem {
+		if v == nil {
+			continue
+
+		}
+		player := v.(*Player)
+		if player == nil || player.MainUnit == nil {
+			continue
+		}
+		tpinfo := &protomsg.TeamPlayerInfo{}
+		tpinfo.UID = player.Uid
+		tpinfo.Name = player.MainUnit.Name
+		tpinfo.HP = player.MainUnit.HP
+		tpinfo.MP = int32(player.MainUnit.MP)
+		tpinfo.MaxHP = player.MainUnit.MAX_HP
+		tpinfo.MaxMP = player.MainUnit.MAX_MP
+		tpinfo.ID = player.MainUnit.ID
+
+		msg.TPInfo = append(msg.TPInfo, tpinfo)
+	}
+
+	for _, v := range playeritem {
+		if v == nil {
+			continue
+		}
+		player := v.(*Player)
+		if player == nil {
+			continue
+		}
+
+		player.SendMsgToClient("SC_UpdateTeamInfo", msg)
+	}
 }
 
 //删除成员
@@ -108,6 +153,9 @@ type TeamManager struct {
 	Teams       *utils.BeeMap //当前服务器组队信息
 	OperateLock *sync.RWMutex //同步操作锁
 	Server      ServerInterface
+	//时间到 倒计时
+	UpdateTimer *timer.Timer
+	//	IsClose     bool //是否结束
 }
 
 //离开队伍
@@ -125,6 +173,24 @@ func (this *TeamManager) LeaveTeam(player *Player) {
 	if lastteam.(*TeamInfo).Players.Size() <= 1 {
 		this.DismissTeam(lastteam.(*TeamInfo).ID, lastteam.(*TeamInfo).MainPlayer)
 	}
+
+}
+
+//踢人
+func (this *TeamManager) OutTeam(doplayer *Player, outplayer *Player) {
+	if doplayer == nil || outplayer == nil || doplayer == outplayer {
+		return
+	}
+
+	team := this.Teams.Get(doplayer.TeamID)
+	if team == nil {
+		return
+	}
+	if team.(*TeamInfo).MainPlayer != doplayer {
+		return
+	}
+
+	this.LeaveTeam(outplayer)
 
 }
 
@@ -266,19 +332,30 @@ func (this *TeamManager) Init(server ServerInterface) {
 	this.Server = server
 	this.OperateLock = new(sync.RWMutex)
 
+	this.UpdateTimer = timer.AddRepeatCallback(time.Second, this.Update)
+	//	go func() {
+	//		this.Update()
+	//	}()
+
+}
+func (this *TeamManager) Close() {
+	if this.UpdateTimer != nil {
+		this.UpdateTimer.Cancel()
+		this.UpdateTimer = nil
+	}
 }
 
 //更新
 func (this *TeamManager) Update() {
-	//当队伍只有1人的时候自动解散队伍
 
-	//	teams := this.Teams.Items()
-	//	for _, v := range teams {
-	//		if v == nil {
-	//			continue
-	//		}
-	//		if v.(*TeamInfo).Players.Size() <= 1 {
-	//			this.DismissTeam(v.(*TeamInfo).ID, v.(*TeamInfo).MainPlayer)
-	//		}
-	//	}
+	//给玩家发生队伍信息
+	teams := this.Teams.Items()
+	for _, v := range teams {
+		if v == nil {
+			continue
+		}
+		team := v.(*TeamInfo)
+		team.SendData()
+
+	}
 }

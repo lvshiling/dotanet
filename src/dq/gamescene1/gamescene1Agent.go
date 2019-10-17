@@ -72,6 +72,7 @@ func (a *GameScene1Agent) Init() {
 
 	a.handles["CS_OrganizeTeam"] = a.DoOrganizeTeam
 	a.handles["CS_ResponseOrgTeam"] = a.DoResponseOrgTeam
+	a.handles["CS_OutTeam"] = a.DoOutTeam
 
 	//创建场景
 	allscene := conf.GetAllScene()
@@ -459,6 +460,30 @@ func (a *GameScene1Agent) DoResponseOrgTeam(data *protomsg.MsgBase) {
 	gamecore.TeamManagerObj.ResponseOrgTeam(h2, player.(*gamecore.Player))
 }
 
+//a.handles["CS_OutTeam"] = a.DoOutTeam
+func (a *GameScene1Agent) DoOutTeam(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_OutTeam{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	player1 := a.Players.Get(h2.OutPlayerUID)
+	if player1 == nil {
+		return
+	}
+	if player == player1 {
+		gamecore.TeamManagerObj.LeaveTeam(player1.(*gamecore.Player))
+	} else {
+		gamecore.TeamManagerObj.OutTeam(player.(*gamecore.Player), player1.(*gamecore.Player))
+	}
+
+}
+
 //CS_LodingScene
 func (a *GameScene1Agent) DoLodingScene(data *protomsg.MsgBase) {
 
@@ -533,6 +558,7 @@ func (a *GameScene1Agent) OnClose() {
 	for _, v := range scenes {
 		v.(*gamecore.Scene).Close()
 	}
+	gamecore.TeamManagerObj.Close()
 
 	a.wgScene.Wait()
 

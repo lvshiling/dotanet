@@ -150,6 +150,32 @@ message CS_ResponseOrgTeam {
     int32 IsAgree = 2;//是否同意  1同意 2不同意
     int32 RequestType = 3;// 组队类型 1:请求加入战队 2:邀请目标加入战队
 }
+//队伍踢人
+message CS_OutTeam{
+    int32 OutPlayerUID = 1;//被踢者的UID
+}
+
+//队伍玩家信息
+message TeamPlayerInfo{
+    int32 UID = 1;
+    string Name = 2;//名字
+    int32 HP = 3;//血量
+    int32 MP = 4;//魔法
+    int32 MaxHP = 5;//最大血量
+    int32 MaxMP = 6;//最大魔法
+    int32 ID = 7;//单位ID
+}
+//更新队伍信息
+message SC_UpdateTeamInfo {
+    int32 TeamID = 1;//队伍ID
+    int32 MainUID = 2;//队长的UID
+    repeated TeamPlayerInfo TPInfo = 3;//成员信息(包括队长在内)
+}
+
+//提示文字
+message SC_NoticeWords{
+    int32 TypeID = 1;//id
+}
 
 
 //技能数据
@@ -225,9 +251,10 @@ message UnitDatas{
     int32   AttackAnim = 32;//攻击动画
     int32   TypeID = 33; //类型id
     float   RemainReviveTime = 34;//剩余复活时间
-    repeated SkillDatas SD = 35;//技能数据
-    repeated BuffDatas BD = 36;//buff数据
-    repeated SkillDatas ISD = 37;//道具技能数据
+    int32   TeamID = 35;//组队的队伍ID
+    repeated SkillDatas SD = 36;//技能数据
+    repeated BuffDatas BD = 37;//buff数据
+    repeated SkillDatas ISD = 38;//道具技能数据
 
     //单位状态(idle walk attack skill die)
     //各种buff状态(单位身上的buff 包括剩余时间)

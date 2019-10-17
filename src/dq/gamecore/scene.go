@@ -284,32 +284,32 @@ func (this *Scene) Update() {
 		//t1 := time.Now().UnixNano()
 		//log.Info("main time:%d", (t1)/1e6)
 
-		time1 := utils.GetCurTimeOfSecond()
+		//time1 := utils.GetCurTimeOfSecond()
 		this.EveryTimeDo(1 / float32(this.SceneFrame))
 
 		this.DoRemoveBullet()
 		this.DoRemoveHalo()
 		this.DoAddAndRemoveUnit()
 
-		time2 := utils.GetCurTimeOfSecond()
+		//time2 := utils.GetCurTimeOfSecond()
 		this.DoLogic()
-		time3 := utils.GetCurTimeOfSecond()
+		//time3 := utils.GetCurTimeOfSecond()
 		this.UpdateHalo(1 / float32(this.SceneFrame))
-		time4 := utils.GetCurTimeOfSecond()
+		//time4 := utils.GetCurTimeOfSecond()
 		this.UpdateBullet(1 / float32(this.SceneFrame))
-		time5 := utils.GetCurTimeOfSecond()
+		//time5 := utils.GetCurTimeOfSecond()
 
 		this.DoMove()
-		time6 := utils.GetCurTimeOfSecond()
+		//time6 := utils.GetCurTimeOfSecond()
 		this.DoZone()
-		time7 := utils.GetCurTimeOfSecond()
+		//time7 := utils.GetCurTimeOfSecond()
 		this.DoSendData()
-		time8 := utils.GetCurTimeOfSecond()
+		//time8 := utils.GetCurTimeOfSecond()
 
-		if time8-time1 >= 10.01 {
-			log.Info("time:%f %f %f %f %f %f %f  ", time2-time1, time3-time2, time4-time3, time5-time4,
-				time6-time5, time7-time6, time8-time7)
-		}
+		//		if time8-time1 >= 10.01 {
+		//			log.Info("time:%f %f %f %f %f %f %f  ", time2-time1, time3-time2, time4-time3, time5-time4,
+		//				time6-time5, time7-time6, time8-time7)
+		//		}
 
 		this.CurFrame++
 
@@ -384,7 +384,7 @@ func (this *Scene) DoSendData() {
 				}
 			}
 		}
-		player.SendUpdateMsg(this.CurFrame)
+		player.Update(this.CurFrame)
 	}
 }
 

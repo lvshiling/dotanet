@@ -64,12 +64,13 @@ func (this *IdleState) OnTransform() {
 	if this.Parent.HaveSkillCmd() {
 		//在技能范围内
 		if this.Parent.IsInSkillRange(this.Parent.SkillCmdData) {
-
+			log.Info("-IsInSkillRange-")
 			this.OnEnd()
 			this.Parent.SetState(NewChantState(this.Parent))
 
 		} else {
 			//有攻击指令 却不在攻击范围内
+			log.Info("-IsOutSkillRange-")
 			this.OnEnd()
 			this.Parent.SetState(NewMoveState(this.Parent))
 		}
@@ -80,7 +81,7 @@ func (this *IdleState) OnTransform() {
 	if this.Parent.HaveAttackCmd() {
 		//在攻击范围内
 		if this.Parent.IsInAttackRange(this.Parent.AttackCmdDataTarget) {
-			if this.Parent.AttackCmdDataTarget.IsCanBeAttack() {
+			if this.Parent.AttackCmdDataTarget.IsCanBeAttack() && this.Parent.NextAttackRemainTime <= 0 {
 
 				this.OnEnd()
 				this.Parent.SetState(NewAttackState(this.Parent))
@@ -105,6 +106,13 @@ func (this *IdleState) OnTransform() {
 }
 func (this *IdleState) Update(dt float64) {
 	this.Parent.SetAnimotorState(1)
+	if this.Parent.HaveAttackCmd() {
+		//this.Parent.AttackCmdDataTarget
+		if this.Parent.AttackCmdDataTarget != nil && this.Parent.TurnEnable == 1 {
+			this.Parent.SetDirection(vec2d.Sub(this.Parent.AttackCmdDataTarget.Body.Position, this.Parent.Body.Position))
+		}
+
+	}
 }
 func (this *IdleState) OnEnd() {
 	//	if this.Parent.IsMirrorImage == 1 {
@@ -166,7 +174,7 @@ func (this *MoveState) OnTransform() {
 		//在攻击范围内
 		if this.Parent.IsInAttackRange(this.Parent.AttackCmdDataTarget) {
 			//在范围内 能被攻击就到攻击状态  不能被攻击就到休息状态
-			if this.Parent.AttackCmdDataTarget.IsCanBeAttack() {
+			if this.Parent.AttackCmdDataTarget.IsCanBeAttack() && this.Parent.NextAttackRemainTime <= 0 {
 
 				this.OnEnd()
 				this.Parent.SetState(NewAttackState(this.Parent))
@@ -399,6 +407,7 @@ func (this *AttackState) Update(dt float64) {
 			this.Parent.RemoveBuffForAttacked()
 
 			this.IsDoBullet = true
+			this.Parent.NextAttackRemainTime = float32(this.OneAttackTime - dotime)
 		}
 
 		if this.AttackTarget != nil {

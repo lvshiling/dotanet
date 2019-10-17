@@ -8,6 +8,7 @@ import (
 	"dq/protobuf"
 	"dq/utils"
 	"dq/vec2d"
+	"math"
 	//"math"
 	"strconv"
 	"strings"
@@ -37,6 +38,8 @@ func (this *Unit) TestData() {
 func (this *Unit) GetOneAttackTime() float32 {
 
 	return 170.0 / this.AttackSpeed
+
+	//return 5
 }
 
 //目标离自动攻击范围的距离 小于0 表示在内
@@ -1031,6 +1034,11 @@ func (this *Unit) DoSkill(data *protomsg.CS_PlayerSkill, targetpos vec2d.Vec2) {
 	}
 
 }
+func (this *Unit) SendNoticeWord(typeid int32) {
+	if this.MyPlayer != nil {
+		this.MyPlayer.SendNoticeWordToClient(typeid)
+	}
+}
 
 //检查是否能使用技能
 func (this *Unit) UseSkillEnable(data *protomsg.CS_PlayerSkill) bool {
@@ -1064,11 +1072,13 @@ func (this *Unit) UseSkillEnable(data *protomsg.CS_PlayerSkill) bool {
 	}
 	//cd中
 	if skilldata.CheckCDTime() == false {
+		this.SendNoticeWord(2)
 		return false
 	}
 	//魔法不足
 	shouldmp := skilldata.GetManaCost() - int32(this.ManaCost*float32(skilldata.GetManaCost()))
 	if shouldmp > int32(this.MP) {
+		this.SendNoticeWord(1)
 		return false
 	}
 
@@ -1530,6 +1540,8 @@ type UnitProperty struct {
 
 	IsDeath int32 //是否死亡(1:死亡 2:没死)
 	Name    string
+
+	NextAttackRemainTime float32 //下次攻击剩余时间
 
 	//复合数据 会随时变动的数据 比如受buff影响攻击力降低  (每帧动态计算)
 	HP               int32
@@ -2229,6 +2241,7 @@ func (this *Unit) PreUpdate(dt float64) {
 	if this.IsDisappear() {
 		return
 	}
+	this.NextAttackRemainTime -= float32(dt)
 
 	this.DoUpgradeSkill()
 	this.DoChangeAttackMode()
@@ -3574,15 +3587,33 @@ func (this *Unit) GetRewardForKill(deathunit *Unit) {
 	//阵营(1:玩家 2:NPC)  玩家的召唤物和幻象camp也是 玩家
 	if deathunit.Camp == 2 {
 
-		if deathunit.InScene == nil {
+		if deathunit.InScene == nil || this.MyPlayer == nil || this.MyPlayer.MainUnit == nil {
 			return
 		}
-
-		this.Gold += deathunit.InScene.UnitGold
-		this.AddExperience(deathunit.InScene.UnitExperience)
+		addgold := float64(deathunit.InScene.UnitGold)
+		addExp := float64(deathunit.InScene.UnitExperience)
+		var team interface{}
+		if this.MyPlayer.TeamID > 0 {
+			team = TeamManagerObj.Teams.Get(this.MyPlayer.TeamID)
+		}
+		if team != nil {
+			teamplayers := team.(*TeamInfo).Players.Items()
+			addgold = math.Ceil(addgold / float64(len(teamplayers)))
+			addExp = math.Ceil(addExp / float64(len(teamplayers)))
+			for _, v := range teamplayers {
+				player := v.(*Player)
+				if player != nil && player.MainUnit != nil {
+					player.MainUnit.Gold += int32(addgold)
+					player.MainUnit.AddExperience(int32(addExp))
+				}
+			}
+		} else {
+			this.MyPlayer.MainUnit.Gold += int32(addgold)
+			this.MyPlayer.MainUnit.AddExperience(int32(addExp))
+		}
 
 		//显示奖励的金币
-		mph := &protomsg.MsgPlayerHurt{HurtUnitID: deathunit.ID, GetGold: deathunit.InScene.UnitGold}
+		mph := &protomsg.MsgPlayerHurt{HurtUnitID: deathunit.ID, GetGold: int32(addgold)}
 		//log.Info("get gold:%d", deathunit.InScene.UnitGold)
 		if this.MyPlayer != nil {
 			//log.Info("get gold succ")
@@ -3744,6 +3775,9 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.AttackAnim = this.AttackAnim
 	this.ClientData.TypeID = this.TypeID
 	this.ClientData.RemainReviveTime = this.RemainReviveTime
+	if this.MyPlayer != nil {
+		this.ClientData.TeamID = this.MyPlayer.TeamID
+	}
 
 	//道具技能
 	isds := make(map[int32]int32)
@@ -3901,7 +3935,9 @@ func (this *Unit) FreshClientDataSub() {
 	this.ClientDataSub.AttackAnim = this.AttackAnim - this.ClientData.AttackAnim
 	this.ClientDataSub.TypeID = this.TypeID - this.ClientData.TypeID
 	this.ClientDataSub.RemainReviveTime = this.RemainReviveTime - this.ClientData.RemainReviveTime
-
+	if this.MyPlayer != nil {
+		this.ClientDataSub.TeamID = this.MyPlayer.TeamID - this.ClientData.TeamID
+	}
 	//道具技能
 	isds := make(map[int32]int32)
 	this.ClientDataSub.ISD = make([]*protomsg.SkillDatas, 0)

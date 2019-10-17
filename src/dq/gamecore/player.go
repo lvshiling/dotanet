@@ -593,6 +593,11 @@ func (this *Player) AddHurtValue(hv *protomsg.MsgPlayerHurt) {
 	this.Msg.PlayerHurt = append(this.Msg.PlayerHurt, hv)
 }
 
+func (this *Player) Update(curframe int32) {
+	this.SendUpdateMsg(curframe)
+
+}
+
 func (this *Player) SendUpdateMsg(curframe int32) {
 
 	//删除的单位 id
@@ -639,6 +644,11 @@ func (this *Player) SendUpdateMsg(curframe int32) {
 	this.CurShowSceneItem = make(map[int32]*SceneItem)
 	this.Msg = &protomsg.SC_Update{}
 
+}
+func (this *Player) SendNoticeWordToClient(typeid int32) {
+	msg := &protomsg.SC_NoticeWords{}
+	msg.TypeID = typeid
+	this.SendMsgToClient("SC_NoticeWords", msg)
 }
 
 func (this *Player) SendMsgToClient(msgtype string, msg proto.Message) {
