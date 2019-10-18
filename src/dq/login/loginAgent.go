@@ -197,7 +197,7 @@ func (a *LoginAgent) DoSelectCharacter(data *protomsg.MsgBase) {
 			data.MsgType = "SC_SelectCharacterResult"
 			jd := &protomsg.SC_SelectCharacterResult{}
 			jd.Code = 0 //失败
-			jd.Error = "create fail :name repeat"
+			jd.Error = 3
 			a.WriteMsgBytes(datamsg.NewMsg1Bytes(data, jd))
 			return
 		}
@@ -213,7 +213,7 @@ func (a *LoginAgent) DoSelectCharacter(data *protomsg.MsgBase) {
 		data.MsgType = "SC_SelectCharacterResult"
 		jd := &protomsg.SC_SelectCharacterResult{}
 		jd.Code = 0 //失败
-		jd.Error = "find fail :no characterid"
+		jd.Error = 1
 		a.WriteMsgBytes(datamsg.NewMsg1Bytes(data, jd))
 		return
 	}

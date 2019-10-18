@@ -3596,6 +3596,7 @@ func (this *Unit) GetRewardForKill(deathunit *Unit) {
 		if this.MyPlayer.TeamID > 0 {
 			team = TeamManagerObj.Teams.Get(this.MyPlayer.TeamID)
 		}
+		//组队时 需要平分
 		if team != nil {
 			teamplayers := team.(*TeamInfo).Players.Items()
 			addgold = math.Ceil(addgold / float64(len(teamplayers)))
@@ -3605,22 +3606,20 @@ func (this *Unit) GetRewardForKill(deathunit *Unit) {
 				if player != nil && player.MainUnit != nil {
 					player.MainUnit.Gold += int32(addgold)
 					player.MainUnit.AddExperience(int32(addExp))
+					//显示奖励的金币
+					mph := &protomsg.MsgPlayerHurt{HurtUnitID: deathunit.ID, GetGold: int32(addgold)}
+					player.AddHurtValue(mph)
 				}
 			}
 		} else {
 			this.MyPlayer.MainUnit.Gold += int32(addgold)
 			this.MyPlayer.MainUnit.AddExperience(int32(addExp))
+			//显示奖励的金币
+			mph := &protomsg.MsgPlayerHurt{HurtUnitID: deathunit.ID, GetGold: int32(addgold)}
+			if this.MyPlayer != nil {
+				this.MyPlayer.AddHurtValue(mph)
+			}
 		}
-
-		//显示奖励的金币
-		mph := &protomsg.MsgPlayerHurt{HurtUnitID: deathunit.ID, GetGold: int32(addgold)}
-		//log.Info("get gold:%d", deathunit.InScene.UnitGold)
-		if this.MyPlayer != nil {
-			//log.Info("get gold succ")
-			this.MyPlayer.AddHurtValue(mph)
-		}
-
-		//组队时 需要平分
 
 	}
 }

@@ -13,7 +13,7 @@ var (
 	TeamManagerObj  = &TeamManager{}
 	TeamCount       = int32(100)
 	TeamCountLock   = new(sync.RWMutex)
-	OneTeamMaxCount = (5)
+	OneTeamMaxCount = (6)
 )
 
 type ServerInterface interface {
@@ -192,6 +192,8 @@ func (this *TeamManager) OutTeam(doplayer *Player, outplayer *Player) {
 
 	this.LeaveTeam(outplayer)
 
+	outplayer.SendNoticeWordToClient(4)
+
 }
 
 //解散team
@@ -298,7 +300,7 @@ func (this *TeamManager) OrganizeTeam(player1 *Player, player2 *Player) {
 
 	if lastteam1 != nil && lastteam2 != nil {
 		//2个玩家都有队伍 请先退出当前队伍再来组队
-
+		player1.SendNoticeWordToClient(3)
 	} else if lastteam1 == nil && lastteam2 != nil {
 		//向玩家2的队伍申请组队
 

@@ -363,5 +363,5 @@ message SC_Logined {
 message SC_SelectCharacterResult {
     int32 Code = 1;//选择角色结果 1表示成功 0表示失败
     int32 Characterid = 2;//Characterid
-    string Error = 3;//失败原因  名字重复
+    int32 Error = 3;//失败原因  名字重复
 }
