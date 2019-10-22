@@ -74,6 +74,10 @@ func (a *GameScene1Agent) Init() {
 	a.handles["CS_ResponseOrgTeam"] = a.DoResponseOrgTeam
 	a.handles["CS_OutTeam"] = a.DoOutTeam
 
+	//商店
+	a.handles["CS_GetStoreData"] = a.DoGetStoreData
+	a.handles["CS_BuyCommodity"] = a.DoBuyCommodity
+
 	//创建场景
 	allscene := conf.GetAllScene()
 	for _, v := range allscene {
@@ -458,6 +462,38 @@ func (a *GameScene1Agent) DoResponseOrgTeam(data *protomsg.MsgBase) {
 		return
 	}
 	gamecore.TeamManagerObj.ResponseOrgTeam(h2, player.(*gamecore.Player))
+}
+
+//商店
+func (a *GameScene1Agent) DoGetStoreData(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_GetStoreData{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+
+	player.(*gamecore.Player).SendMsgToClient("SC_StoreData", conf.GetStoreData2SC_StoreData())
+
+}
+func (a *GameScene1Agent) DoBuyCommodity(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_BuyCommodity{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	//商品信息
+	cominfo := conf.GetStoreFileData(h2.TypeID)
+	player.(*gamecore.Player).BuyItem(cominfo)
 }
 
 //a.handles["CS_OutTeam"] = a.DoOutTeam

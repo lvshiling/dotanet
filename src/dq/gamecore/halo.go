@@ -117,6 +117,7 @@ func (this *Halo) Update(dt float32) {
 			this.IsEnd = true
 		}
 		this.TriggerRemainTime -= float32(dt)
+		//log.Info("----halo update:%f   %f  %f", dt, this.TriggerRemainTime, utils.GetCurTimeOfSecond())
 		//检查是否触发
 		if this.TriggerRemainTime <= 0.00001 {
 			//重置触发时间

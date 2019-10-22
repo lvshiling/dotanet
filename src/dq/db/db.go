@@ -261,6 +261,7 @@ func (a *DB) SaveCharacter(playerInfo DB_CharacterInfo) error {
 	datastring["level"] = playerInfo.Level
 	datastring["experience"] = playerInfo.Experience
 	datastring["gold"] = playerInfo.Gold
+	datastring["diamond"] = playerInfo.Diamond
 	datastring["hp"] = playerInfo.HP
 	datastring["mp"] = playerInfo.MP
 	datastring["sceneid"] = playerInfo.SceneID

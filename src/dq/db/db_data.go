@@ -8,6 +8,7 @@ type DB_CharacterInfo struct {
 	Level            int32   `json:"level"`
 	Experience       int32   `json:"experience"`
 	Gold             int32   `json:"gold"`
+	Diamond          int32   `json:"diamond"`
 	HP               float32 `json:"hp"`
 	MP               float32 `json:"mp"`
 	SceneID          int32   `json:"sceneid"`

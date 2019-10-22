@@ -1,6 +1,7 @@
 package gamecore
 
 import (
+	"dq/conf"
 	"dq/datamsg"
 	"dq/db"
 	"dq/log"
@@ -13,7 +14,7 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-var MaxBagCount int32 = 36
+var MaxBagCount int32 = 25
 
 type Server interface {
 	WriteMsgBytes(msg []byte)
@@ -49,6 +50,8 @@ type Player struct {
 
 	lock *sync.RWMutex //同步操作锁
 
+	Buy *sync.RWMutex //同步操作锁
+
 	//OtherUnit  *Unit //其他单位
 
 	//组合数据包相关
@@ -67,6 +70,7 @@ type Player struct {
 func CreatePlayer(uid int32, connectid int32, characterid int32) *Player {
 	re := &Player{}
 	re.lock = new(sync.RWMutex)
+	re.Buy = new(sync.RWMutex)
 	re.Uid = uid
 	re.ConnectId = connectid
 	re.Characterid = characterid
@@ -316,18 +320,20 @@ func (this *Player) ChangeItemPos(data *protomsg.CS_ChangeItemPos) {
 	this.lock.Unlock()
 }
 
-//拾取地面物品
-func (this *Player) SelectSceneItem(sceneitem *SceneItem) bool {
+//获取道具
+func (this *Player) AddItem(typeid int32) bool {
+	this.lock.Lock()
+	defer this.lock.Unlock()
 	if this.MainUnit == nil || this.MainUnit.Items == nil {
 		return false
 	}
-	this.lock.Lock()
+
 	for _, v := range this.MainUnit.Items {
 		if v == nil {
 
-			item := NewItem(sceneitem.TypeID)
+			item := NewItem(typeid)
 			this.MainUnit.AddItem(-1, item)
-			this.lock.Unlock()
+			//this.lock.Unlock()
 			return true
 		}
 	}
@@ -335,14 +341,19 @@ func (this *Player) SelectSceneItem(sceneitem *SceneItem) bool {
 		if v == nil {
 			item := &BagItem{}
 			item.Index = int32(k)
-			item.TypeID = sceneitem.TypeID
+			item.TypeID = typeid
 			this.BagInfo[k] = item
-			this.lock.Unlock()
+			//this.lock.Unlock()
 			return true
 		}
 	}
-	this.lock.Unlock()
+	//this.lock.Unlock()
 	return false
+}
+
+//拾取地面物品
+func (this *Player) SelectSceneItem(sceneitem *SceneItem) bool {
+	return this.AddItem(sceneitem.TypeID)
 }
 
 //遍历删除无效的
@@ -355,6 +366,64 @@ func (this *Player) CheckOtherUnit() {
 		}
 	}
 
+}
+
+//购买道具
+func (this *Player) BuyItem(cominfo *conf.CommodityData) bool {
+	this.Buy.Lock()
+	defer this.Buy.Unlock()
+	if cominfo == nil {
+		return false
+	}
+	if this.CheckPrice(cominfo.PriceType, cominfo.Price) == false {
+		//货币不足
+		this.SendNoticeWordToClient(4 + cominfo.PriceType)
+		return false
+	}
+
+	if this.AddItem(cominfo.ItemID) == false {
+		//背包已满
+		this.SendNoticeWordToClient(7)
+		return false
+	}
+	//扣钱
+	if cominfo.PriceType == 1 {
+		this.MainUnit.Gold -= cominfo.Price
+	}
+	if cominfo.PriceType == 2 {
+		this.MainUnit.Diamond -= cominfo.Price
+	}
+
+	//购买成功
+	this.SendNoticeWordToClient(8)
+
+	return true
+
+}
+
+//检查是否有足够的货币
+func (this *Player) CheckPrice(pricetype int32, price int32) bool {
+	if this.MainUnit == nil {
+		return false
+	}
+
+	if pricetype == 1 {
+		if this.MainUnit.Gold >= price {
+			return true
+		} else {
+			return false
+		}
+	}
+
+	if pricetype == 2 {
+		if this.MainUnit.Diamond >= price {
+			return true
+		} else {
+			return false
+		}
+	}
+
+	return false
 }
 
 //type DB_CharacterInfo struct {
@@ -384,6 +453,7 @@ func (this *Player) GetDBData() *db.DB_CharacterInfo {
 	dbdata.Level = this.MainUnit.Level
 	dbdata.Experience = this.MainUnit.Experience
 	dbdata.Gold = this.MainUnit.Gold
+	dbdata.Diamond = this.MainUnit.Diamond
 	dbdata.HP = float32(this.MainUnit.HP) / float32(this.MainUnit.MAX_HP)
 	dbdata.MP = float32(this.MainUnit.MP) / float32(this.MainUnit.MAX_MP)
 	dbdata.RemainExperience = this.MainUnit.RemainExperience

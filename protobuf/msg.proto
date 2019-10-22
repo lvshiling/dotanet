@@ -252,9 +252,11 @@ message UnitDatas{
     int32   TypeID = 33; //类型id
     float   RemainReviveTime = 34;//剩余复活时间
     int32   TeamID = 35;//组队的队伍ID
-    repeated SkillDatas SD = 36;//技能数据
-    repeated BuffDatas BD = 37;//buff数据
-    repeated SkillDatas ISD = 38;//道具技能数据
+    int32   Gold = 36;//金币
+    int32   Diamond = 37;//钻石
+    repeated SkillDatas SD = 38;//技能数据
+    repeated BuffDatas BD = 39;//buff数据
+    repeated SkillDatas ISD = 40;//道具技能数据
 
     //单位状态(idle walk attack skill die)
     //各种buff状态(单位身上的buff 包括剩余时间)
@@ -364,4 +366,24 @@ message SC_SelectCharacterResult {
     int32 Code = 1;//选择角色结果 1表示成功 0表示失败
     int32 Characterid = 2;//Characterid
     int32 Error = 3;//失败原因  名字重复
+}
+
+//商品数据
+message CommodityDataProto{
+    int32 TypeID = 1;    //商品ID
+    int32 ItemID = 2;    //道具ID
+    int32 PriceType = 3; //价格类型 1金币 2砖石
+    int32 Price = 4;    //价格
+}
+//获取商店数据
+message CS_GetStoreData{
+    int32 Test = 1;//
+}
+//返回商品数据
+message SC_StoreData{
+    repeated CommodityDataProto Commoditys = 1;//所有商品
+}
+//购买商品
+message CS_BuyCommodity{
+    int32 TypeID = 1;    //商品ID 
 }

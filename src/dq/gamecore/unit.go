@@ -1552,6 +1552,7 @@ type UnitProperty struct {
 	Experience       int32
 	MaxExperience    int32
 	Gold             int32   //金币
+	Diamond          int32   //钻石
 	GetExperienceDay string  //获取经验的日期
 	RemainExperience int32   //今天还能获取的经验值
 	RemainReviveTime float32 //剩余复活时间
@@ -1979,6 +1980,7 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 	unitre.Level = characterinfo.Level
 	unitre.Experience = characterinfo.Experience
 	unitre.Gold = characterinfo.Gold
+	unitre.Diamond = characterinfo.Diamond
 	unitre.GetExperienceDay = characterinfo.GetExperienceDay //获取经验的日期
 	unitre.RemainExperience = characterinfo.RemainExperience //今天还能获取的经验值
 	unitre.RemainReviveTime = characterinfo.RemainReviveTime
@@ -3774,6 +3776,8 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.AttackAnim = this.AttackAnim
 	this.ClientData.TypeID = this.TypeID
 	this.ClientData.RemainReviveTime = this.RemainReviveTime
+	this.ClientData.Gold = this.Gold
+	this.ClientData.Diamond = this.Diamond
 	if this.MyPlayer != nil {
 		this.ClientData.TeamID = this.MyPlayer.TeamID
 	}
@@ -3934,6 +3938,9 @@ func (this *Unit) FreshClientDataSub() {
 	this.ClientDataSub.AttackAnim = this.AttackAnim - this.ClientData.AttackAnim
 	this.ClientDataSub.TypeID = this.TypeID - this.ClientData.TypeID
 	this.ClientDataSub.RemainReviveTime = this.RemainReviveTime - this.ClientData.RemainReviveTime
+	this.ClientDataSub.Gold = this.Gold - this.ClientData.Gold
+	this.ClientDataSub.Diamond = this.Diamond - this.ClientData.Diamond
+
 	if this.MyPlayer != nil {
 		this.ClientDataSub.TeamID = this.MyPlayer.TeamID - this.ClientData.TeamID
 	}
