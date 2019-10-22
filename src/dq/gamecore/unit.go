@@ -2796,8 +2796,16 @@ func (this *Unit) CalPropertyByBuffsFirst() {
 
 	//buff
 	for _, v := range this.Buffs {
-		for _, v1 := range v {
-			this.CalPropertyByBuffFirst(v1, add)
+
+		if len(v) <= 0 {
+			continue
+		}
+		if v[0].OverlyingType == 4 {
+			this.CalPropertyByBuffFirst(v[0], add)
+		} else {
+			for _, v1 := range v {
+				this.CalPropertyByBuffFirst(v1, add)
+			}
 		}
 
 	}
@@ -2811,8 +2819,15 @@ func (this *Unit) CalPropertyByBuffs() {
 
 	//buff
 	for _, v := range this.Buffs {
-		for _, v1 := range v {
-			this.CalPropertyByBuff(v1, add)
+		if len(v) <= 0 {
+			continue
+		}
+		if v[0].OverlyingType == 4 {
+			this.CalPropertyByBuff(v[0], add)
+		} else {
+			for _, v1 := range v {
+				this.CalPropertyByBuff(v1, add)
+			}
 		}
 
 	}
@@ -3006,7 +3021,7 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 	bf, ok := this.Buffs[buff.TypeID]
 
 	//叠加机制
-	//		OverlyingType          int32 //叠加类型 1:只更新最大时间 2:完美叠加(小鱼的偷属性)
+	//		OverlyingType          int32 //叠加类型 1:只更新最大时间 2:完美叠加(小鱼的偷属性) 4:添加时叠加 发生作用时不叠加
 	//	OverlyingAddTag        int32 //叠加时是否增加标记数字 1:表示增加 2:表示不增加 3:最大标记覆盖原值
 	if ok == true && len(bf) > 0 {
 		if buff.OverlyingType == 1 {
@@ -3025,7 +3040,7 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 			//log.Info("bb--111111122:%d  %f  %f  %f  ", buff.TypeID, bf[0].RemainTime, buff.Time, utils.GetCurTimeOfSecond())
 			return bf[0]
 
-		} else if buff.OverlyingType == 2 {
+		} else if buff.OverlyingType == 2 || buff.OverlyingType == 4 {
 			this.Buffs[buff.TypeID] = append(bf, buff)
 			//log.Info("--111111133:%d", buff.TypeID)
 			this.CheckTriggerCreateBuff(buff)
