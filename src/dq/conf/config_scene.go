@@ -29,7 +29,7 @@ func LoadSceneFileData() {
 
 }
 func GetSceneFileData(typeid int32) *SceneFileData {
-	//log.Info("find unitfile:%d", typeid)
+	log.Info("find unitfile:%d", typeid)
 
 	re := (SceneFileDatas[int(typeid)])
 	if re == nil {

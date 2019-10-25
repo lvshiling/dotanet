@@ -192,7 +192,12 @@ func (this *TeamManager) OutTeam(doplayer *Player, outplayer *Player) {
 
 	this.LeaveTeam(outplayer)
 
-	outplayer.SendNoticeWordToClient(4)
+	name := ""
+	if doplayer.MainUnit != nil {
+		name = doplayer.MainUnit.Name
+	}
+
+	outplayer.SendNoticeWordToClient(4, name)
 
 }
 

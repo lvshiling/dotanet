@@ -316,7 +316,7 @@ func (a *DB) SaveCharacter(playerInfo DB_CharacterInfo) error {
 	}
 	sqlstr += " where characterid=?"
 
-	log.Info("SaveCharacter:%s ---%d", sqlstr, playerInfo.Characterid)
+	//log.Info("SaveCharacter:%s ---%d", sqlstr, playerInfo.Characterid)
 
 	res, err1 := tx.Exec(sqlstr, playerInfo.Characterid)
 	if err1 != nil {

@@ -4,8 +4,8 @@ import (
 	"dq/vec2d"
 )
 
-var width = 16.0
-var height = 16.0
+var width = 12.0
+var height = 12.0
 
 //标准矩形
 type Rect struct {

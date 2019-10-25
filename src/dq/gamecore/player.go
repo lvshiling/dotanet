@@ -20,6 +20,8 @@ type Server interface {
 	WriteMsgBytes(msg []byte)
 }
 
+var AutoSaveTime float32 = 10
+
 //场景里的道具
 type BagItem struct {
 	TypeID int32 //类型
@@ -52,6 +54,8 @@ type Player struct {
 
 	Buy *sync.RWMutex //同步操作锁
 
+	AutoSaveRemainTime float32 //自动保存 剩余时间
+
 	//OtherUnit  *Unit //其他单位
 
 	//组合数据包相关
@@ -74,6 +78,7 @@ func CreatePlayer(uid int32, connectid int32, characterid int32) *Player {
 	re.Uid = uid
 	re.ConnectId = connectid
 	re.Characterid = characterid
+	re.AutoSaveRemainTime = AutoSaveTime
 	re.ReInit()
 	return re
 }
@@ -663,7 +668,23 @@ func (this *Player) AddHurtValue(hv *protomsg.MsgPlayerHurt) {
 	this.Msg.PlayerHurt = append(this.Msg.PlayerHurt, hv)
 }
 
+func (this *Player) AutoSaveDB() {
+
+	if this.CurScene != nil {
+		this.AutoSaveRemainTime -= 1.0 / float32(this.CurScene.SceneFrame)
+		if this.AutoSaveRemainTime <= 0 {
+			this.AutoSaveRemainTime += AutoSaveTime
+			go func() {
+				this.SaveDB()
+			}()
+		}
+	}
+
+	//AutoSaveTime
+}
+
 func (this *Player) Update(curframe int32) {
+	this.AutoSaveDB()
 	this.SendUpdateMsg(curframe)
 
 }
@@ -715,9 +736,10 @@ func (this *Player) SendUpdateMsg(curframe int32) {
 	this.Msg = &protomsg.SC_Update{}
 
 }
-func (this *Player) SendNoticeWordToClient(typeid int32) {
+func (this *Player) SendNoticeWordToClient(typeid int32, param ...string) {
 	msg := &protomsg.SC_NoticeWords{}
 	msg.TypeID = typeid
+	msg.P = param
 	this.SendMsgToClient("SC_NoticeWords", msg)
 }
 
@@ -737,6 +759,7 @@ func (this *Player) OutScene() {
 
 	if this.CurScene != nil {
 		this.CurScene.PlayerGoout(this)
+		this.CurScene = nil
 	}
 	this.ReInit()
 
@@ -746,6 +769,7 @@ func (this *Player) OutScene() {
 func (this *Player) GoInScene(scene *Scene, datas []byte) {
 	if this.CurScene != nil {
 		this.CurScene.PlayerGoout(this)
+		this.CurScene = nil
 	}
 	this.CurScene = scene
 

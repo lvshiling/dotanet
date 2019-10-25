@@ -8,7 +8,7 @@ import (
 	"dq/network"
 	"fmt"
 	"net"
-	//"time"
+	"time"
 
 	//"dq/db"
 	"dq/utils"
@@ -83,6 +83,7 @@ func (a *GameScene1Agent) Init() {
 	for _, v := range allscene {
 		log.Info("scene:%d  %s", v.(*conf.SceneFileData).TypeID, v.(*conf.SceneFileData).ScenePath)
 		scene := gamecore.CreateScene(v.(*conf.SceneFileData), a)
+		time.Sleep(time.Duration(33 / len(allscene)))
 		a.Scenes.Set(v.(*conf.SceneFileData).TypeID, scene)
 		a.wgScene.Add(1)
 		go func() {

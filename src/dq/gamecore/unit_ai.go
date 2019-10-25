@@ -45,9 +45,10 @@ func NewNormalAI(p *Unit) *NormalAI {
 
 func (this *NormalAI) Update(dt float64) {
 	//1秒钟更新1次
-	if utils.GetCurTimeOfSecond()-this.LastCheckTime < 2 {
+	if utils.GetCurTimeOfSecond()-this.LastCheckTime < 1 {
 		return
 	}
+	this.LastCheckTime = utils.GetCurTimeOfSecond()
 
 	//更新仇恨列表(5秒)
 	this.UpdateEnemies()
@@ -60,6 +61,7 @@ func (this *NormalAI) Update(dt float64) {
 		//log.Info("bigEnemies:%d", this.AttackTarget.ID)
 		return
 	}
+	//return
 	//获取最近的敌人
 	nearestEnemies := this.GetNearestEnemies(this.AttackTarget)
 	if nearestEnemies != this.AttackTarget {
@@ -90,7 +92,7 @@ func (this *NormalAI) OnEnd() {
 }
 func (this *NormalAI) OnStart() {
 	this.ClearEnemies()
-	this.LastCheckTime = 0
+	this.LastCheckTime = utils.GetCurTimeOfSecond() + float64(utils.GetRandomFloat(1))
 
 }
 

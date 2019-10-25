@@ -163,6 +163,7 @@ type DoorWay struct {
 	Z           float64
 	R           float64
 	NeedLevel   int32
+	NeedPlayer  int32
 	NextX       float32
 	NextY       float32
 	HaloTypeID  int32

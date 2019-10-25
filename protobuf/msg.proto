@@ -175,6 +175,8 @@ message SC_UpdateTeamInfo {
 //提示文字
 message SC_NoticeWords{
     int32 TypeID = 1;//id
+    repeated string P = 2;//参数
+    
 }
 
 

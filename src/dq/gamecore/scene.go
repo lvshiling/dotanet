@@ -121,7 +121,7 @@ func (this *Scene) Init() {
 		if oneunit != nil {
 			//item := NewItem(77)
 			//oneunit.AddItem(-1, item)
-			log.Info("createunity")
+			//log.Info("createunity")
 		}
 
 		//log.Info("createunity :%v", v)
@@ -139,9 +139,9 @@ func (this *Scene) Init() {
 	}
 
 	//创建道具
-	this.CreateSceneItem(1, vec2d.Vec2{X: 34, Y: 84})
+	//this.CreateSceneItem(1, vec2d.Vec2{X: 34, Y: 84})
 	//创建道具
-	this.CreateSceneItem(2, vec2d.Vec2{X: 36, Y: 84})
+	//this.CreateSceneItem(2, vec2d.Vec2{X: 36, Y: 84})
 
 	//	for i := 0; i < 4; i++ {
 	//		//创建英雄
@@ -448,7 +448,10 @@ func (this *Scene) DoSleep() {
 	sleeptime := nexttime - t1
 
 	//log.Info("main time:%d    %d", (t1-this.LastUpdateTime)/1e6, onetime/1e6)
-	//log.Info("sleep :%d   ", sleeptime/1e6)
+	//	if this.TypeID == 1 {
+	//		log.Info("sleep :%d   ", sleeptime/1e6)
+	//	}
+
 	if sleeptime > 0 {
 		time.Sleep(time.Duration(sleeptime))
 	} else {
