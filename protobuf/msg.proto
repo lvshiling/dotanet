@@ -256,9 +256,10 @@ message UnitDatas{
     int32   TeamID = 35;//组队的队伍ID
     int32   Gold = 36;//金币
     int32   Diamond = 37;//钻石
-    repeated SkillDatas SD = 38;//技能数据
-    repeated BuffDatas BD = 39;//buff数据
-    repeated SkillDatas ISD = 40;//道具技能数据
+    int32   ReviveGold = 38;//复活需要的金币
+    repeated SkillDatas SD = 39;//技能数据
+    repeated BuffDatas BD = 40;//buff数据
+    repeated SkillDatas ISD = 41;//道具技能数据
 
     //单位状态(idle walk attack skill die)
     //各种buff状态(单位身上的buff 包括剩余时间)
@@ -388,4 +389,9 @@ message SC_StoreData{
 //购买商品
 message CS_BuyCommodity{
     int32 TypeID = 1;    //商品ID 
+}
+
+//立即复活
+message CS_QuickRevive{
+    int32 ReviveType = 1;    //1金币复活 2看视频复活
 }

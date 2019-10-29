@@ -77,6 +77,8 @@ func (a *GameScene1Agent) Init() {
 	//商店
 	a.handles["CS_GetStoreData"] = a.DoGetStoreData
 	a.handles["CS_BuyCommodity"] = a.DoBuyCommodity
+	//立即复活
+	a.handles["CS_QuickRevive"] = a.DoQuickRevive
 
 	//创建场景
 	allscene := conf.GetAllScene()
@@ -495,6 +497,22 @@ func (a *GameScene1Agent) DoBuyCommodity(data *protomsg.MsgBase) {
 	//商品信息
 	cominfo := conf.GetStoreFileData(h2.TypeID)
 	player.(*gamecore.Player).BuyItem(cominfo)
+}
+
+func (a *GameScene1Agent) DoQuickRevive(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_QuickRevive{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	if player.(*gamecore.Player).MainUnit != nil {
+		player.(*gamecore.Player).MainUnit.QuickRevive = h2
+	}
 }
 
 //a.handles["CS_OutTeam"] = a.DoOutTeam

@@ -23,6 +23,8 @@ var (
 	LevelFileDatas = make(map[interface{}]interface{})
 
 	MaxLevel = int32(20)
+
+	FirstKillGetGold = int32(200)
 )
 
 //场景配置文件
@@ -48,4 +50,6 @@ type LevelFileData struct {
 	UpgradeExperience   int32   //升级所需要的经验
 	MaxExperienceOneDay int32   //一天中能获取到的最大经验值
 	ReviveTime          float32 //复活时间
+	KilledBaseGold      int32   //被击杀的基础金钱奖励
+	ReviveGold          int32   //立即复活需要的金币
 }

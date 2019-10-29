@@ -464,6 +464,12 @@ func (this *Player) GetDBData() *db.DB_CharacterInfo {
 	dbdata.RemainExperience = this.MainUnit.RemainExperience
 	dbdata.GetExperienceDay = this.MainUnit.GetExperienceDay
 	dbdata.RemainReviveTime = this.MainUnit.RemainReviveTime
+	//击杀相关
+	dbdata.KillCount = this.MainUnit.KillCount
+	dbdata.ContinuityKillCount = this.MainUnit.ContinuityKillCount
+	dbdata.DieCount = this.MainUnit.DieCount
+	dbdata.KillGetGold = this.MainUnit.KillGetGold
+
 	if this.CurScene != nil {
 		dbdata.SceneID = this.CurScene.TypeID
 	} else {
@@ -742,6 +748,12 @@ func (this *Player) SendNoticeWordToClient(typeid int32, param ...string) {
 	msg.P = param
 	this.SendMsgToClient("SC_NoticeWords", msg)
 }
+func (this *Player) SendNoticeWordToClientP(typeid int32, param []string) {
+	msg := &protomsg.SC_NoticeWords{}
+	msg.TypeID = typeid
+	msg.P = param
+	this.SendMsgToClient("SC_NoticeWords", msg)
+}
 
 func (this *Player) SendMsgToClient(msgtype string, msg proto.Message) {
 	data := &protomsg.MsgBase{}
@@ -782,7 +794,7 @@ func (this *Player) MoveCmd(data *protomsg.CS_PlayerMove) {
 	this.CheckOtherUnit()
 	for _, v := range data.IDs {
 		if this.MainUnit.ID == v {
-			this.MainUnit.MoveCmd(data)
+			this.MainUnit.PlayerControl_MoveCmd(data)
 
 			this.CheckOtherUnit()
 			items := this.OtherUnit.Items()

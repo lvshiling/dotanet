@@ -179,6 +179,9 @@ type UnitCmd struct {
 
 	//切换攻击技能命令
 	ChangeAttackModeData *protomsg.CS_ChangeAttackMode
+
+	//立即复活
+	QuickRevive *protomsg.CS_QuickRevive
 }
 
 //-----------------------技能命令--------------------
@@ -1331,6 +1334,30 @@ func (this *Unit) StopAttackCmd() {
 
 }
 
+//-----------处理其他命令-------
+func (this *Unit) DoOtherCmd() {
+	quickrevive := this.QuickRevive
+	if quickrevive != nil {
+
+		////1金币复活 2看视频复活
+		if quickrevive.ReviveType == 1 {
+			if this.ReviveGold > this.Gold {
+				//金币不足
+				if this.MyPlayer != nil {
+					this.MyPlayer.SendNoticeWordToClient(5)
+				}
+			} else {
+				this.Gold -= this.ReviveGold
+				this.DoAvive(2, 0.5, 0.5)
+			}
+		} else if quickrevive.ReviveType == 2 {
+
+		}
+
+		this.QuickRevive = nil
+	}
+}
+
 //-----------------------移动命令--------------------
 //是否有移动命令
 func (this *Unit) HaveMoveCmd() bool {
@@ -1360,12 +1387,16 @@ func (this *Unit) SetDirection(dir vec2d.Vec2) {
 	this.Body.Direction = dir
 }
 
+var PlayerControl_MoveCmdtest = 1
+
 //玩家操作行为命令
 func (this *Unit) PlayerControl_MoveCmd(data *protomsg.CS_PlayerMove) {
 
 	//移动结束命令可执行
 	if data.IsStart == false {
 		this.MoveCmdData = data
+		log.Info("-----PlayerControl_MoveCmd:end %d", PlayerControl_MoveCmdtest)
+		PlayerControl_MoveCmdtest++
 		return
 	}
 
@@ -1553,9 +1584,16 @@ type UnitProperty struct {
 	MaxExperience    int32
 	Gold             int32   //金币
 	Diamond          int32   //钻石
-	GetExperienceDay string  //获取经验的日期
+	GetExperienceDay string  //获取经验的日期 最近登录日期
 	RemainExperience int32   //今天还能获取的经验值
 	RemainReviveTime float32 //剩余复活时间
+	ReviveGold       int32   //立即复活需要的金币
+
+	//击杀相关
+	KillCount           int32
+	ContinuityKillCount int32
+	DieCount            int32
+	KillGetGold         int32
 
 	UnitBaseProperty
 
@@ -1984,11 +2022,19 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 	unitre.GetExperienceDay = characterinfo.GetExperienceDay //获取经验的日期
 	unitre.RemainExperience = characterinfo.RemainExperience //今天还能获取的经验值
 	unitre.RemainReviveTime = characterinfo.RemainReviveTime
+
+	//击杀相关
+	unitre.KillCount = characterinfo.KillCount
+	unitre.ContinuityKillCount = characterinfo.ContinuityKillCount
+	unitre.DieCount = characterinfo.DieCount
+	unitre.KillGetGold = characterinfo.KillGetGold
+
 	unitre.InitPosition = vec2d.Vec2{float64(characterinfo.X), float64(characterinfo.Y)}
 
 	leveldata := conf.GetLevelFileData(unitre.Level)
 	if leveldata != nil {
 		unitre.MaxExperience = leveldata.UpgradeExperience
+		unitre.ReviveGold = leveldata.ReviveGold
 	}
 
 	//创建技能
@@ -2148,13 +2194,19 @@ func (this *Unit) CheckGetExperienceDay() {
 	today := time.Now().Format("2006-01-02")
 	if today != this.GetExperienceDay {
 		this.GetExperienceDay = today
+
+		//刷新剩余可获取的经验值
 		leveldata := conf.GetLevelFileData(this.Level)
 		if leveldata != nil {
 			this.RemainExperience = leveldata.MaxExperienceOneDay
 		} else {
 			this.RemainExperience = 1000
 		}
-
+		//击杀数量 连杀数量 死亡数量 击杀获取金币数量
+		this.KillCount = 0
+		this.ContinuityKillCount = 0
+		this.DieCount = 0
+		this.KillGetGold = 0
 	}
 }
 
@@ -2301,6 +2353,7 @@ func (this *Unit) Update(dt float64) {
 	}
 	this.CheckSkillCmd()
 	this.CheckAttackCmd()
+	this.DoOtherCmd()
 
 	//
 	this.EveryTimeDo(dt)
@@ -3597,7 +3650,7 @@ func (this *Unit) AddExperience(add int32) {
 }
 
 //击杀单位获得经验 金币奖励
-func (this *Unit) GetRewardForKill(deathunit *Unit) {
+func (this *Unit) GetRewardForKill(deathunit *Unit, lostgold int32) {
 	if deathunit == nil {
 		return
 	}
@@ -3638,6 +3691,47 @@ func (this *Unit) GetRewardForKill(deathunit *Unit) {
 			}
 		}
 
+	} else {
+		if deathunit.InScene == nil || this.MyPlayer == nil || this.MyPlayer.MainUnit == nil ||
+			deathunit.MyPlayer == nil || deathunit.MyPlayer.MainUnit != deathunit {
+			return
+		}
+
+		addgold := lostgold
+		leveldata := conf.GetLevelFileData(deathunit.Level)
+		if leveldata != nil {
+			addgold += leveldata.KilledBaseGold
+		}
+		//如果是第一滴血
+		if this.MyPlayer.MainUnit.KillCount == 0 {
+			addgold += conf.FirstKillGetGold
+			this.MyPlayer.SendNoticeWordToClient(11)
+		}
+		this.MyPlayer.MainUnit.Gold += addgold
+
+		this.MyPlayer.MainUnit.KillCount++
+		this.MyPlayer.MainUnit.ContinuityKillCount++
+		this.MyPlayer.MainUnit.KillGetGold += addgold
+		//
+		if this.MyPlayer.MainUnit.ContinuityKillCount == 2 {
+			this.MyPlayer.SendNoticeWordToClient(12)
+		} else if this.MyPlayer.MainUnit.ContinuityKillCount >= 3 {
+			if this.InScene != nil {
+				killnotice := this.MyPlayer.MainUnit.ContinuityKillCount
+				if killnotice > 10 {
+					killnotice = 10
+				}
+				this.InScene.SendNoticeWordToAllPlayer(10+killnotice, this.Name+"("+strconv.Itoa(int(this.Body.Position.X))+","+strconv.Itoa(int(this.Body.Position.Y))+")")
+			}
+
+		}
+
+		//显示奖励的金币
+		mph := &protomsg.MsgPlayerHurt{HurtUnitID: deathunit.ID, GetGold: int32(addgold)}
+		if this.MyPlayer != nil {
+			this.MyPlayer.AddHurtValue(mph)
+		}
+
 	}
 }
 
@@ -3649,16 +3743,29 @@ func (this *Unit) CheckTriggerDie(killer *Unit) {
 	leveldata := conf.GetLevelFileData(this.Level)
 	if leveldata != nil {
 		this.RemainReviveTime = leveldata.ReviveTime
+		//ReviveGold
+		this.ReviveGold = leveldata.ReviveGold
 	} else {
 		this.RemainReviveTime = 100
 	}
+
+	//连杀归0
+	this.ContinuityKillCount = 0
+	//死亡次数加1
+	this.DieCount++
+	lostgold := int32(float32(this.KillGetGold) * 0.2)
+	if this.Gold < lostgold {
+		lostgold = this.Gold
+	}
+	this.KillGetGold -= lostgold
+	this.Gold -= lostgold
 
 	//处理击杀者相关逻辑
 	if killer == nil || killer.IsDisappear() {
 		return
 	}
 	//击杀者获得奖励
-	killer.GetRewardForKill(this)
+	killer.GetRewardForKill(this, lostgold)
 
 	killer.RemoveBuffForKilled()
 	killer.RemoveHaloForKilled()
@@ -3793,6 +3900,8 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.RemainReviveTime = this.RemainReviveTime
 	this.ClientData.Gold = this.Gold
 	this.ClientData.Diamond = this.Diamond
+	this.ClientData.ReviveGold = this.ReviveGold
+
 	if this.MyPlayer != nil {
 		this.ClientData.TeamID = this.MyPlayer.TeamID
 	}
@@ -3955,6 +4064,7 @@ func (this *Unit) FreshClientDataSub() {
 	this.ClientDataSub.RemainReviveTime = this.RemainReviveTime - this.ClientData.RemainReviveTime
 	this.ClientDataSub.Gold = this.Gold - this.ClientData.Gold
 	this.ClientDataSub.Diamond = this.Diamond - this.ClientData.Diamond
+	this.ClientDataSub.ReviveGold = this.ReviveGold - this.ClientData.ReviveGold
 
 	if this.MyPlayer != nil {
 		this.ClientDataSub.TeamID = this.MyPlayer.TeamID - this.ClientData.TeamID

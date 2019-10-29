@@ -280,6 +280,10 @@ func (a *DB) SaveCharacter(playerInfo DB_CharacterInfo) error {
 	datastring["remainexperience"] = playerInfo.RemainExperience
 	datastring["getexperienceday"] = playerInfo.GetExperienceDay
 	datastring["remainerevivetime"] = playerInfo.RemainReviveTime
+	datastring["killcount"] = playerInfo.KillCount
+	datastring["continuitykillcount"] = playerInfo.ContinuityKillCount
+	datastring["diecount"] = playerInfo.DieCount
+	datastring["killgetgold"] = playerInfo.KillGetGold
 
 	sqlstr := "UPDATE characterinfo SET "
 	count := 0

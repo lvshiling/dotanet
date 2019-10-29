@@ -4,6 +4,7 @@ import (
 	"dq/conf"
 	"dq/cyward"
 	"dq/log"
+	"strconv"
 	//"dq/protobuf"
 	//"dq/timer"
 	"dq/utils"
@@ -243,14 +244,20 @@ func (this *Scene) DoDoorWay() {
 		pos := vec2d.Vec2{X: v.X, Y: v.Y}
 		for _, player := range this.Players {
 			if player != nil && player.MainUnit != nil &&
-				player.MainUnit.Body != nil && player.MainUnit.Level >= v.NeedLevel {
+				player.MainUnit.Body != nil {
+
 				mypos := player.MainUnit.Body.Position
 				subpos := vec2d.Sub(mypos, pos)
 				distanse := subpos.Length()
 				if distanse <= v.R {
 					//传送到其他场景
 					log.Info("chuan song :%v", v)
-					this.ChangeScene.PlayerChangeScene(player, v)
+					if player.MainUnit.Level >= v.NeedLevel {
+						this.ChangeScene.PlayerChangeScene(player, v)
+					} else {
+						player.SendNoticeWordToClient(9, strconv.Itoa(int(v.NeedLevel)))
+					}
+
 				}
 			}
 		}
@@ -271,6 +278,17 @@ func (this *Scene) EveryTimeDo(dt float32) {
 		this.UpdateSceneItem(dt)
 		this.DoRemoveSceneItem()
 
+	}
+}
+
+func (this *Scene) SendNoticeWordToAllPlayer(typeid int32, param ...string) {
+	//遍历所有玩家
+	for _, player := range this.Players {
+		v := player.MainUnit
+		if v == nil {
+			continue
+		}
+		player.SendNoticeWordToClientP(typeid, param)
 	}
 }
 
