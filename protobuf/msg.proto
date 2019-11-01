@@ -395,3 +395,8 @@ message CS_BuyCommodity{
 message CS_QuickRevive{
     int32 ReviveType = 1;    //1金币复活 2看视频复活
 }
+
+//掉线 客户端自己发给自己的消息
+message CC_Disconnect{
+    string Err = 1; //掉线原因
+}

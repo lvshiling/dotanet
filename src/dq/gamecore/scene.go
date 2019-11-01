@@ -7,6 +7,7 @@ import (
 	"strconv"
 	//"dq/protobuf"
 	//"dq/timer"
+	"dq/db"
 	"dq/utils"
 	"dq/vec2d"
 	"math/rand"
@@ -726,9 +727,10 @@ func (this *Scene) Close() {
 }
 
 //玩家进入
-func (this *Scene) PlayerGoin(player *Player, datas []byte) {
+func (this *Scene) PlayerGoin(player *Player, characterinfo *db.DB_CharacterInfo) {
 	if player.MainUnit == nil {
-		player.MainUnit = CreateUnitByPlayer(this, player, datas)
+
+		player.MainUnit = CreateUnitByPlayer(this, player, characterinfo)
 		//player.Characterid =
 	}
 

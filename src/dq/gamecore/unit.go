@@ -1388,6 +1388,7 @@ func (this *Unit) SetDirection(dir vec2d.Vec2) {
 }
 
 var PlayerControl_MoveCmdtest = 1
+var PlayerMoveOverTime = float64(0)
 
 //玩家操作行为命令
 func (this *Unit) PlayerControl_MoveCmd(data *protomsg.CS_PlayerMove) {
@@ -1395,9 +1396,15 @@ func (this *Unit) PlayerControl_MoveCmd(data *protomsg.CS_PlayerMove) {
 	//移动结束命令可执行
 	if data.IsStart == false {
 		this.MoveCmdData = data
-		log.Info("-----PlayerControl_MoveCmd:end %d", PlayerControl_MoveCmdtest)
-		PlayerControl_MoveCmdtest++
+		PlayerMoveOverTime = utils.GetCurTimeOfSecond()
+		//log.Info("-----PlayerControl_MoveCmd:end %d", PlayerControl_MoveCmdtest)
+		//PlayerControl_MoveCmdtest++
 		return
+	} else {
+		if utils.GetCurTimeOfSecond()-PlayerMoveOverTime <= 0.1 {
+			return
+		}
+		//log.Info("-----PlayerControl_MoveCmd")
 	}
 
 	if this.PlayerControlEnable != 1 {
@@ -1991,7 +1998,7 @@ func CreateUnitByCopyUnit(unit *Unit, controlplayer *Player) *Unit {
 
 }
 
-func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
+func CreateUnitByPlayer(scene *Scene, player *Player, characterinfo *db.DB_CharacterInfo) *Unit {
 	if scene == nil || player == nil {
 		return nil
 	}
@@ -2002,11 +2009,8 @@ func CreateUnitByPlayer(scene *Scene, player *Player, datas []byte) *Unit {
 	unitre.MyPlayer = player
 
 	//---------db.DB_CharacterInfo
-	characterinfo := db.DB_CharacterInfo{}
-	utils.Bytes2Struct(datas, &characterinfo)
-	player.Characterid = characterinfo.Characterid
-	player.LoadBagInfoFromDB(characterinfo.BagInfo)
-	player.LoadItemSkillCDFromDB(characterinfo.ItemSkillCDInfo)
+	//characterinfo := db.DB_CharacterInfo{}
+	//utils.Bytes2Struct(datas, &characterinfo)
 
 	log.Info("---DB_CharacterInfo---%v", characterinfo)
 	//	文件数据

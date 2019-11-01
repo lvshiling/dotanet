@@ -785,7 +785,13 @@ func (this *Player) GoInScene(scene *Scene, datas []byte) {
 	}
 	this.CurScene = scene
 
-	this.CurScene.PlayerGoin(this, datas)
+	characterinfo := db.DB_CharacterInfo{}
+	utils.Bytes2Struct(datas, &characterinfo)
+	this.Characterid = characterinfo.Characterid
+	this.LoadBagInfoFromDB(characterinfo.BagInfo)
+	this.LoadItemSkillCDFromDB(characterinfo.ItemSkillCDInfo)
+
+	this.CurScene.PlayerGoin(this, &characterinfo)
 	//this.ReInit()
 }
 

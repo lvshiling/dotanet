@@ -329,7 +329,10 @@ func (a *DB) SaveCharacter(playerInfo DB_CharacterInfo) error {
 	}
 	n, e := res.RowsAffected()
 	if n == 0 || e != nil {
-		log.Info("SaveCharacter err ")
+		if e != nil {
+			log.Info("SaveCharacter err %s", e.Error())
+		}
+
 		return tx.Rollback()
 	}
 
