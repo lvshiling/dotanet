@@ -511,7 +511,7 @@ func (this *DeathState) OnStart() {
 
 	this.Parent.ClearBuff()
 	//单位类型(1:英雄 2:普通单位 3:远古 4:boss)
-	if this.Parent.UnitType == 2 {
+	if this.Parent.UnitType != 1 {
 		//装备掉落
 		this.Parent.DropItem()
 	}

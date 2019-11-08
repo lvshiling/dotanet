@@ -558,6 +558,9 @@ func (this *Player) SaveDB() {
 	//if this.MainUnit != nil
 
 	dbdata := this.GetDBData()
+	if dbdata == nil {
+		return
+	}
 	db.DbOne.SaveCharacter(*dbdata)
 
 }

@@ -1620,6 +1620,7 @@ type UnitProperty struct {
 	InvisibleBeSee  int32 //隐身可以被看见 1:是 2:否
 	CanSeeInvisible int32 //可以看见隐身 1:是 2:否
 	MasterInvisible int32 //大师级隐身 不会被看见 (分身的无敌和其他的blink躲弹道) 1:是 2:否
+	Invincible      int32 //是否无敌 1:是 2:否 (无敌免疫所有伤害 包括纯粹伤害)
 
 	IsMirrorImage int32 //是否是镜像 1:是 2:不是
 
@@ -2656,6 +2657,7 @@ func (this *Unit) CalControlState() {
 	this.AddHPEffect = 0     //
 	this.MagicCD = 0         //技能CD降低
 	this.Invisible = 2       //隐身   否
+	this.Invincible = 2      //是否无敌
 	this.InvisibleBeSee = 2
 	this.CanSeeInvisible = 2
 	this.MasterInvisible = 2
@@ -2780,6 +2782,9 @@ func (this *Unit) CalPropertyByBuff(v1 *Buff, add *UnitBaseProperty) {
 	}
 	if v1.Invisible == 1 {
 		this.Invisible = 1
+	}
+	if v1.Invincible == 1 {
+		this.Invincible = 1
 	}
 	if v1.InvisibleBeSee == 1 {
 		this.InvisibleBeSee = 1
@@ -3067,6 +3072,10 @@ func (this *Unit) AddBuffFromBuff(buff *Buff, castunit *Unit) *Buff {
 		//log.Info("dddddddddddddd")
 		return nil
 	}
+	//如果是恶性buff 单位无敌就不加
+	if buff.BuffType == 2 && this.Invincible == 1 {
+		return nil
+	}
 	buff.CastUnit = castunit
 
 	//状态抗性 减状态时间
@@ -3329,6 +3338,12 @@ func (this *Unit) CheckAttackSucOneSkillTrigger(v *Skill, bullet *Bullet) {
 
 //受到来自子弹的伤害 calcmiss是否计算miss 溅射不会miss
 func (this *Unit) BeAttacked(bullet *Bullet) (bool, int32, int32, int32) {
+
+	//无敌
+	if this.Invincible == 1 {
+		return false, 0, 0, 0
+	}
+
 	//计算闪避
 	if bullet.SkillID == -1 {
 		//普通攻击

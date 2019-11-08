@@ -109,6 +109,7 @@ type BuffBaseData struct {
 	InvisibleBeSee  int32 //隐身可以被看见 1:是 2:否
 	CanSeeInvisible int32 //可以看见隐身 1:是 2:否
 	MasterInvisible int32 //大师级隐身 不会被看见 (分身的无敌和其他的blink躲弹道) 1:是 2:否
+	Invincible      int32 //是否无敌 1:是 2:否 (无敌免疫所有伤害 包括纯粹伤害)
 
 	AttackedInvalid  int32 //攻击后失效 1:是 2:否
 	DoSkilledInvalid int32 //使用技能后失效 1:是 2:否
