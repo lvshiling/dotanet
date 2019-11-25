@@ -2,6 +2,7 @@
     "GateInfo":{
         //客户端监听端口
         "ClientListenPort":":1118",
+        "ClientTcpListenPort":":1119",
         //服务器监听地址
         "ServerListenPort":"127.0.0.1:12345",
         "MaxConnNum":10000,

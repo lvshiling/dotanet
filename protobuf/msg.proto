@@ -44,6 +44,11 @@ message CS_LodingScene{
     int32  SceneID = 1;//场景ID
 }
 
+//使用AI
+message CS_UseAI{
+    int32  AIid = 1;//AIid
+}
+
 //装备栏
 message UnitEquip{
     int32 Pos = 1;//位置
@@ -91,6 +96,12 @@ message CS_ChangeItemPos {
     int32 SrcType = 3;//源类型 1表示装备栏 2表示背包
     int32 DestType = 4;//目标类型 1表示装备栏 2表示背包
 }
+
+//删除道具
+message CS_DestroyItem{
+    int32 SrcPos = 1;//源位置
+}
+
 message SC_UnitInfo  {
     UnitBoardDatas   UnitData = 1;//单位面板信息
 }

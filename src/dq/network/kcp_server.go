@@ -38,7 +38,7 @@ func (server *KCPServer) GetLoginedConnect() *utils.BeeMap {
 	return server.LoginedConnect
 }
 func (server *KCPServer) GetAgents() *utils.BeeMap {
-
+	//log.Info("---KCPServer---GetAgents:%d", server.Agents.Size())
 	return server.Agents
 }
 

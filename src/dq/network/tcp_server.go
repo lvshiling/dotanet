@@ -41,7 +41,7 @@ func (server *TCPServer) GetLoginedConnect() *utils.BeeMap {
 	return server.LoginedConnect
 }
 func (server *TCPServer) GetAgents() *utils.BeeMap {
-	log.Info("---TCPServer---GetAgents:%d", server.Agents.Size())
+	//log.Info("---TCPServer---GetAgents:%d", server.Agents.Size())
 	return server.Agents
 }
 

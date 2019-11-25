@@ -67,7 +67,7 @@ func NewSceneItem(typeid int32, pos vec2d.Vec2) *SceneItem {
 	item := &SceneItem{}
 	item.TypeID = typeid
 	item.Position = pos
-	item.LifeTime = 11120.0
+	item.LifeTime = 120.0
 	item.CreateTime = utils.GetCurTimeOfSecond()
 	item.IsOver = false
 	//唯一ID处理

@@ -3,9 +3,9 @@ package gate
 import (
 	"dq/log"
 	"dq/network"
-	"fmt"
-
 	"dq/utils"
+	"fmt"
+	"sync"
 	//"time"
 )
 
@@ -19,6 +19,7 @@ type Gate struct {
 	WSAddr  string
 
 	TcpServer network.Server
+	KcpServer network.Server
 	//TcpServer  	interface{}
 
 	//本地服务器之间通讯
@@ -29,7 +30,16 @@ type Gate struct {
 	Models *utils.BeeMap
 }
 
-var ConnectId = 10000
+var ConnectIDLock = new(sync.RWMutex)
+var ConnectId = int32(10000)
+
+func GetConnectID() int32 {
+	ConnectIDLock.Lock()
+	defer ConnectIDLock.Unlock()
+	var re = ConnectId
+	ConnectId++
+	return re
+}
 
 //type MessageHandle struct{
 //	gate *Gate
@@ -53,6 +63,15 @@ var ConnectId = 10000
 //	t.gate.TcpServer.Agents[args.Session].(Agent).WriteMsgBytes(args.Msg)
 //    return nil
 //}
+
+func (gate *Gate) GetAgent(connectid int32) interface{} {
+	var agent1 = gate.TcpServer.GetAgents().Get(connectid)
+	if agent1 == nil {
+		agent1 = gate.KcpServer.GetAgents().Get(connectid)
+	}
+
+	return agent1
+}
 
 func (gate *Gate) Run(closeSig chan bool) {
 
@@ -82,8 +101,8 @@ func (gate *Gate) Run(closeSig chan bool) {
 
 		wsServer.NewAgent = func(conn network.Conn) network.Agent {
 			//ReadDataTime time.Duration
-			a := &agent{conn: conn, gate: gate, connectId: int32(ConnectId)}
-			ConnectId++
+			a := &agent{conn: conn, gate: gate, connectId: GetConnectID()}
+			//ConnectId++
 
 			return a
 		}
@@ -98,8 +117,8 @@ func (gate *Gate) Run(closeSig chan bool) {
 		tcpServer.PendingWriteNum = gate.PendingWriteNum
 
 		tcpServer.NewAgent = func(conn network.Conn) network.Agent {
-			a := &agent{conn: conn, gate: gate, connectId: int32(ConnectId)}
-			ConnectId++
+			a := &agent{conn: conn, gate: gate, connectId: GetConnectID()}
+			//ConnectId++
 
 			return a
 		}
@@ -114,8 +133,8 @@ func (gate *Gate) Run(closeSig chan bool) {
 		kcpServer.PendingWriteNum = gate.PendingWriteNum
 
 		kcpServer.NewAgent = func(conn network.Conn) network.Agent {
-			a := &agent{conn: conn, gate: gate, connectId: int32(ConnectId)}
-			ConnectId++
+			a := &agent{conn: conn, gate: gate, connectId: GetConnectID()}
+			//ConnectId++
 
 			return a
 		}
@@ -138,7 +157,7 @@ func (gate *Gate) Run(closeSig chan bool) {
 		wsServer.Start()
 	}
 	if kcpServer != nil {
-		gate.TcpServer = kcpServer
+		gate.KcpServer = kcpServer
 		kcpServer.Start()
 	}
 

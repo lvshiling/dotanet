@@ -60,7 +60,7 @@ func (app *DefaultApp) Init() {
 			a := &gate.Gate{
 				MaxConnNum:      conf.Conf.GateInfo.MaxConnNum,
 				PendingWriteNum: conf.Conf.GateInfo.PendingWriteNum,
-				//TCPAddr:         conf.Conf.GateInfo.ClientListenPort,
+				TCPAddr:         conf.Conf.GateInfo.ClientTcpListenPort,
 				//WSAddr:       conf.Conf.GateInfo.ClientListenPort,
 				KCPAddr:      conf.Conf.GateInfo.ClientListenPort,
 				LocalTCPAddr: conf.Conf.GateInfo.ServerListenPort,

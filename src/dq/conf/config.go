@@ -190,11 +190,12 @@ type Config struct {
 	DataBaseInfo map[string]interface{}
 }
 type gateInfo struct {
-	ClientListenPort string
-	ServerListenPort string
-	MaxConnNum       int
-	PendingWriteNum  int
-	TimeOut          int
+	ClientListenPort    string
+	ClientTcpListenPort string
+	ServerListenPort    string
+	MaxConnNum          int
+	PendingWriteNum     int
+	TimeOut             int
 }
 
 func readBigFileInto(path string) (error, []byte) {

@@ -97,7 +97,7 @@ func (this *Player) SaveItemSkillCDInfo(skill *Skill) {
 		return
 	}
 
-	log.Info("---SaveItemSkillCDInfo-%d  %f", skill.TypeID, skill.RemainCDTime)
+	//log.Info("---SaveItemSkillCDInfo-%d  %f", skill.TypeID, skill.RemainCDTime)
 
 	bagitem := &ItemSkillCDData{}
 	bagitem.TypeID = skill.TypeID
@@ -172,6 +172,14 @@ func (this *Player) ReInit() {
 	this.Msg = &protomsg.SC_Update{}
 
 	this.IsLoadedSceneSucc = false
+}
+
+//使用AI
+func (this *Player) UseAI(id int32) {
+	if this.MainUnit == nil {
+		return
+	}
+	this.MainUnit.SetAI(NewNormalAI(this.MainUnit))
 }
 
 //添加其他可控制的单位
@@ -323,6 +331,24 @@ func (this *Player) ChangeItemPos(data *protomsg.CS_ChangeItemPos) {
 	}
 
 	this.lock.Unlock()
+}
+
+//交换道具位置 背包位置
+func (this *Player) DestroyItem(data *protomsg.CS_DestroyItem) {
+
+	if data.SrcPos < 0 || data.SrcPos >= MaxBagCount {
+		return
+	}
+	if this.MainUnit == nil {
+		return
+	}
+
+	log.Info("-------DestroyItem:%d ", data.SrcPos)
+
+	this.lock.Lock()
+	defer this.lock.Unlock()
+	this.BagInfo[data.SrcPos] = nil
+
 }
 
 //获取道具

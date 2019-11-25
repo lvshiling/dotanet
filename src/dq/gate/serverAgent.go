@@ -68,7 +68,7 @@ func (a *ServersAgent) ReLoginForceDisconnect(data *protomsg.MsgBase) {
 		log.Info("--h1.Uid <= 0--")
 		return
 	}
-	ag1 := (a.gate.TcpServer.GetAgents().Get((h1.ConnectId)))
+	ag1 := (a.gate.GetAgent((h1.ConnectId)))
 	if ag1 != nil {
 		ag := ag1.(*agent)
 		//异地登录 强制下线
@@ -87,7 +87,7 @@ func (a *ServersAgent) DoGateUserLoginData(data *protomsg.MsgBase) {
 		return
 	}
 
-	ag1 := (a.gate.TcpServer.GetAgents().Get((h1.ConnectId)))
+	ag1 := (a.gate.GetAgent((h1.ConnectId)))
 	if ag1 != nil {
 		ag := ag1.(*agent)
 
@@ -112,16 +112,16 @@ func (a *ServersAgent) DoGateData(data *protomsg.MsgBase) {
 
 func (a *ServersAgent) SendToAll(data1 []byte) {
 
-	allAgents := a.gate.TcpServer.GetAgents()
-	items := allAgents.Items()
-	for _, v := range items {
+	//	allAgents := a.gate.GetAgent()
+	//	items := allAgents.Items()
+	//	for _, v := range items {
 
-		ag := v
-		if ag != nil {
-			ag.(*agent).WriteMsgBytes(data1)
+	//		ag := v
+	//		if ag != nil {
+	//			ag.(*agent).WriteMsgBytes(data1)
 
-		}
-	}
+	//		}
+	//	}
 }
 
 func (a *ServersAgent) DoClientData(data *protomsg.MsgBase) {
@@ -138,7 +138,7 @@ func (a *ServersAgent) DoClientData(data *protomsg.MsgBase) {
 		if connectid == -2 && uid == -2 {
 			go a.SendToAll(data1)
 		} else {
-			ag := a.gate.TcpServer.GetAgents().Get(connectid)
+			ag := a.gate.GetAgent(connectid)
 			//			if ag == nil {
 
 			//				con := a.gate.TcpServer.GetLoginedConnect().Get(uid)

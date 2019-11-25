@@ -65,10 +65,12 @@ func (a *GameScene1Agent) Init() {
 	a.handles["CS_GetUnitInfo"] = a.DoGetUnitInfo
 	a.handles["CS_GetBagInfo"] = a.DoGetBagInfo
 	a.handles["CS_ChangeItemPos"] = a.DoChangeItemPos
+	a.handles["CS_DestroyItem"] = a.DoDestroyItem
 	a.handles["CS_PlayerUpgradeSkill"] = a.DoPlayerUpgradeSkill
 	a.handles["CS_ChangeAttackMode"] = a.DoChangeAttackMode
 
 	a.handles["CS_LodingScene"] = a.DoLodingScene
+	a.handles["CS_UseAI"] = a.DoUseAI
 
 	a.handles["CS_OrganizeTeam"] = a.DoOrganizeTeam
 	a.handles["CS_ResponseOrgTeam"] = a.DoResponseOrgTeam
@@ -99,7 +101,7 @@ func (a *GameScene1Agent) Init() {
 //
 func (a *GameScene1Agent) DoDisconnect(data *protomsg.MsgBase) {
 
-	log.Info("---------DoDisconnect")
+	log.Info("GameScene1Agent---------DoDisconnect")
 
 	player := a.Players.Get(data.Uid)
 	if player != nil {
@@ -266,6 +268,26 @@ func (a *GameScene1Agent) DoPlayerUpgradeSkill(data *protomsg.MsgBase) {
 		return
 	}
 	player.(*gamecore.Player).UpgradeSkill(h2)
+
+}
+
+func (a *GameScene1Agent) DoDestroyItem(data *protomsg.MsgBase) {
+
+	log.Info("---------CS_DestroyItem")
+	h2 := &protomsg.CS_DestroyItem{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	player.(*gamecore.Player).DestroyItem(h2)
+
+	a.SendBagInfo(player.(*gamecore.Player))
 
 }
 
@@ -536,6 +558,26 @@ func (a *GameScene1Agent) DoOutTeam(data *protomsg.MsgBase) {
 	} else {
 		gamecore.TeamManagerObj.OutTeam(player.(*gamecore.Player), player1.(*gamecore.Player))
 	}
+
+}
+
+//a.handles["CS_UseAI"] = a.DoUseAI
+func (a *GameScene1Agent) DoUseAI(data *protomsg.MsgBase) {
+
+	//log.Info("---------DoPlayerOperate")
+	h2 := &protomsg.CS_UseAI{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+
+	player.(*gamecore.Player).UseAI(h2.AIid)
 
 }
 

@@ -57,7 +57,7 @@ func (a *LoginAgent) Init() {
 //--DoDisconnect
 func (a *LoginAgent) DoDisconnect(data *protomsg.MsgBase) {
 	a.LoginPlayers.Delete(data.Uid)
-	log.Info("-------DoDisconnect :%d", data.Uid)
+	log.Info("LoginAgent-------DoDisconnect :%d", data.Uid)
 }
 
 //DoLoginOut
