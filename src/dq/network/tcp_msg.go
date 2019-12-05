@@ -22,7 +22,7 @@ func NewMsgParser() *MsgParser {
 	p := new(MsgParser)
 	p.lenMsgLen = 4
 	p.minMsgLen = 1
-	p.maxMsgLen = 4096*20
+	p.maxMsgLen = 4096 * 100
 	p.littleEndian = false
 
 	return p
@@ -64,30 +64,21 @@ func (p *MsgParser) SetByteOrder(littleEndian bool) {
 
 // goroutine safe
 func (p *MsgParser) Read(conn *TCPConn) ([]byte, error) {
-	
-//	for{
-//		var cc  = make([]byte,128)
-//		len,_ := conn.Read(cc)
-//		if len > 0{
-//			log.Info("len:%d",len)
-//			log.Info("read:"+string(cc))
-		
-//			for k,_ := range cc{
-//				log.Info("%d read:%d",k,cc[k])
-//			}
-//			return cc,errors.New("fd")
-//		}
-//	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
+	//	for{
+	//		var cc  = make([]byte,128)
+	//		len,_ := conn.Read(cc)
+	//		if len > 0{
+	//			log.Info("len:%d",len)
+	//			log.Info("read:"+string(cc))
+
+	//			for k,_ := range cc{
+	//				log.Info("%d read:%d",k,cc[k])
+	//			}
+	//			return cc,errors.New("fd")
+	//		}
+	//	}
+
 	var b [4]byte
 	bufMsgLen := b[:p.lenMsgLen]
 
@@ -95,7 +86,6 @@ func (p *MsgParser) Read(conn *TCPConn) ([]byte, error) {
 	if _, err := io.ReadFull(conn, bufMsgLen); err != nil {
 		return nil, err
 	}
-	
 
 	// parse len
 	var msgLen uint32

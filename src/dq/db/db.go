@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strconv"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -253,7 +254,14 @@ func (a *DB) CreateCharacter(uid int32, name string, typeid int32) (error, int32
 
 //保存角色信息
 func (a *DB) SaveCharacter(playerInfo DB_CharacterInfo) error {
-	tx, _ := a.Mydb.Begin()
+	tx, e1 := a.Mydb.Begin()
+
+	for tx == nil || e1 != nil {
+		log.Info("SaveCharacter11 :%s", e1.Error())
+		time.Sleep(time.Millisecond * 2)
+		tx, e1 = a.Mydb.Begin()
+
+	}
 
 	//要存的数据
 	datastring := make(map[string]interface{})

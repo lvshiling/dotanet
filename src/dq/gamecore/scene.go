@@ -303,32 +303,32 @@ func (this *Scene) Update() {
 		//t1 := time.Now().UnixNano()
 		//log.Info("main time:%d", (t1)/1e6)
 
-		//time1 := utils.GetCurTimeOfSecond()
+		time1 := utils.GetCurTimeOfSecond()
 		this.EveryTimeDo(1 / float32(this.SceneFrame))
 
 		this.DoRemoveBullet()
 		this.DoRemoveHalo()
 		this.DoAddAndRemoveUnit()
 
-		//time2 := utils.GetCurTimeOfSecond()
+		time2 := utils.GetCurTimeOfSecond()
 		this.DoLogic()
-		//time3 := utils.GetCurTimeOfSecond()
+		time3 := utils.GetCurTimeOfSecond()
 		this.UpdateHalo(1 / float32(this.SceneFrame))
 		//time4 := utils.GetCurTimeOfSecond()
 		this.UpdateBullet(1 / float32(this.SceneFrame))
-		//time5 := utils.GetCurTimeOfSecond()
+		time5 := utils.GetCurTimeOfSecond()
 
 		this.DoMove()
-		//time6 := utils.GetCurTimeOfSecond()
+		time6 := utils.GetCurTimeOfSecond()
 		this.DoZone()
-		//time7 := utils.GetCurTimeOfSecond()
+		time7 := utils.GetCurTimeOfSecond()
 		this.DoSendData()
-		//time8 := utils.GetCurTimeOfSecond()
+		time8 := utils.GetCurTimeOfSecond()
 
-		//		if time8-time1 >= 10.01 {
-		//			log.Info("time:%f %f %f %f %f %f %f  ", time2-time1, time3-time2, time4-time3, time5-time4,
-		//				time6-time5, time7-time6, time8-time7)
-		//		}
+		if time8-time1 >= 0.03 {
+			log.Info("time:%f %f %f %f %f  ", time2-time1, time3-time2,
+				time6-time5, time8-time7, time8-time1)
+		}
 
 		this.CurFrame++
 
@@ -350,6 +350,7 @@ func (this *Scene) Update() {
 //同步数据
 func (this *Scene) DoSendData() {
 
+	time1 := utils.GetCurTimeOfSecond()
 	//生成单位的 客户端 显示数据
 	for _, v := range this.Units {
 		v.FreshClientDataSub()
@@ -366,7 +367,11 @@ func (this *Scene) DoSendData() {
 		v.FreshClientDataSub()
 		v.FreshClientData()
 	}
-
+	var unitcount = 0
+	var bulletcount = 0
+	var sceneitemcount = 0
+	var halotcount = 0
+	time2 := utils.GetCurTimeOfSecond()
 	//遍历所有玩家
 	for _, player := range this.Players {
 		v := player.MainUnit
@@ -380,12 +385,14 @@ func (this *Scene) DoSendData() {
 				//遍历区域中的单位
 				for _, unit := range this.ZoneUnits[vzone] {
 					player.AddUnitData(unit)
+					unitcount++
 				}
 			}
 			if _, ok := this.ZoneBullets[vzone]; ok {
 				//遍历区域中的单位
 				for _, bullet := range this.ZoneBullets[vzone] {
 					player.AddBulletData(bullet)
+					bulletcount++
 				}
 			}
 			//ZoneSceneItems
@@ -393,6 +400,7 @@ func (this *Scene) DoSendData() {
 				//遍历区域中的单位
 				for _, sceneitem := range this.ZoneSceneItems[vzone] {
 					player.AddSceneItemData(sceneitem)
+					sceneitemcount++
 				}
 			}
 			//
@@ -400,11 +408,27 @@ func (this *Scene) DoSendData() {
 				//遍历区域中的单位
 				for _, halo := range this.ZoneHalos[vzone] {
 					player.AddHaloData(halo)
+					halotcount++
 				}
 			}
 		}
+		//player.Update(this.CurFrame)
+	}
+	time3 := utils.GetCurTimeOfSecond()
+	//遍历所有玩家
+	for _, player := range this.Players {
+		v := player.MainUnit
+		if v == nil {
+			continue
+		}
 		player.Update(this.CurFrame)
 	}
+
+	time4 := utils.GetCurTimeOfSecond()
+	if time4-time1 > 0.015 {
+		log.Info("DoSendData:t1:%f   t2:%f  t3:%f ", time4-time3, time3-time2, time2-time1)
+	}
+
 }
 
 //处理移动
@@ -700,7 +724,7 @@ func (this *Scene) DoAddAndRemoveUnit() {
 
 		player := v.(*Player)
 		if player != nil {
-			if player.IsLoadedSceneSucc == false {
+			if player.IsLoadedSceneSucc == false || player.MainUnit == nil || player.MainUnit.Body == nil {
 				continue
 			}
 		}

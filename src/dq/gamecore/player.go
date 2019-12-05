@@ -179,6 +179,7 @@ func (this *Player) UseAI(id int32) {
 	if this.MainUnit == nil {
 		return
 	}
+	this.MainUnit.AttackMode = 3 //全体攻击模式
 	this.MainUnit.SetAI(NewNormalAI(this.MainUnit))
 }
 

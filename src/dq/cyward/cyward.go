@@ -372,7 +372,7 @@ func (this *Body) SetTarget(pos vec2d.Vec2, mindistanse float64) {
 		//		}
 		//log.Info("SetTarget suc :%d", len(bodys))
 	} else {
-		log.Info("SetTarget faild :%d", len(bodys))
+		//log.Info("SetTarget faild :%d", len(bodys))
 	}
 
 	t2 := time.Now().UnixNano()
@@ -1202,10 +1202,10 @@ func (this *WardCore) CalcDetourPath(my *Body, collion *Body, targetPos vec2d.Ve
 	if this.CheckDetourPathNodeT(&dpNode, &bodys, path) {
 		//log.Info("1111111111111")
 		//log.Info("CalcDetourPath suc :%d", len(bodys))
-		log.Info("CalcDetourPath suc %d", my.Tag)
-		for i := 0; i < len(*path); i++ {
-			log.Info("--:%v", *path)
-		}
+		//		log.Info("CalcDetourPath suc %d", my.Tag)
+		//		for i := 0; i < len(*path); i++ {
+		//			log.Info("--:%v", *path)
+		//		}
 	} else {
 		log.Info("CalcDetourPath:%d", len(bodys))
 	}

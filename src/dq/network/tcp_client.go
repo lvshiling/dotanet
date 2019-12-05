@@ -46,7 +46,7 @@ func (client *TCPClient) init() {
 		log.Debug("invalid ConnectInterval, reset to %v", client.ConnectInterval)
 	}
 	if client.PendingWriteNum <= 0 {
-		client.PendingWriteNum = 200
+		client.PendingWriteNum = 20000
 		log.Debug("invalid PendingWriteNum, reset to %v", client.PendingWriteNum)
 	}
 	if client.NewAgent == nil {
