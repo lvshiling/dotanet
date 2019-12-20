@@ -188,6 +188,7 @@ type Config struct {
 	HallInfo     map[string]interface{}
 	Game5GInfo   map[string]interface{}
 	DataBaseInfo map[string]interface{}
+	NormalInfo   map[string]interface{}
 }
 type gateInfo struct {
 	ClientListenPort    string

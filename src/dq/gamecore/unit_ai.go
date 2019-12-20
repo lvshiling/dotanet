@@ -44,6 +44,7 @@ func NewNormalAI(p *Unit) *NormalAI {
 }
 
 func (this *NormalAI) Update(dt float64) {
+	//return
 	//1秒钟更新1次
 	if utils.GetCurTimeOfSecond()-this.LastCheckTime < 1 {
 		return

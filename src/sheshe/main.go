@@ -4,11 +4,20 @@ package main
 
 import (
 	"dq/app"
+	//"dq/db"
 	"dq/log"
 	//"dq/vec2d"
+	//	"net/http"
+	//	_ "net/http/pprof"
 )
 
 func main() {
+	//
+
+	// 性能分析
+	//	go func() {
+	//		http.ListenAndServe(":8282", nil)
+	//	}()
 
 	//	v1 := vec2d.Vec2{X: 0, Y: 1}
 	//	v2 := vec2d.Vec2{X: -1, Y: 0}
@@ -31,6 +40,7 @@ func main() {
 	//	t1 := vec2d.Angle(vec2d.Vec2{0, 1}, vec2d.Vec2{1, 0})
 	//	log.Info("angle:%f", t1)
 	app := new(app.DefaultApp)
+
 	app.Run()
 	log.Info("dq over!")
 	//	log.Info("111!")

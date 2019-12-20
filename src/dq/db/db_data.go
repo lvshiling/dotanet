@@ -31,4 +31,6 @@ type DB_CharacterInfo struct {
 	ContinuityKillCount int32   `json:"continuitykillcount"`
 	DieCount            int32   `json:"diecount"`
 	KillGetGold         int32   `json:"killgetgold"`
+	Friends             string  `json:"friends"`
+	FriendsRequest      string  `json:"friendsrequest"`
 }

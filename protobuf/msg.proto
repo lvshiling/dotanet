@@ -43,6 +43,10 @@ message CS_SelectCharacter {
 message CS_LodingScene{
     int32  SceneID = 1;//场景ID
 }
+//观看视频
+message CS_LookVedioSucc{
+    int32  ID = 1;//ID  1表示看视频得砖石
+}
 
 //使用AI
 message CS_UseAI{
@@ -242,7 +246,7 @@ message UnitDatas{
     int32   MaxMP = 10;
     int32   Experience = 11;
     int32   MaxExperience = 12;
-    int32   ControlID = 13;//控制者id
+    int32   ControlID = 13;//控制者id uid
     int32   AnimotorState = 14;//动画状态 1:idle 2:walk 3:attack 4:skill 5:death
     float   AttackTime = 15;//攻击动画时间
     float   DirectionX = 16;//方向x
@@ -268,9 +272,11 @@ message UnitDatas{
     int32   Gold = 36;//金币
     int32   Diamond = 37;//钻石
     int32   ReviveGold = 38;//复活需要的金币
-    repeated SkillDatas SD = 39;//技能数据
-    repeated BuffDatas BD = 40;//buff数据
-    repeated SkillDatas ISD = 41;//道具技能数据
+    int32   ReviveDiamond = 39;//复活需要的砖石
+    int32   Characterid = 40;//
+    repeated SkillDatas SD = 41;//技能数据
+    repeated BuffDatas BD = 42;//buff数据
+    repeated SkillDatas ISD = 43;//道具技能数据
 
     //单位状态(idle walk attack skill die)
     //各种buff状态(单位身上的buff 包括剩余时间)
@@ -404,10 +410,60 @@ message CS_BuyCommodity{
 
 //立即复活
 message CS_QuickRevive{
-    int32 ReviveType = 1;    //1金币复活 2看视频复活
+    int32 ReviveType = 1;    //1金币复活 2砖石复活
 }
 
 //掉线 客户端自己发给自己的消息
 message CC_Disconnect{
     string Err = 1; //掉线原因
+}
+
+//聊天信息
+message SC_ChatInfo{
+    int32 Channel = 1;//聊天频道 1附近 2全服 3私聊 4队伍
+    string Time = 2;//时间
+    string SrcName = 3;//发送者名字
+    int32 SrcPlayerUID = 4;//发送者uid
+    int32 DestPlayerUID = 5;//目标者uid
+    string Content = 6;//内容
+}
+//发送聊天信息
+message CS_ChatInfo{
+    int32 Channel = 1;//聊天频道 1附近 2全服 3私聊 4队伍
+    int32 DestPlayerUID = 5;//目标者uid
+    string Content = 6;//内容
+}
+
+//添加好友
+message CS_AddFriendRequest{
+    int32 Uid = 1;//uid
+    int32 Characterid = 2;//角色ID
+}
+//删除好友
+message CS_RemoveFriend{
+    int32 Uid = 1;//uid
+    int32 Characterid = 2;//角色ID
+}
+//回复好友请求
+message CS_AddFriendResponse{
+    FriendInfoMsg FriendInfo = 1;//
+    int32 Result = 2;//1同意  2拒绝
+}
+//好友信息
+message FriendInfoMsg{
+    int32 Uid = 1;//uid
+    int32 Characterid = 2;//角色ID
+    string Name = 3;
+    int32 Level = 4;//
+    int32 Typeid = 5;//
+    int32 State = 6;//
+}
+//获取好友列表
+message CS_GetFriendsList{
+    int32 Uid = 1;
+}
+//获取好友列表
+message SC_GetFriendsList{
+    repeated FriendInfoMsg Friends = 1;//好友
+    repeated FriendInfoMsg FriendsRequest = 2;//好友请求
 }

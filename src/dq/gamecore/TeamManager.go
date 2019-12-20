@@ -158,6 +158,18 @@ type TeamManager struct {
 	//	IsClose     bool //是否结束
 }
 
+//获取队伍
+func (this *TeamManager) GetTeam(player *Player) *TeamInfo {
+	if player == nil || player.TeamID <= 0 {
+		return nil
+	}
+	lastteam := this.Teams.Get(player.TeamID)
+	if lastteam == nil {
+		return nil
+	}
+	return lastteam.(*TeamInfo)
+}
+
 //离开队伍
 func (this *TeamManager) LeaveTeam(player *Player) {
 	if player == nil || player.TeamID <= 0 {

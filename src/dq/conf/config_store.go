@@ -46,6 +46,9 @@ func GetStoreData2SC_StoreData() *protomsg.SC_StoreData {
 	re.Commoditys = make([]*protomsg.CommodityDataProto, 0)
 	for _, v := range StoreFileDatas {
 		one := &protomsg.CommodityDataProto{}
+		if v.(*CommodityData).IsSell != 1 {
+			continue
+		}
 		one.TypeID = v.(*CommodityData).TypeID
 		one.ItemID = v.(*CommodityData).ItemID
 		one.PriceType = v.(*CommodityData).PriceType
@@ -63,4 +66,5 @@ type CommodityData struct {
 	ItemID    int32 //道具ID
 	PriceType int32 //价格类型 1金币 2砖石
 	Price     int32 //价格
+	IsSell    int32 //是否售卖 1:卖  2:不卖
 }

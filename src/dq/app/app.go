@@ -50,7 +50,7 @@ type DefaultApp struct {
 
 	moduleNew func(modelType string) model.BaseModel
 
-	databaseOne sync.Once
+	DatabaseOne sync.Once
 }
 
 func (app *DefaultApp) Init() {
@@ -70,27 +70,27 @@ func (app *DefaultApp) Init() {
 			a := &login.Login{
 				TCPAddr: conf.Conf.LoginInfo["GateIp"].(string),
 			}
-			app.databaseOne.Do(db.CreateDB)
+			app.DatabaseOne.Do(db.CreateDB)
 			return a
 		} else if modelType == datamsg.HallMode {
 			a := &hall.Hall{
 				TCPAddr: conf.Conf.HallInfo["GateIp"].(string),
 			}
-			app.databaseOne.Do(db.CreateDB)
+			app.DatabaseOne.Do(db.CreateDB)
 			return a
 		} else if modelType == datamsg.GameScene1 {
 			a := &gamescene1.GameScene1{
 				TCPAddr:    conf.Conf.Game5GInfo["GateIp"].(string),
 				ServerName: datamsg.GameScene1,
 			}
-			//app.databaseOne.Do(db.CreateDB)
+			//app.DatabaseOne.Do(db.CreateDB)
 			return a
 		} else if modelType == "GameScene2" {
 			a := &gamescene1.GameScene1{
 				TCPAddr:    conf.Conf.Game5GInfo["GateIp"].(string),
 				ServerName: "GameScene2",
 			}
-			//app.databaseOne.Do(db.CreateDB)
+			//app.DatabaseOne.Do(db.CreateDB)
 			return a
 		}
 
@@ -142,6 +142,10 @@ func (app *DefaultApp) Run() error {
 	}
 
 	conf.LoadConfig(f.Name()) //加载配置文件
+
+	//	app.DatabaseOne.Do(db.CreateDB)
+	//	db.DbOne.AddFriendsRequest(543, 542)
+	//	log.Info("test")
 	conf.LoadScene("/bin/conf/SceneCollides.sc")
 	conf.LoadCreateUnit("/bin/conf/CreateUnits.sc")
 	conf.LoadStoreFileData() //加载商店信息

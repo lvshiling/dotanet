@@ -52,4 +52,5 @@ type LevelFileData struct {
 	ReviveTime          float32 //复活时间
 	KilledBaseGold      int32   //被击杀的基础金钱奖励
 	ReviveGold          int32   //立即复活需要的金币
+	ReviveDiamond       int32   //立即复活需要的砖石
 }

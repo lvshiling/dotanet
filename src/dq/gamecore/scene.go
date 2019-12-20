@@ -11,6 +11,7 @@ import (
 	"dq/utils"
 	"dq/vec2d"
 	"math/rand"
+	"sync"
 	"time"
 )
 
@@ -58,6 +59,8 @@ type Scene struct {
 	ChangeScene ChangeSceneFunc
 	Quit        bool //是否退出
 	SceneFrame  int32
+
+	playerlock *sync.RWMutex //玩家操作同步操作锁
 }
 
 func CreateScene(data *conf.SceneFileData, parent ChangeSceneFunc) *Scene {
@@ -66,6 +69,7 @@ func CreateScene(data *conf.SceneFileData, parent ChangeSceneFunc) *Scene {
 	scene.SceneFileData = *data
 	scene.SceneName = data.ScenePath
 	scene.Quit = false
+	scene.playerlock = new(sync.RWMutex)
 	scene.Init()
 	return scene
 }
@@ -235,6 +239,26 @@ func (this *Scene) FindVisibleUnits(my *Unit) []*Unit {
 	return units
 }
 
+//获取可视范围内的所有玩家
+//func (this *Scene) FindVisiblePlayers(my *Unit) []*Player {
+
+//	units := make([]*Unit, 0)
+
+//	zones := utils.GetVisibleZones((my.Body.Position.X), (my.Body.Position.Y))
+//	//遍历可视区域
+//	for _, vzone := range zones {
+//		if _, ok := this.ZoneUnits[vzone]; ok {
+//			//遍历区域中的单位
+//			for _, unit := range this.ZoneUnits[vzone] {
+//				units = append(units, unit)
+
+//			}
+//		}
+//	}
+
+//	return units
+//}
+
 //传送门检查
 func (this *Scene) DoDoorWay() {
 	if this.ChangeScene == nil {
@@ -296,8 +320,8 @@ func (this *Scene) SendNoticeWordToAllPlayer(typeid int32, param ...string) {
 func (this *Scene) Update() {
 
 	log.Info("Update start")
-	t1 := time.Now().UnixNano()
-	log.Info("t1:%d", (t1)/1e6)
+	t1 := utils.GetCurTimeOfSecond()
+	log.Info("t1:%f", (t1))
 	for {
 		//log.Info("Update loop")
 		//t1 := time.Now().UnixNano()
@@ -342,8 +366,8 @@ func (this *Scene) Update() {
 
 	}
 
-	t2 := time.Now().UnixNano()
-	log.Info("t2:%d   delta:%d    frame:%d", (t2)/1e6, (t2-t1)/1e6, this.CurFrame)
+	//t2 := time.Now().UnixNano()
+	//log.Info("t2:%d   delta:%d    frame:%d", (t2)/1e6, (t2-t1)/1e6, this.CurFrame)
 
 }
 
@@ -728,8 +752,9 @@ func (this *Scene) DoAddAndRemoveUnit() {
 				continue
 			}
 		}
-
+		this.playerlock.Lock()
 		this.Players[k.(int32)] = v.(*Player)
+		this.playerlock.Unlock()
 
 		this.NextAddPlayer.Delete(k)
 	}
@@ -738,12 +763,24 @@ func (this *Scene) DoAddAndRemoveUnit() {
 	//删除玩家
 	playerremove := this.NextRemovePlayer.Items()
 	for k, _ := range playerremove {
+		this.playerlock.Lock()
 		delete(this.Players, k.(int32))
+		this.playerlock.Unlock()
 
 		this.NextRemovePlayer.Delete(k)
 	}
 	//this.NextRemovePlayer.DeleteAll()
+}
 
+//安全锁的情况下获取所有玩家
+func (this *Scene) GetAllPlayerUseLock() map[int32]*Player {
+	this.playerlock.RLock()
+	r := make(map[int32]*Player)
+	for k, v := range this.Players {
+		r[k] = v
+	}
+	this.playerlock.RUnlock()
+	return r
 }
 
 func (this *Scene) Close() {

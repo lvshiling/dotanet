@@ -182,6 +182,9 @@ type UnitCmd struct {
 
 	//立即复活
 	QuickRevive *protomsg.CS_QuickRevive
+
+	//看视频得砖石
+	LookViewGetDiamond *protomsg.CS_LookVedioSucc
 }
 
 //-----------------------技能命令--------------------
@@ -1339,7 +1342,7 @@ func (this *Unit) DoOtherCmd() {
 	quickrevive := this.QuickRevive
 	if quickrevive != nil {
 
-		////1金币复活 2看视频复活
+		////1金币复活 2砖石复活
 		if quickrevive.ReviveType == 1 {
 			if this.ReviveGold > this.Gold {
 				//金币不足
@@ -1351,10 +1354,25 @@ func (this *Unit) DoOtherCmd() {
 				this.DoAvive(2, 0.5, 0.5)
 			}
 		} else if quickrevive.ReviveType == 2 {
+			if this.ReviveDiamond > this.Diamond {
+				//砖石
+				if this.MyPlayer != nil {
+					this.MyPlayer.SendNoticeWordToClient(6)
+				}
+			} else {
+				this.Diamond -= this.ReviveDiamond
+				this.DoAvive(2, 1, 1)
+			}
 
 		}
 
 		this.QuickRevive = nil
+	}
+
+	lookvedio := this.LookViewGetDiamond
+	if lookvedio != nil {
+		this.LookViewGetDiamond = nil
+		this.Diamond += int32(conf.Conf.NormalInfo["LookVedioAddDiamond"].(float64))
 	}
 }
 
@@ -1595,6 +1613,7 @@ type UnitProperty struct {
 	RemainExperience int32   //今天还能获取的经验值
 	RemainReviveTime float32 //剩余复活时间
 	ReviveGold       int32   //立即复活需要的金币
+	ReviveDiamond    int32   //立即复活需要的砖石
 
 	//击杀相关
 	KillCount           int32
@@ -2040,6 +2059,8 @@ func CreateUnitByPlayer(scene *Scene, player *Player, characterinfo *db.DB_Chara
 	if leveldata != nil {
 		unitre.MaxExperience = leveldata.UpgradeExperience
 		unitre.ReviveGold = leveldata.ReviveGold
+		unitre.ReviveDiamond = leveldata.ReviveDiamond
+
 	}
 
 	//创建技能
@@ -3764,6 +3785,8 @@ func (this *Unit) CheckTriggerDie(killer *Unit) {
 		this.RemainReviveTime = leveldata.ReviveTime
 		//ReviveGold
 		this.ReviveGold = leveldata.ReviveGold
+		this.ReviveDiamond = leveldata.ReviveDiamond
+
 	} else {
 		this.RemainReviveTime = 100
 	}
@@ -3920,9 +3943,11 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.Gold = this.Gold
 	this.ClientData.Diamond = this.Diamond
 	this.ClientData.ReviveGold = this.ReviveGold
+	this.ClientData.ReviveDiamond = this.ReviveDiamond
 
 	if this.MyPlayer != nil {
 		this.ClientData.TeamID = this.MyPlayer.TeamID
+		this.ClientData.Characterid = this.MyPlayer.Characterid
 	}
 
 	//道具技能
@@ -4084,9 +4109,11 @@ func (this *Unit) FreshClientDataSub() {
 	this.ClientDataSub.Gold = this.Gold - this.ClientData.Gold
 	this.ClientDataSub.Diamond = this.Diamond - this.ClientData.Diamond
 	this.ClientDataSub.ReviveGold = this.ReviveGold - this.ClientData.ReviveGold
+	this.ClientDataSub.ReviveDiamond = this.ReviveDiamond - this.ClientData.ReviveDiamond
 
 	if this.MyPlayer != nil {
 		this.ClientDataSub.TeamID = this.MyPlayer.TeamID - this.ClientData.TeamID
+		this.ClientDataSub.Characterid = this.MyPlayer.Characterid - this.ClientData.Characterid
 	}
 	//道具技能
 	isds := make(map[int32]int32)

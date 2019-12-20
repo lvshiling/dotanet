@@ -46,6 +46,8 @@ type Player struct {
 
 	TeamID int32 //组队信息
 
+	MyFriends *Friends //好友
+
 	BagInfo []*BagItem
 
 	ItemSkillCDDataInfo map[int32]*ItemSkillCDData
@@ -509,6 +511,14 @@ func (this *Player) GetDBData() *db.DB_CharacterInfo {
 		dbdata.X = float32(this.MainUnit.Body.Position.X)
 		dbdata.Y = float32(this.MainUnit.Body.Position.Y)
 	}
+
+	//好友
+	if this.MyFriends != nil {
+		friends, friendsrequest := this.MyFriends.GetDBStr()
+		dbdata.Friends = friends
+		dbdata.FriendsRequest = friendsrequest
+	}
+
 	//技能
 	for _, v := range this.MainUnit.Skills {
 		dbdata.Skill += v.ToDBString() + ";"
@@ -820,6 +830,8 @@ func (this *Player) GoInScene(scene *Scene, datas []byte) {
 	this.Characterid = characterinfo.Characterid
 	this.LoadBagInfoFromDB(characterinfo.BagInfo)
 	this.LoadItemSkillCDFromDB(characterinfo.ItemSkillCDInfo)
+	//好友信息
+	this.MyFriends = NewFriends(characterinfo.Friends, characterinfo.FriendsRequest, this)
 
 	this.CurScene.PlayerGoin(this, &characterinfo)
 	//this.ReInit()

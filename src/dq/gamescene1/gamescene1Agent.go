@@ -72,6 +72,8 @@ func (a *GameScene1Agent) Init() {
 	a.handles["CS_LodingScene"] = a.DoLodingScene
 	a.handles["CS_UseAI"] = a.DoUseAI
 
+	a.handles["CS_LookVedioSucc"] = a.DoLookVedioSucc
+
 	a.handles["CS_OrganizeTeam"] = a.DoOrganizeTeam
 	a.handles["CS_ResponseOrgTeam"] = a.DoResponseOrgTeam
 	a.handles["CS_OutTeam"] = a.DoOutTeam
@@ -82,12 +84,21 @@ func (a *GameScene1Agent) Init() {
 	//立即复活
 	a.handles["CS_QuickRevive"] = a.DoQuickRevive
 
+	//聊天信息
+	a.handles["CS_ChatInfo"] = a.DoChatInfo
+
+	//好友相关
+	a.handles["CS_AddFriendRequest"] = a.DoAddFriendRequest
+	a.handles["CS_RemoveFriend"] = a.DoRemoveFriend
+	a.handles["CS_AddFriendResponse"] = a.DoAddFriendResponse
+	a.handles["CS_GetFriendsList"] = a.DoGetFriendsList
+
 	//创建场景
 	allscene := conf.GetAllScene()
 	for _, v := range allscene {
 		log.Info("scene:%d  %s", v.(*conf.SceneFileData).TypeID, v.(*conf.SceneFileData).ScenePath)
 		scene := gamecore.CreateScene(v.(*conf.SceneFileData), a)
-		time.Sleep(time.Duration(33 / len(allscene)))
+		time.Sleep(time.Duration(33/len(allscene)) * time.Millisecond)
 		a.Scenes.Set(v.(*conf.SceneFileData).TypeID, scene)
 		a.wgScene.Add(1)
 		go func() {
@@ -521,6 +532,184 @@ func (a *GameScene1Agent) DoBuyCommodity(data *protomsg.MsgBase) {
 	player.(*gamecore.Player).BuyItem(cominfo)
 }
 
+//好友相关 请求把目标加为好友
+func (a *GameScene1Agent) DoAddFriendRequest(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_AddFriendRequest{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil || player.(*gamecore.Player).MyFriends == nil {
+		return
+	}
+
+	friend := a.Players.Get(h2.Uid)
+	if friend == nil {
+		player.(*gamecore.Player).MyFriends.AddFriendRequest(h2, nil)
+	} else {
+		player.(*gamecore.Player).MyFriends.AddFriendRequest(h2, friend.(*gamecore.Player))
+	}
+
+}
+func (a *GameScene1Agent) DoRemoveFriend(data *protomsg.MsgBase) {
+	//	h2 := &protomsg.CS_RemoveFriend{}
+	//	err := proto.Unmarshal(data.Datas, h2)
+	//	if err != nil {
+	//		log.Info(err.Error())
+	//		return
+	//	}
+	//	player := a.Players.Get(data.Uid)
+	//	if player == nil {
+	//		return
+	//	}
+
+}
+func (a *GameScene1Agent) CheckOnline(uid int32, characterid int32) bool {
+	p1 := a.Players.Get(uid)
+	if p1 != nil && p1.(*gamecore.Player).Characterid == characterid {
+		return true
+	}
+
+	return false
+}
+
+//回复好友请求
+func (a *GameScene1Agent) DoAddFriendResponse(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_AddFriendResponse{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil || player.(*gamecore.Player).MyFriends == nil {
+		return
+	}
+
+	friend := a.Players.Get(h2.FriendInfo.Uid)
+	if friend == nil {
+		player.(*gamecore.Player).MyFriends.AddFriendResponse(h2, nil)
+	} else {
+		player.(*gamecore.Player).MyFriends.AddFriendResponse(h2, friend.(*gamecore.Player))
+	}
+
+	//重新发送好友信息
+	d1 := player.(*gamecore.Player).MyFriends.GetSCData()
+	for k, v := range d1.Friends {
+		if a.CheckOnline(v.Uid, v.Characterid) == true {
+			d1.Friends[k].State = 1
+		} else {
+			d1.Friends[k].State = 2
+		}
+
+	}
+
+	player.(*gamecore.Player).SendMsgToClient("SC_GetFriendsList", d1)
+
+}
+func (a *GameScene1Agent) DoGetFriendsList(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_GetFriendsList{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil || player.(*gamecore.Player).MyFriends == nil {
+		return
+	}
+
+	//*protomsg.SC_GetFriendsList
+	d1 := player.(*gamecore.Player).MyFriends.GetSCData()
+	for k, v := range d1.Friends {
+		if a.CheckOnline(v.Uid, v.Characterid) == true {
+			d1.Friends[k].State = 1
+		} else {
+			d1.Friends[k].State = 2
+		}
+
+	}
+	player.(*gamecore.Player).SendMsgToClient("SC_GetFriendsList", d1)
+}
+
+//聊天信息
+func (a *GameScene1Agent) DoChatInfo(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_ChatInfo{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	mainunit := player.(*gamecore.Player).MainUnit
+	if mainunit == nil {
+		return
+	}
+	////聊天频道 1附近 2全服 3私聊 4队伍
+	if h2.Channel == 1 {
+		if player.(*gamecore.Player).CurScene == nil {
+			return
+		}
+		msg := &protomsg.SC_ChatInfo{}
+		msg.Channel = h2.Channel
+		msg.Time = time.Now().Format("15:04")
+		msg.SrcName = mainunit.Name
+		msg.SrcPlayerUID = data.Uid
+		msg.Content = h2.Content //内容过滤
+		allplayer := player.(*gamecore.Player).CurScene.GetAllPlayerUseLock()
+		for _, v := range allplayer {
+			if v == nil {
+				continue
+			}
+			v.SendMsgToClient("SC_ChatInfo", msg)
+		}
+
+	} else if h2.Channel == 2 {
+
+	} else if h2.Channel == 3 {
+		destplayer := a.Players.Get(h2.DestPlayerUID)
+		if destplayer == nil {
+			//未找到当前玩家
+			return
+		}
+
+		msg := &protomsg.SC_ChatInfo{}
+		msg.Channel = h2.Channel
+		msg.Time = time.Now().Format("15:04")
+		msg.SrcName = mainunit.Name
+		msg.SrcPlayerUID = data.Uid
+		msg.DestPlayerUID = h2.DestPlayerUID
+		msg.Content = h2.Content //内容过滤
+		player.(*gamecore.Player).SendMsgToClient("SC_ChatInfo", msg)
+		destplayer.(*gamecore.Player).SendMsgToClient("SC_ChatInfo", msg)
+
+	} else if h2.Channel == 4 {
+		team := gamecore.TeamManagerObj.GetTeam(player.(*gamecore.Player))
+		if team == nil {
+			return
+		}
+		msg := &protomsg.SC_ChatInfo{}
+		msg.Channel = h2.Channel
+		msg.Time = time.Now().Format("15:04")
+		msg.SrcName = mainunit.Name
+		msg.SrcPlayerUID = data.Uid
+		msg.Content = h2.Content //内容过滤
+		allplayer := team.Players.Items()
+		for _, v := range allplayer {
+			if v == nil {
+				continue
+			}
+			v.(*gamecore.Player).SendMsgToClient("SC_ChatInfo", msg)
+		}
+	}
+
+}
+
 func (a *GameScene1Agent) DoQuickRevive(data *protomsg.MsgBase) {
 	h2 := &protomsg.CS_QuickRevive{}
 	err := proto.Unmarshal(data.Datas, h2)
@@ -535,6 +724,23 @@ func (a *GameScene1Agent) DoQuickRevive(data *protomsg.MsgBase) {
 	if player.(*gamecore.Player).MainUnit != nil {
 		player.(*gamecore.Player).MainUnit.QuickRevive = h2
 	}
+}
+
+func (a *GameScene1Agent) DoLookVedioSucc(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_LookVedioSucc{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	if player.(*gamecore.Player).MainUnit != nil {
+		player.(*gamecore.Player).MainUnit.LookViewGetDiamond = h2
+	}
+
 }
 
 //a.handles["CS_OutTeam"] = a.DoOutTeam

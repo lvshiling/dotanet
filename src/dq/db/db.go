@@ -224,6 +224,24 @@ func (a *DB) GetCharactersInfoByCharacterid(characterid int32, playersInfo *[]DB
 	return a.QueryAnything(sqlstr, playersInfo)
 }
 
+//获取角色信息通过多个characterid
+func (a *DB) GetCharactersInfoByCharacterids(characterid []int32, playersInfo *[]DB_CharacterInfo) error {
+	if len(characterid) <= 0 {
+		return nil
+	}
+	sqlstr := "SELECT * FROM characterinfo where"
+	rulestr := ""
+	for _, v := range characterid {
+		if len(rulestr) > 0 {
+			rulestr += " or"
+		}
+		rulestr = rulestr + " characterid=" + strconv.Itoa(int(v))
+	}
+	sqlstr += rulestr
+	log.Info("sql:%s")
+	return a.QueryAnything(sqlstr, playersInfo)
+}
+
 //创建角色
 func (a *DB) CreateCharacter(uid int32, name string, typeid int32) (error, int32) {
 
@@ -250,6 +268,66 @@ func (a *DB) CreateCharacter(uid int32, name string, typeid int32) (error, int32
 	err1 = tx.Commit()
 
 	return err1, int32(characterid)
+}
+
+//添加好友请求
+func (a *DB) AddFriendsRequest(mycharacterid int32, requestcid int32) error {
+	tx, e1 := a.Mydb.Begin()
+
+	for tx == nil || e1 != nil {
+		log.Info("AddFriendsRequest :%s", e1.Error())
+		time.Sleep(time.Millisecond * 2)
+		tx, e1 = a.Mydb.Begin()
+	}
+	sqlstr := "UPDATE characterinfo SET friendsrequest= CONCAT(friendsrequest,';" + strconv.Itoa(int(requestcid)) + "')"
+	sqlstr += " where characterid=?"
+
+	res, err1 := tx.Exec(sqlstr, mycharacterid)
+	if err1 != nil {
+		log.Info("err1 %s", err1.Error())
+		return tx.Rollback()
+	}
+	n, e := res.RowsAffected()
+	if n == 0 || e != nil {
+		if e != nil {
+			log.Info("AddFriendsRequest err %s", e.Error())
+		}
+
+		return tx.Rollback()
+	}
+
+	err1 = tx.Commit()
+	return err1
+}
+
+//添加好友
+func (a *DB) AddFriends(mycharacterid int32, requestcid int32) error {
+	tx, e1 := a.Mydb.Begin()
+
+	for tx == nil || e1 != nil {
+		log.Info("AddFriends :%s", e1.Error())
+		time.Sleep(time.Millisecond * 2)
+		tx, e1 = a.Mydb.Begin()
+	}
+	sqlstr := "UPDATE characterinfo SET friends= CONCAT(friends,';" + strconv.Itoa(int(requestcid)) + "')"
+	sqlstr += " where characterid=?"
+
+	res, err1 := tx.Exec(sqlstr, mycharacterid)
+	if err1 != nil {
+		log.Info("err1 %s", err1.Error())
+		return tx.Rollback()
+	}
+	n, e := res.RowsAffected()
+	if n == 0 || e != nil {
+		if e != nil {
+			log.Info("AddFriends err %s", e.Error())
+		}
+
+		return tx.Rollback()
+	}
+
+	err1 = tx.Commit()
+	return err1
 }
 
 //保存角色信息
@@ -292,6 +370,8 @@ func (a *DB) SaveCharacter(playerInfo DB_CharacterInfo) error {
 	datastring["continuitykillcount"] = playerInfo.ContinuityKillCount
 	datastring["diecount"] = playerInfo.DieCount
 	datastring["killgetgold"] = playerInfo.KillGetGold
+	datastring["friends"] = playerInfo.Friends
+	datastring["friendsrequest"] = playerInfo.FriendsRequest
 
 	sqlstr := "UPDATE characterinfo SET "
 	count := 0

@@ -35,6 +35,11 @@
         "Ip":"tcp(127.0.0.1:3306)",
         "NameAndPassword":"root:123456",
         "DataBaseName":"sheshe?charset=utf8"
+    },
+    "NormalInfo":{
+        //观看一次视频增加的砖石
+        "LookVedioAddDiamond":10
     }
+
 	
 }
