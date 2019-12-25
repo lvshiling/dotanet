@@ -54,6 +54,7 @@ type SceneFileData struct {
 	StartY         float32
 	EndX           float32
 	EndY           float32
+	IsOpen         int32 //1表示开放 2表示关闭
 	//StartX	StartY	EndX	EndY
 
 }

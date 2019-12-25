@@ -97,6 +97,10 @@ func (a *GameScene1Agent) Init() {
 	allscene := conf.GetAllScene()
 	for _, v := range allscene {
 		log.Info("scene:%d  %s", v.(*conf.SceneFileData).TypeID, v.(*conf.SceneFileData).ScenePath)
+		if v.(*conf.SceneFileData).IsOpen != 1 {
+			continue
+		}
+		log.Info("scene succ:%d ", v.(*conf.SceneFileData).TypeID)
 		scene := gamecore.CreateScene(v.(*conf.SceneFileData), a)
 		time.Sleep(time.Duration(33/len(allscene)) * time.Millisecond)
 		a.Scenes.Set(v.(*conf.SceneFileData).TypeID, scene)

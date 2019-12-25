@@ -123,6 +123,7 @@ func (this *Scene) Init() {
 	//场景分区数据 创建100个单位
 	createunitdata := conf.GetCreateUnitData(this.CreateUnit)
 	for _, v := range createunitdata.Units {
+		v.ReCreateTime = v.ReCreateTime + 60 //敌人单位+30秒重生时间
 		oneunit := this.CreateUnitByConf(v)
 		if oneunit != nil {
 			//item := NewItem(77)

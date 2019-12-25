@@ -182,13 +182,18 @@ func LoadConfig(Path string) {
 	}
 }
 
+type normalInfo struct {
+	LookVedioAddDiamond      int
+	WatchVedioMaxCountOneDay int
+}
+
 type Config struct {
 	GateInfo     gateInfo
 	LoginInfo    map[string]interface{}
 	HallInfo     map[string]interface{}
 	Game5GInfo   map[string]interface{}
 	DataBaseInfo map[string]interface{}
-	NormalInfo   map[string]interface{}
+	NormalInfo   normalInfo
 }
 type gateInfo struct {
 	ClientListenPort    string

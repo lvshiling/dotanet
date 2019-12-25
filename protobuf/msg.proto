@@ -274,9 +274,11 @@ message UnitDatas{
     int32   ReviveGold = 38;//复活需要的金币
     int32   ReviveDiamond = 39;//复活需要的砖石
     int32   Characterid = 40;//
-    repeated SkillDatas SD = 41;//技能数据
-    repeated BuffDatas BD = 42;//buff数据
-    repeated SkillDatas ISD = 43;//道具技能数据
+    int32   RemainWatchVedioCountToday = 41;//今日剩余观看视频次数
+    int32   WatchVedioAddDiamond = 42;//当前观看视频奖励砖石
+    repeated SkillDatas SD = 43;//技能数据
+    repeated BuffDatas BD = 44;//buff数据
+    repeated SkillDatas ISD = 45;//道具技能数据
 
     //单位状态(idle walk attack skill die)
     //各种buff状态(单位身上的buff 包括剩余时间)

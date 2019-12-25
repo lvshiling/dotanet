@@ -1372,7 +1372,8 @@ func (this *Unit) DoOtherCmd() {
 	lookvedio := this.LookViewGetDiamond
 	if lookvedio != nil {
 		this.LookViewGetDiamond = nil
-		this.Diamond += int32(conf.Conf.NormalInfo["LookVedioAddDiamond"].(float64))
+		this.Diamond += int32(conf.Conf.NormalInfo.LookVedioAddDiamond)
+		this.WatchVedioCountOneDay += 1
 	}
 }
 
@@ -1616,10 +1617,11 @@ type UnitProperty struct {
 	ReviveDiamond    int32   //立即复活需要的砖石
 
 	//击杀相关
-	KillCount           int32
-	ContinuityKillCount int32
-	DieCount            int32
-	KillGetGold         int32
+	KillCount             int32
+	ContinuityKillCount   int32
+	DieCount              int32
+	KillGetGold           int32
+	WatchVedioCountOneDay int32
 
 	UnitBaseProperty
 
@@ -2052,6 +2054,7 @@ func CreateUnitByPlayer(scene *Scene, player *Player, characterinfo *db.DB_Chara
 	unitre.ContinuityKillCount = characterinfo.ContinuityKillCount
 	unitre.DieCount = characterinfo.DieCount
 	unitre.KillGetGold = characterinfo.KillGetGold
+	unitre.WatchVedioCountOneDay = characterinfo.WatchVedioCountOneDay
 
 	unitre.InitPosition = vec2d.Vec2{float64(characterinfo.X), float64(characterinfo.Y)}
 
@@ -2233,6 +2236,8 @@ func (this *Unit) CheckGetExperienceDay() {
 		this.ContinuityKillCount = 0
 		this.DieCount = 0
 		this.KillGetGold = 0
+
+		this.WatchVedioCountOneDay = 0
 	}
 }
 
@@ -3944,10 +3949,12 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.Diamond = this.Diamond
 	this.ClientData.ReviveGold = this.ReviveGold
 	this.ClientData.ReviveDiamond = this.ReviveDiamond
-
+	this.ClientData.RemainWatchVedioCountToday = int32(conf.Conf.NormalInfo.WatchVedioMaxCountOneDay) - this.WatchVedioCountOneDay
+	this.ClientData.WatchVedioAddDiamond = int32(conf.Conf.NormalInfo.LookVedioAddDiamond)
 	if this.MyPlayer != nil {
 		this.ClientData.TeamID = this.MyPlayer.TeamID
 		this.ClientData.Characterid = this.MyPlayer.Characterid
+
 	}
 
 	//道具技能
@@ -4110,6 +4117,9 @@ func (this *Unit) FreshClientDataSub() {
 	this.ClientDataSub.Diamond = this.Diamond - this.ClientData.Diamond
 	this.ClientDataSub.ReviveGold = this.ReviveGold - this.ClientData.ReviveGold
 	this.ClientDataSub.ReviveDiamond = this.ReviveDiamond - this.ClientData.ReviveDiamond
+
+	this.ClientDataSub.RemainWatchVedioCountToday = int32(conf.Conf.NormalInfo.WatchVedioMaxCountOneDay) - this.WatchVedioCountOneDay - this.ClientData.RemainWatchVedioCountToday
+	this.ClientDataSub.WatchVedioAddDiamond = int32(conf.Conf.NormalInfo.LookVedioAddDiamond) - this.ClientData.WatchVedioAddDiamond
 
 	if this.MyPlayer != nil {
 		this.ClientDataSub.TeamID = this.MyPlayer.TeamID - this.ClientData.TeamID

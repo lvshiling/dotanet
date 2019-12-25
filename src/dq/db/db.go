@@ -372,6 +372,7 @@ func (a *DB) SaveCharacter(playerInfo DB_CharacterInfo) error {
 	datastring["killgetgold"] = playerInfo.KillGetGold
 	datastring["friends"] = playerInfo.Friends
 	datastring["friendsrequest"] = playerInfo.FriendsRequest
+	datastring["watchvediocountoneday"] = playerInfo.WatchVedioCountOneDay
 
 	sqlstr := "UPDATE characterinfo SET "
 	count := 0

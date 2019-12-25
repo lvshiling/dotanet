@@ -498,6 +498,7 @@ func (this *Player) GetDBData() *db.DB_CharacterInfo {
 	dbdata.ContinuityKillCount = this.MainUnit.ContinuityKillCount
 	dbdata.DieCount = this.MainUnit.DieCount
 	dbdata.KillGetGold = this.MainUnit.KillGetGold
+	dbdata.WatchVedioCountOneDay = this.MainUnit.WatchVedioCountOneDay
 
 	if this.CurScene != nil {
 		dbdata.SceneID = this.CurScene.TypeID
