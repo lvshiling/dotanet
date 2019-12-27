@@ -9,10 +9,24 @@ import (
 	//"dq/vec2d"
 	//	"net/http"
 	//	_ "net/http/pprof"
+	//	"dq/wordsfilter"
+	//	"fmt"
+	//	"os"
 )
 
 func main() {
 	//
+	//	ApplicationDir, _ := os.Getwd()
+
+	//	confPath := fmt.Sprintf("%s/bin/conf/words_filter.txt", ApplicationDir)
+
+	//	_, err := wordsfilter.WF.GenerateWithFile(confPath)
+	//	if err != nil {
+	//		log.Info("path:%s", err.Error())
+	//	} else {
+
+	//		log.Info("test:%s", wordsfilter.WF.DoReplace("毛主席 12332"))
+	//	}
 
 	// 性能分析
 	//	go func() {

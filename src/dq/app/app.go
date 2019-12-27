@@ -37,6 +37,7 @@ import (
 	"dq/log"
 	"dq/login"
 	"dq/model"
+	"dq/wordsfilter"
 	"errors"
 	"math/rand"
 	"strings"
@@ -146,6 +147,7 @@ func (app *DefaultApp) Run() error {
 	//	app.DatabaseOne.Do(db.CreateDB)
 	//	db.DbOne.AddFriendsRequest(543, 542)
 	//	log.Info("test")
+	wordsfilter.WF.GenerateWithFile("/bin/conf/words_filter.txt") //字符串过滤
 	conf.LoadScene("/bin/conf/SceneCollides.sc")
 	conf.LoadCreateUnit("/bin/conf/CreateUnits.sc")
 	conf.LoadStoreFileData() //加载商店信息

@@ -17,6 +17,7 @@ import (
 	"dq/protobuf"
 	//"dq/timer"
 	//"dq/vec2d"
+	"dq/wordsfilter"
 	"sync"
 
 	"github.com/golang/protobuf/proto"
@@ -654,6 +655,10 @@ func (a *GameScene1Agent) DoChatInfo(data *protomsg.MsgBase) {
 	if mainunit == nil {
 		return
 	}
+
+	//过滤非法字符
+	h2.Content = wordsfilter.WF.DoReplace(h2.Content)
+
 	////聊天频道 1附近 2全服 3私聊 4队伍
 	if h2.Channel == 1 {
 		if player.(*gamecore.Player).CurScene == nil {

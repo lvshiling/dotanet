@@ -7,6 +7,7 @@ import (
 	"dq/network"
 	"dq/protobuf"
 	"dq/utils"
+	"dq/wordsfilter"
 	"math/rand"
 	"net"
 	"time"
@@ -189,6 +190,20 @@ func (a *LoginAgent) DoSelectCharacter(data *protomsg.MsgBase) {
 	//检查是否是新创建角色
 	if h2.SelectCharacter.Characterid < 0 {
 		isNewCharacter = true
+
+		if wordsfilter.WF.DoContains(h2.SelectCharacter.Name) == true {
+			//含有非法字符
+			//回复客户端
+			data.ModeType = "Client"
+			data.Uid = (uid)
+			data.MsgType = "SC_SelectCharacterResult"
+			jd := &protomsg.SC_SelectCharacterResult{}
+			jd.Code = 0  //失败
+			jd.Error = 4 //非法字符
+			a.WriteMsgBytes(datamsg.NewMsg1Bytes(data, jd))
+			return
+		}
+
 		err, characterid = db.DbOne.CreateCharacter(data.Uid, h2.SelectCharacter.Name, h2.SelectCharacter.Typeid)
 		if err != nil {
 			//回复客户端
@@ -196,8 +211,8 @@ func (a *LoginAgent) DoSelectCharacter(data *protomsg.MsgBase) {
 			data.Uid = (uid)
 			data.MsgType = "SC_SelectCharacterResult"
 			jd := &protomsg.SC_SelectCharacterResult{}
-			jd.Code = 0 //失败
-			jd.Error = 3
+			jd.Code = 0  //失败
+			jd.Error = 3 //重名
 			a.WriteMsgBytes(datamsg.NewMsg1Bytes(data, jd))
 			return
 		}

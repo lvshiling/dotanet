@@ -148,7 +148,7 @@ func (this *Scene) Init() {
 	//创建道具
 	//this.CreateSceneItem(1, vec2d.Vec2{X: 34, Y: 84})
 	//创建道具
-	//this.CreateSceneItem(2, vec2d.Vec2{X: 36, Y: 84})
+	//this.CreateSceneItem(2, vec2d.Vec2{X: 28, Y: 84})
 
 	//	for i := 0; i < 4; i++ {
 	//		//创建英雄
