@@ -224,6 +224,24 @@ func (a *DB) GetCharactersInfoByCharacterid(characterid int32, playersInfo *[]DB
 	return a.QueryAnything(sqlstr, playersInfo)
 }
 
+//获取邮件信息信息通过多个邮件id
+func (a *DB) GetMailsInfoByids(id []int32, mailsInfo *[]DB_MailInfo) error {
+	if len(id) <= 0 {
+		return nil
+	}
+	sqlstr := "SELECT * FROM characterinfo where"
+	rulestr := ""
+	for _, v := range id {
+		if len(rulestr) > 0 {
+			rulestr += " or"
+		}
+		rulestr = rulestr + " id=" + strconv.Itoa(int(v))
+	}
+	sqlstr += rulestr
+	log.Info("sql:%s")
+	return a.QueryAnything(sqlstr, mailsInfo)
+}
+
 //获取角色信息通过多个characterid
 func (a *DB) GetCharactersInfoByCharacterids(characterid []int32, playersInfo *[]DB_CharacterInfo) error {
 	if len(characterid) <= 0 {
@@ -373,6 +391,7 @@ func (a *DB) SaveCharacter(playerInfo DB_CharacterInfo) error {
 	datastring["friends"] = playerInfo.Friends
 	datastring["friendsrequest"] = playerInfo.FriendsRequest
 	datastring["watchvediocountoneday"] = playerInfo.WatchVedioCountOneDay
+	datastring["mails"] = playerInfo.Mails
 
 	sqlstr := "UPDATE characterinfo SET "
 	count := 0
@@ -412,6 +431,84 @@ func (a *DB) SaveCharacter(playerInfo DB_CharacterInfo) error {
 	//log.Info("SaveCharacter:%s ---%d", sqlstr, playerInfo.Characterid)
 
 	res, err1 := tx.Exec(sqlstr, playerInfo.Characterid)
+	if err1 != nil {
+		log.Info("err1 %s", err1.Error())
+		return tx.Rollback()
+	}
+	n, e := res.RowsAffected()
+	if n == 0 || e != nil {
+		if e != nil {
+			log.Info("SaveCharacter err %s", e.Error())
+		}
+
+		return tx.Rollback()
+	}
+
+	err1 = tx.Commit()
+	return err1
+}
+
+//保存角色信息
+func (a *DB) SaveMail(mailInfo DB_MailInfo) error {
+	tx, e1 := a.Mydb.Begin()
+
+	for tx == nil || e1 != nil {
+		log.Info("SaveMail :%s", e1.Error())
+		time.Sleep(time.Millisecond * 2)
+		tx, e1 = a.Mydb.Begin()
+
+	}
+
+	//要存的数据
+	datastring := make(map[string]interface{})
+	datastring["id"] = mailInfo.Id
+	datastring["sendname"] = mailInfo.Sendname
+	datastring["title"] = mailInfo.Title
+	datastring["content"] = mailInfo.Content
+	datastring["recUid"] = mailInfo.RecUid
+	datastring["recCharacterid"] = mailInfo.RecCharacterid
+	datastring["date"] = mailInfo.Date
+	datastring["rewardstr"] = mailInfo.Rewardstr
+	datastring["getstate"] = mailInfo.Getstate
+
+	sqlstr := "UPDATE mail SET "
+	count := 0
+	for k, v := range datastring {
+
+		switch v.(type) {
+
+		case string:
+			sqlstr += k + "=" + "'" + v.(string) + "'"
+			break
+		case int:
+			sqlstr += k + "=" + strconv.Itoa(v.(int))
+			break
+		case int32:
+			sqlstr += k + "=" + strconv.Itoa(int(v.(int32)))
+			break
+		case int64:
+			sqlstr += k + "=" + strconv.Itoa(int(v.(int64)))
+			break
+		case float64:
+			sqlstr += k + "=" + strconv.FormatFloat(float64(v.(float64)), 'f', 4, 32)
+			break
+		case float32:
+			sqlstr += k + "=" + strconv.FormatFloat(float64(v.(float32)), 'f', 4, 32)
+			break
+		}
+		if count == len(datastring)-1 {
+
+		} else {
+			sqlstr += ","
+		}
+		count++
+
+	}
+	sqlstr += " where id=?"
+
+	//log.Info("SaveCharacter:%s ---%d", sqlstr, playerInfo.Characterid)
+
+	res, err1 := tx.Exec(sqlstr, mailInfo.Id)
 	if err1 != nil {
 		log.Info("err1 %s", err1.Error())
 		return tx.Rollback()

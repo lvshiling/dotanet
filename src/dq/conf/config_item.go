@@ -67,6 +67,15 @@ func InitItemDatas() {
 	//log.Info("----------2---------")
 }
 
+//:10000表示金币 10001表示砖石  其他表示道具ID
+//是否是背包道具
+func IsBagItem(typeid int32) bool {
+	if typeid != 10000 && typeid != 10001 {
+		return true
+	}
+	return false
+}
+
 //获取技能数据 通过技能ID和等级
 func GetItemData(typeid int32) *ItemData {
 	//log.Info("find unitfile:%d", typeid)

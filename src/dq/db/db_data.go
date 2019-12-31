@@ -1,5 +1,6 @@
 package db
 
+//玩家角色信息
 type DB_CharacterInfo struct {
 	Characterid           int32   `json:"characterid"`
 	Uid                   int32   `json:"uid"`
@@ -34,4 +35,18 @@ type DB_CharacterInfo struct {
 	Friends               string  `json:"friends"`
 	FriendsRequest        string  `json:"friendsrequest"`
 	WatchVedioCountOneDay int32   `json:"watchvediocountoneday"`
+	Mails                 string  `json:"mails"`
+}
+
+//角色邮件信息
+type DB_MailInfo struct {
+	Id             int32  `json:"id"`
+	Sendname       string `json:"sendname"`
+	Title          string `json:"title"`
+	Content        string `json:"content"`
+	RecUid         int32  `json:"recUid"`
+	RecCharacterid int32  `json:"recCharacterid"`
+	Date           string `json:"date"`
+	Rewardstr      string `json:"rewardstr"`
+	Getstate       int32  `json:"getstate"`
 }

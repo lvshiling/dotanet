@@ -47,6 +47,7 @@ type Player struct {
 	TeamID int32 //组队信息
 
 	MyFriends *Friends //好友
+	MyMails   *Mails   //邮件系统
 
 	BagInfo []*BagItem
 
@@ -385,6 +386,42 @@ func (this *Player) AddItem(typeid int32) bool {
 	return false
 }
 
+//获取道具到背包
+func (this Player) AddItem2Bag(typeid int32, count int32) bool {
+	this.lock.Lock()
+	defer this.lock.Unlock()
+	////:10000表示金币 10001表示砖石  其他表示道具ID
+	if typeid == 10000 {
+		//扣钱
+		this.MainUnit.Gold += count
+		return true
+	} else if typeid == 10001 {
+		this.MainUnit.Diamond += count
+		return true
+	}
+	for k, v := range this.BagInfo {
+		if v == nil {
+			item := &BagItem{}
+			item.Index = int32(k)
+			item.TypeID = typeid
+			this.BagInfo[k] = item
+			return true
+		}
+	}
+	return false
+}
+
+//获取背包空位
+func (this *Player) GetBagNilCount() int32 {
+	count := int32(0)
+	for _, v := range this.BagInfo {
+		if v == nil {
+			count++
+		}
+	}
+	return count
+}
+
 //拾取地面物品
 func (this *Player) SelectSceneItem(sceneitem *SceneItem) bool {
 	return this.AddItem(sceneitem.TypeID)
@@ -518,6 +555,12 @@ func (this *Player) GetDBData() *db.DB_CharacterInfo {
 		friends, friendsrequest := this.MyFriends.GetDBStr()
 		dbdata.Friends = friends
 		dbdata.FriendsRequest = friendsrequest
+	}
+
+	//邮件
+	if this.MyMails != nil {
+		mials := this.MyMails.GetDBStr()
+		dbdata.Mails = mials
 	}
 
 	//技能
@@ -833,6 +876,8 @@ func (this *Player) GoInScene(scene *Scene, datas []byte) {
 	this.LoadItemSkillCDFromDB(characterinfo.ItemSkillCDInfo)
 	//好友信息
 	this.MyFriends = NewFriends(characterinfo.Friends, characterinfo.FriendsRequest, this)
+	//邮件信息
+	this.MyMails = NewMails(characterinfo.Mails, this)
 
 	this.CurScene.PlayerGoin(this, &characterinfo)
 	//this.ReInit()
