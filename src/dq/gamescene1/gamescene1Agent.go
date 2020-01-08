@@ -94,6 +94,11 @@ func (a *GameScene1Agent) Init() {
 	a.handles["CS_AddFriendResponse"] = a.DoAddFriendResponse
 	a.handles["CS_GetFriendsList"] = a.DoGetFriendsList
 
+	//邮件相关
+	a.handles["CS_GetMailsList"] = a.DoGetMailsList
+	a.handles["CS_GetMailInfo"] = a.DoGetMailInfo
+	a.handles["CS_GetMailRewards"] = a.DoGetMailRewards
+
 	//创建场景
 	allscene := conf.GetAllScene()
 	for _, v := range allscene {
@@ -637,6 +642,57 @@ func (a *GameScene1Agent) DoGetFriendsList(data *protomsg.MsgBase) {
 
 	}
 	player.(*gamecore.Player).SendMsgToClient("SC_GetFriendsList", d1)
+}
+
+//邮件信息
+//邮件相关
+//	a.handles["CS_GetMailsList"] = a.DoGetMailsList
+//	a.handles["CS_GetMailInfo"] = a.DoGetMailInfo
+//	a.handles["CS_GetMailRewards"] = a.DoGetMailRewards
+func (a *GameScene1Agent) DoGetMailRewards(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_GetMailRewards{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil || player.(*gamecore.Player).MyMails == nil {
+		return
+	}
+	mail := player.(*gamecore.Player).MyMails.GetMailRewards(h2.Id)
+
+	player.(*gamecore.Player).SendMsgToClient("SC_GetMailRewards", mail)
+}
+func (a *GameScene1Agent) DoGetMailInfo(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_GetMailInfo{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil || player.(*gamecore.Player).MyMails == nil {
+		return
+	}
+	mail := player.(*gamecore.Player).MyMails.GetOneMailInfo(h2.Id)
+
+	player.(*gamecore.Player).SendMsgToClient("SC_GetMailInfo", mail)
+}
+func (a *GameScene1Agent) DoGetMailsList(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_GetMailsList{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil || player.(*gamecore.Player).MyMails == nil {
+		return
+	}
+	mails := player.(*gamecore.Player).MyMails.GetMailsList()
+
+	player.(*gamecore.Player).SendMsgToClient("SC_GetMailsList", mails)
 }
 
 //聊天信息

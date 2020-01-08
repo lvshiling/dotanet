@@ -1,13 +1,14 @@
 package gamecore
 
 import (
-	"dq/conf"
+	//"dq/conf"
 	"dq/db"
 	"dq/log"
 	"dq/protobuf"
 	"dq/utils"
 	"encoding/json"
 	"strconv"
+	"sync"
 )
 
 //ItemType:10000表示金币 10001表示砖石  其他表示道具ID
@@ -22,7 +23,8 @@ type MailInfo struct {
 
 type Mails struct {
 	MyPlayer    *Player       //载体
-	MyMailsInfo *utils.BeeMap //好友
+	MyMailsInfo *utils.BeeMap //邮件信息
+	lock        *sync.RWMutex //同步操作锁
 }
 
 //获取邮件信息字符串
@@ -46,6 +48,7 @@ func (this *Mails) GetMailsList() *protomsg.SC_GetMailsList {
 		msim.SendName = v.(*MailInfo).Sendname
 		msim.Title = v.(*MailInfo).Title
 		msim.State = v.(*MailInfo).Getstate
+		msim.Date = v.(*MailInfo).Date
 		msg.Mails = append(msg.Mails, msim)
 	}
 	return msg
@@ -61,6 +64,7 @@ func (this *Mails) GetOneMailInfo(id int32) *protomsg.SC_GetMailInfo {
 		msg.Title = oneinfo.(*MailInfo).Title
 		msg.State = oneinfo.(*MailInfo).Getstate
 		msg.Content = oneinfo.(*MailInfo).Content
+		msg.Date = oneinfo.(*MailInfo).Date
 		msg.Rewards = make([]*protomsg.MailRewards, 0)
 		for _, v := range oneinfo.(*MailInfo).Reward {
 			onereward := &protomsg.MailRewards{}
@@ -75,6 +79,9 @@ func (this *Mails) GetOneMailInfo(id int32) *protomsg.SC_GetMailInfo {
 //领取邮件奖励
 func (this *Mails) GetMailRewards(id int32) *protomsg.SC_GetMailRewards {
 
+	this.lock.Lock()
+	defer this.lock.Unlock()
+
 	if this.MyPlayer == nil {
 		return nil
 	}
@@ -84,20 +91,17 @@ func (this *Mails) GetMailRewards(id int32) *protomsg.SC_GetMailRewards {
 	msg.Result = 0 //1表示成功 0表示失败
 	oneinfo := this.MyMailsInfo.Get(id)
 	if oneinfo != nil {
-		itemcount := int32(0)
-		for _, v := range oneinfo.(*MailInfo).Reward {
-			if conf.IsBagItem(v.ItemType) {
-				itemcount++
-			}
-		}
-		//检查背包空位是否足够
-		if this.MyPlayer.GetBagNilCount() < itemcount {
+
+		if oneinfo.(*MailInfo).Getstate == 1 {
+			//已经被领取
 			return msg
 		}
-		msg.Result = 1
-		for _, v := range oneinfo.(*MailInfo).Reward {
-			this.MyPlayer.AddItem2Bag(v.ItemType, v.Count)
+
+		if this.MyPlayer.AddItemS2Bag(oneinfo.(*MailInfo).Reward) == false {
+			return msg
 		}
+
+		msg.Result = 1
 		//已经被领取
 		oneinfo.(*MailInfo).Getstate = 1
 		db.DbOne.SaveMail(oneinfo.(*MailInfo).DB_MailInfo)
@@ -106,16 +110,48 @@ func (this *Mails) GetMailRewards(id int32) *protomsg.SC_GetMailRewards {
 	return msg
 }
 
+//测试邮件
+func (this *Mails) TestMail() {
+
+	if this.MyPlayer == nil {
+		return
+	}
+
+	mi := &MailInfo{}
+	mi.Sendname = "系统"
+	mi.Title = "测试"
+	mi.Content = "恭喜你获得以下道具:"
+	mi.RecUid = this.MyPlayer.Uid
+	mi.RecCharacterid = this.MyPlayer.Characterid
+	mi.Reward = make([]RewardsConfig, 0)
+	tt := RewardsConfig{ItemType: 10, Count: 1}
+	mi.Reward = append(mi.Reward, tt)
+	tt1 := RewardsConfig{ItemType: 10000, Count: 1000}
+	mi.Reward = append(mi.Reward, tt1)
+	tt2 := RewardsConfig{ItemType: 10001, Count: 100}
+	mi.Reward = append(mi.Reward, tt2)
+	rewards, _ := json.Marshal(mi.Reward)
+	mi.Rewardstr = string(rewards)
+	mi.Getstate = 0
+
+	db.DbOne.CreateAndSaveMail(&mi.DB_MailInfo)
+
+	this.MyMailsInfo.Set(mi.Id, mi)
+}
+
 //创建邮件系统
-func NewMails(mials string, myplayer *Player) *Mails {
-	log.Info("NewMails:%s ", mials)
+func NewMails(mialstr string, myplayer *Player) *Mails {
+	log.Info("NewMails:%s ", mialstr)
 
 	mails := &Mails{}
 	mails.MyMailsInfo = utils.NewBeeMap()
 	mails.MyPlayer = myplayer
+	mails.lock = new(sync.RWMutex)
+
+	//mails.TestMail()
 
 	//解析所有邮件
-	allmialsid := utils.GetInt32FromString3(mials, ";")
+	allmialsid := utils.GetInt32FromString3(mialstr, ";")
 	mialsinfo := make([]db.DB_MailInfo, 0)
 	db.DbOne.GetMailsInfoByids(allmialsid, &mialsinfo)
 	for _, v := range mialsinfo {

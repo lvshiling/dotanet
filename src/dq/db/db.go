@@ -229,7 +229,7 @@ func (a *DB) GetMailsInfoByids(id []int32, mailsInfo *[]DB_MailInfo) error {
 	if len(id) <= 0 {
 		return nil
 	}
-	sqlstr := "SELECT * FROM characterinfo where"
+	sqlstr := "SELECT * FROM mail where"
 	rulestr := ""
 	for _, v := range id {
 		if len(rulestr) > 0 {
@@ -238,7 +238,7 @@ func (a *DB) GetMailsInfoByids(id []int32, mailsInfo *[]DB_MailInfo) error {
 		rulestr = rulestr + " id=" + strconv.Itoa(int(v))
 	}
 	sqlstr += rulestr
-	log.Info("sql:%s")
+	log.Info("sql:%s", sqlstr)
 	return a.QueryAnything(sqlstr, mailsInfo)
 }
 
@@ -272,6 +272,7 @@ func (a *DB) CreateCharacter(uid int32, name string, typeid int32) (error, int32
 
 	tx, _ := a.Mydb.Begin()
 
+	//a.Mydb.Exec()
 	//sqlstr :=
 
 	res, err1 := tx.Exec("INSERT characterinfo (uid,name,typeid) values (?,?,?)",
@@ -448,7 +449,40 @@ func (a *DB) SaveCharacter(playerInfo DB_CharacterInfo) error {
 	return err1
 }
 
-//保存角色信息
+//创建并保存邮件
+func (a *DB) CreateAndSaveMail(mailInfo *DB_MailInfo) {
+	_, id := a.CreateMail()
+	if id < 0 {
+		return
+	}
+
+	mailInfo.Id = id
+
+	a.SaveMail(*mailInfo)
+}
+
+//创建邮件
+func (a *DB) CreateMail() (error, int32) {
+	tx, _ := a.Mydb.Begin()
+
+	//a.Mydb.Exec()
+	//sqlstr :=
+	day := time.Now().Format("2006-01-02")
+
+	res, err1 := tx.Exec("INSERT mail (date) values (?)", day)
+	n, e := res.RowsAffected()
+	characterid, err2 := res.LastInsertId()
+	if err1 != nil || n == 0 || e != nil || err2 != nil {
+		log.Info("INSERT mail err")
+		return tx.Rollback(), -1
+	}
+
+	err1 = tx.Commit()
+
+	return err1, int32(characterid)
+}
+
+//保存邮件信息
 func (a *DB) SaveMail(mailInfo DB_MailInfo) error {
 	tx, e1 := a.Mydb.Begin()
 
@@ -467,7 +501,7 @@ func (a *DB) SaveMail(mailInfo DB_MailInfo) error {
 	datastring["content"] = mailInfo.Content
 	datastring["recUid"] = mailInfo.RecUid
 	datastring["recCharacterid"] = mailInfo.RecCharacterid
-	datastring["date"] = mailInfo.Date
+	//datastring["date"] = mailInfo.Date
 	datastring["rewardstr"] = mailInfo.Rewardstr
 	datastring["getstate"] = mailInfo.Getstate
 
@@ -516,7 +550,7 @@ func (a *DB) SaveMail(mailInfo DB_MailInfo) error {
 	n, e := res.RowsAffected()
 	if n == 0 || e != nil {
 		if e != nil {
-			log.Info("SaveCharacter err %s", e.Error())
+			log.Info("mail err %s", e.Error())
 		}
 
 		return tx.Rollback()

@@ -386,6 +386,45 @@ func (this *Player) AddItem(typeid int32) bool {
 	return false
 }
 
+//获取多个道具到背包[]RewardsConfig
+func (this Player) AddItemS2Bag(items []RewardsConfig) bool {
+	this.lock.Lock()
+	defer this.lock.Unlock()
+	itemcount := int32(0)
+	for _, v := range items {
+		if conf.IsBagItem(v.ItemType) {
+			itemcount++
+		}
+	}
+	//检查背包空位是否足够
+	if this.GetBagNilCount() < itemcount {
+		return false
+	}
+
+	for _, v := range items {
+		////:10000表示金币 10001表示砖石  其他表示道具ID
+		if v.ItemType == 10000 {
+			//扣钱
+			this.MainUnit.Gold += v.Count
+			continue
+		} else if v.ItemType == 10001 {
+			this.MainUnit.Diamond += v.Count
+			continue
+		}
+		for k, v1 := range this.BagInfo {
+			if v1 == nil {
+				item := &BagItem{}
+				item.Index = int32(k)
+				item.TypeID = v.ItemType
+				this.BagInfo[k] = item
+				break
+			}
+		}
+	}
+
+	return true
+}
+
 //获取道具到背包
 func (this Player) AddItem2Bag(typeid int32, count int32) bool {
 	this.lock.Lock()
