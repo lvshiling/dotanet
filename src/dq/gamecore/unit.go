@@ -1957,7 +1957,7 @@ func (this *Unit) CopyItem(unit *Unit) {
 	this.Items = make([]*Item, UnitEquitCount)
 	for _, v := range unit.Items {
 		if v != nil {
-			this.AddItem(v.Index, NewItem(v.TypeID))
+			this.AddItem(v.Index, NewItem(v.TypeID, v.Level))
 		}
 	}
 

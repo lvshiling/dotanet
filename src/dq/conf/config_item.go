@@ -92,9 +92,10 @@ func GetItemData(typeid int32) *ItemData {
 type ItemBaseData struct {
 	TypeID int32 //类型ID
 
-	Buffs  string //buff
-	Halos  string //halo
-	Skills string //skill
+	Buffs    string //buff
+	Halos    string //halo
+	Skills   string //skill
+	MaxLevel int32  //最高等级
 
 }
 

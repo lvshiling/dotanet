@@ -345,6 +345,7 @@ func (a *GameScene1Agent) SendBagInfo(player *gamecore.Player) {
 			equip := &protomsg.UnitEquip{}
 			equip.Pos = v.Index
 			equip.TypdID = v.TypeID
+			equip.Level = v.Level
 			msg.Equips = append(msg.Equips, equip)
 		}
 	}
@@ -400,6 +401,7 @@ func (a *GameScene1Agent) SendUnitInfo(unit *gamecore.Unit, player *gamecore.Pla
 		equip.Pos = int32(k)
 		if v != nil {
 			equip.TypdID = v.TypeID
+			equip.Level = v.Level
 		} else {
 			equip.TypdID = 0
 		}

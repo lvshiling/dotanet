@@ -15,6 +15,7 @@ import (
 type RewardsConfig struct {
 	ItemType int32
 	Count    int32
+	Level    int32
 }
 type MailInfo struct {
 	db.DB_MailInfo
@@ -70,6 +71,7 @@ func (this *Mails) GetOneMailInfo(id int32) *protomsg.SC_GetMailInfo {
 			onereward := &protomsg.MailRewards{}
 			onereward.ItemType = v.ItemType
 			onereward.Count = v.Count
+			onereward.Level = v.Level
 			msg.Rewards = append(msg.Rewards, onereward)
 		}
 	}
@@ -124,11 +126,11 @@ func (this *Mails) TestMail() {
 	mi.RecUid = this.MyPlayer.Uid
 	mi.RecCharacterid = this.MyPlayer.Characterid
 	mi.Reward = make([]RewardsConfig, 0)
-	tt := RewardsConfig{ItemType: 10, Count: 1}
+	tt := RewardsConfig{ItemType: 10, Count: 1, Level: 1}
 	mi.Reward = append(mi.Reward, tt)
-	tt1 := RewardsConfig{ItemType: 10000, Count: 1000}
+	tt1 := RewardsConfig{ItemType: 10000, Count: 1000, Level: 1}
 	mi.Reward = append(mi.Reward, tt1)
-	tt2 := RewardsConfig{ItemType: 10001, Count: 100}
+	tt2 := RewardsConfig{ItemType: 10001, Count: 100, Level: 1}
 	mi.Reward = append(mi.Reward, tt2)
 	rewards, _ := json.Marshal(mi.Reward)
 	mi.Rewardstr = string(rewards)
@@ -148,7 +150,7 @@ func NewMails(mialstr string, myplayer *Player) *Mails {
 	mails.MyPlayer = myplayer
 	mails.lock = new(sync.RWMutex)
 
-	//mails.TestMail()
+	mails.TestMail()
 
 	//解析所有邮件
 	allmialsid := utils.GetInt32FromString3(mialstr, ";")

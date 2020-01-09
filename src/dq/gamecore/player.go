@@ -26,6 +26,7 @@ var AutoSaveTime float32 = 10
 type BagItem struct {
 	TypeID int32 //类型
 	Index  int32 //位置索引
+	Level  int32 //等级
 }
 
 //道具技能CD
@@ -150,6 +151,11 @@ func (this *Player) LoadBagInfoFromDB(baginfo string) {
 		bagitem := &BagItem{}
 		bagitem.Index = item[0]
 		bagitem.TypeID = item[1]
+		if len(item) >= 3 { //等级
+			bagitem.Level = item[2]
+		} else {
+			bagitem.Level = 1
+		}
 		this.BagInfo[bagitem.Index] = bagitem
 
 	}
@@ -264,6 +270,7 @@ func (this *Player) ChangeItemPos(data *protomsg.CS_ChangeItemPos) {
 	log.Info("-------ChangeItemPos:%d  %d  %d  %d", data.SrcPos, data.DestPos, data.SrcType, data.DestType)
 
 	this.lock.Lock()
+	//1表示装备栏 2表示背包
 	if data.SrcType == 1 {
 		src := this.MainUnit.Items[data.SrcPos]
 		if data.DestType == 1 {
@@ -284,7 +291,7 @@ func (this *Player) ChangeItemPos(data *protomsg.CS_ChangeItemPos) {
 			//删除角色身上的装备
 			this.MainUnit.RemoveItem(data.SrcPos)
 			if dest != nil {
-				item := NewItem(dest.TypeID)
+				item := NewItem(dest.TypeID, dest.Level)
 				this.MainUnit.AddItem(data.SrcPos, item)
 			}
 			//删除背包道具
@@ -293,6 +300,7 @@ func (this *Player) ChangeItemPos(data *protomsg.CS_ChangeItemPos) {
 				item := &BagItem{}
 				item.Index = data.DestPos
 				item.TypeID = src.TypeID
+				item.Level = src.Level
 				this.BagInfo[data.DestPos] = item
 			}
 
@@ -306,7 +314,7 @@ func (this *Player) ChangeItemPos(data *protomsg.CS_ChangeItemPos) {
 			//删除角色身上的装备
 			this.MainUnit.RemoveItem(data.DestPos)
 			if src != nil {
-				item := NewItem(src.TypeID)
+				item := NewItem(src.TypeID, src.Level)
 				this.MainUnit.AddItem(data.DestPos, item)
 			}
 			//删除背包道具
@@ -315,20 +323,38 @@ func (this *Player) ChangeItemPos(data *protomsg.CS_ChangeItemPos) {
 				item := &BagItem{}
 				item.Index = data.SrcPos
 				item.TypeID = dest.TypeID
+				item.Level = dest.Level
 				this.BagInfo[data.SrcPos] = item
 			}
 		} else {
 			dest := this.BagInfo[data.DestPos]
-			//只交换位置
-
-			this.BagInfo[data.SrcPos] = dest
-			if this.BagInfo[data.SrcPos] != nil {
-				this.BagInfo[data.SrcPos].Index = data.SrcPos
-			}
-			//src.Index = data.DestPos
-			this.BagInfo[data.DestPos] = src
-			if this.BagInfo[data.DestPos] != nil {
-				this.BagInfo[data.DestPos].Index = data.DestPos
+			if src != nil && dest != nil && src.TypeID == dest.TypeID && src.Level == dest.Level {
+				//相同道具且等级相同为合成
+				maxlevel := int32(4)
+				itemdata := conf.GetItemData(dest.TypeID)
+				if itemdata != nil {
+					maxlevel = itemdata.MaxLevel
+				}
+				if dest.Level >= maxlevel {
+					//不能超过4级 21
+					this.SendNoticeWordToClient(21)
+				} else {
+					//合成成功 22
+					this.BagInfo[data.SrcPos] = nil
+					this.BagInfo[data.DestPos].Level++
+					this.SendNoticeWordToClient(22)
+				}
+			} else {
+				//只交换位置
+				this.BagInfo[data.SrcPos] = dest
+				if this.BagInfo[data.SrcPos] != nil {
+					this.BagInfo[data.SrcPos].Index = data.SrcPos
+				}
+				//src.Index = data.DestPos
+				this.BagInfo[data.DestPos] = src
+				if this.BagInfo[data.DestPos] != nil {
+					this.BagInfo[data.DestPos].Index = data.DestPos
+				}
 			}
 
 		}
@@ -356,7 +382,7 @@ func (this *Player) DestroyItem(data *protomsg.CS_DestroyItem) {
 }
 
 //获取道具
-func (this *Player) AddItem(typeid int32) bool {
+func (this *Player) AddItem(typeid int32, level int32) bool {
 	this.lock.Lock()
 	defer this.lock.Unlock()
 	if this.MainUnit == nil || this.MainUnit.Items == nil {
@@ -366,7 +392,7 @@ func (this *Player) AddItem(typeid int32) bool {
 	for _, v := range this.MainUnit.Items {
 		if v == nil {
 
-			item := NewItem(typeid)
+			item := NewItem(typeid, level)
 			this.MainUnit.AddItem(-1, item)
 			//this.lock.Unlock()
 			return true
@@ -377,6 +403,7 @@ func (this *Player) AddItem(typeid int32) bool {
 			item := &BagItem{}
 			item.Index = int32(k)
 			item.TypeID = typeid
+			item.Level = level
 			this.BagInfo[k] = item
 			//this.lock.Unlock()
 			return true
@@ -416,6 +443,7 @@ func (this Player) AddItemS2Bag(items []RewardsConfig) bool {
 				item := &BagItem{}
 				item.Index = int32(k)
 				item.TypeID = v.ItemType
+				item.Level = v.Level
 				this.BagInfo[k] = item
 				break
 			}
@@ -463,7 +491,7 @@ func (this *Player) GetBagNilCount() int32 {
 
 //拾取地面物品
 func (this *Player) SelectSceneItem(sceneitem *SceneItem) bool {
-	return this.AddItem(sceneitem.TypeID)
+	return this.AddItem(sceneitem.TypeID, 1)
 }
 
 //遍历删除无效的
@@ -491,7 +519,7 @@ func (this *Player) BuyItem(cominfo *conf.CommodityData) bool {
 		return false
 	}
 
-	if this.AddItem(cominfo.ItemID) == false {
+	if this.AddItem(cominfo.ItemID, cominfo.Level) == false {
 		//背包已满
 		this.SendNoticeWordToClient(7)
 		return false
@@ -612,37 +640,37 @@ func (this *Player) GetDBData() *db.DB_CharacterInfo {
 		if item1 == nil {
 			dbdata.Item1 = ""
 		} else {
-			dbdata.Item1 = strconv.Itoa(int(item1.TypeID))
+			dbdata.Item1 = strconv.Itoa(int(item1.TypeID)) + "," + strconv.Itoa(int(item1.Level))
 		}
 		item2 := this.MainUnit.Items[1]
 		if item2 == nil {
 			dbdata.Item2 = ""
 		} else {
-			dbdata.Item2 = strconv.Itoa(int(item2.TypeID))
+			dbdata.Item2 = strconv.Itoa(int(item2.TypeID)) + "," + strconv.Itoa(int(item2.Level))
 		}
 		item3 := this.MainUnit.Items[2]
 		if item3 == nil {
 			dbdata.Item3 = ""
 		} else {
-			dbdata.Item3 = strconv.Itoa(int(item3.TypeID))
+			dbdata.Item3 = strconv.Itoa(int(item3.TypeID)) + "," + strconv.Itoa(int(item3.Level))
 		}
 		item4 := this.MainUnit.Items[3]
 		if item4 == nil {
 			dbdata.Item4 = ""
 		} else {
-			dbdata.Item4 = strconv.Itoa(int(item4.TypeID))
+			dbdata.Item4 = strconv.Itoa(int(item4.TypeID)) + "," + strconv.Itoa(int(item4.Level))
 		}
 		item5 := this.MainUnit.Items[4]
 		if item5 == nil {
 			dbdata.Item5 = ""
 		} else {
-			dbdata.Item5 = strconv.Itoa(int(item5.TypeID))
+			dbdata.Item5 = strconv.Itoa(int(item5.TypeID)) + "," + strconv.Itoa(int(item5.Level))
 		}
 		item6 := this.MainUnit.Items[5]
 		if item6 == nil {
 			dbdata.Item6 = ""
 		} else {
-			dbdata.Item6 = strconv.Itoa(int(item6.TypeID))
+			dbdata.Item6 = strconv.Itoa(int(item6.TypeID)) + "," + strconv.Itoa(int(item6.Level))
 		}
 	}
 
@@ -650,7 +678,7 @@ func (this *Player) GetDBData() *db.DB_CharacterInfo {
 	baginfo := ""
 	for _, v := range this.BagInfo {
 		if v != nil {
-			itemstr := strconv.Itoa(int(v.Index)) + "," + strconv.Itoa(int(v.TypeID)) + ";"
+			itemstr := strconv.Itoa(int(v.Index)) + "," + strconv.Itoa(int(v.TypeID)) + "," + strconv.Itoa(int(v.Level)) + ";"
 			baginfo += itemstr
 		}
 	}

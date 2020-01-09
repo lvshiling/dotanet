@@ -16,6 +16,7 @@ type Item struct {
 
 	UnitHalos []*Halo //单位身上的halo
 	Index     int32   //位置索引
+	Level     int32   //等级
 }
 
 //删除道具的属性到单位身上
@@ -57,13 +58,13 @@ func (this *Item) SetIndex(index int32) {
 //添加道具的属性到单位身上
 func (this *Item) Add2Unit(unit *Unit, index int32) {
 	this.Parent = unit
-	this.UnitBuffs = unit.AddBuffFromStr(this.Buffs, 1, unit)
+	this.UnitBuffs = unit.AddBuffFromStr(this.Buffs, this.Level, unit)
 	this.Index = index
 
 	//技能
 	skills := utils.GetInt32FromString3(this.Skills, ",")
 	for _, v := range skills {
-		skill := NewOneSkill(v, 1, unit)
+		skill := NewOneSkill(v, this.Level, unit)
 		//幻象且幻象不继承技能
 
 		if skill != nil {
@@ -82,7 +83,7 @@ func (this *Item) Add2Unit(unit *Unit, index int32) {
 	}
 
 	//光环
-	this.UnitHalos = unit.AddHaloFromStr(this.Halos, 1, nil)
+	this.UnitHalos = unit.AddHaloFromStr(this.Halos, this.Level, nil)
 
 	//
 
@@ -111,13 +112,19 @@ func NewItemFromDB(dbdata string) *Item {
 	item.UnitBuffs = make([]*Buff, 0)
 	item.UnitSkills = make([]*Skill, 0)
 	item.ItemData = *itemdata
+
+	if len(param) >= 2 {
+		item.Level = int32(param[1])
+	} else {
+		item.Level = 1
+	}
 	//item.ScenePosition = vec2d.Vec2{X: 0, Y: 0}
 	//item.Parent = parent
 	return item
 }
 
 //创建buf
-func NewItem(typeid int32) *Item {
+func NewItem(typeid int32, level int32) *Item {
 
 	itemdata := conf.GetItemData(typeid)
 	if itemdata == nil {
@@ -128,6 +135,7 @@ func NewItem(typeid int32) *Item {
 	item.UnitBuffs = make([]*Buff, 0)
 	item.UnitSkills = make([]*Skill, 0)
 	item.ItemData = *itemdata
+	item.Level = level
 	//item.ScenePosition = vec2d.Vec2{X: 0, Y: 0}
 	//item.Parent = parent
 	return item

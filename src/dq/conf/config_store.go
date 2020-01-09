@@ -53,6 +53,7 @@ func GetStoreData2SC_StoreData() *protomsg.SC_StoreData {
 		one.ItemID = v.(*CommodityData).ItemID
 		one.PriceType = v.(*CommodityData).PriceType
 		one.Price = v.(*CommodityData).Price
+		one.Level = v.(*CommodityData).Level
 		re.Commoditys = append(re.Commoditys, one)
 	}
 
@@ -64,6 +65,7 @@ type CommodityData struct {
 	//配置文件数据
 	TypeID    int32 //商品ID
 	ItemID    int32 //道具ID
+	Level     int32 //道具等级
 	PriceType int32 //价格类型 1金币 2砖石
 	Price     int32 //价格
 	IsSell    int32 //是否售卖 1:卖  2:不卖

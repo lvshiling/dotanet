@@ -57,6 +57,7 @@ message CS_UseAI{
 message UnitEquip{
     int32 Pos = 1;//位置
     int32 TypdID = 2;//类型id
+    int32 Level = 3;//等级
 }
 
 //单位面板详细信息
@@ -396,6 +397,7 @@ message CommodityDataProto{
     int32 ItemID = 2;    //道具ID
     int32 PriceType = 3; //价格类型 1金币 2砖石
     int32 Price = 4;    //价格
+    int32 Level = 5; //道具等级
 }
 //获取商店数据
 message CS_GetStoreData{
@@ -483,6 +485,7 @@ message MailShortInfoMsg{
 message MailRewards{
     int32 ItemType = 1;//道具类型ID
     int32 Count = 2;//数量
+    int32 Level = 3;//道具等级
 }
 
 //获取邮件列表
