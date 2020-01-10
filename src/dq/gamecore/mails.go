@@ -1,12 +1,13 @@
 package gamecore
 
 import (
-	//"dq/conf"
+	"dq/conf"
 	"dq/db"
 	"dq/log"
 	"dq/protobuf"
 	"dq/utils"
 	"encoding/json"
+	"sort"
 	"strconv"
 	"sync"
 )
@@ -150,10 +151,17 @@ func NewMails(mialstr string, myplayer *Player) *Mails {
 	mails.MyPlayer = myplayer
 	mails.lock = new(sync.RWMutex)
 
-	mails.TestMail()
+	//mails.TestMail()
 
 	//解析所有邮件
-	allmialsid := utils.GetInt32FromString3(mialstr, ";")
+	allmialsid := utils.GetIntFromString3(mialstr, ";")
+	//删除超过保存邮件上限的已经邮件
+	maxcount := (conf.Conf.NormalInfo.MailUpperLimit)
+	if len(allmialsid) > maxcount {
+		sort.Ints(allmialsid)
+		allmialsid = allmialsid[len(allmialsid)-maxcount:]
+	}
+
 	mialsinfo := make([]db.DB_MailInfo, 0)
 	db.DbOne.GetMailsInfoByids(allmialsid, &mialsinfo)
 	for _, v := range mialsinfo {

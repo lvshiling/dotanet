@@ -183,8 +183,9 @@ func LoadConfig(Path string) {
 }
 
 type normalInfo struct {
-	LookVedioAddDiamond      int
-	WatchVedioMaxCountOneDay int
+	LookVedioAddDiamond      int //观看视频获取砖石
+	WatchVedioMaxCountOneDay int //一天观看视频的最大次数
+	MailUpperLimit           int //邮件上限
 }
 
 type Config struct {

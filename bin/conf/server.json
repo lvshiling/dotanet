@@ -40,7 +40,8 @@
         //观看一次视频增加的砖石
         "LookVedioAddDiamond":12,
         //一天可以观看视频加砖石的最大次数
-        "WatchVedioMaxCountOneDay":50
+        "WatchVedioMaxCountOneDay":50,
+        "MailUpperLimit":40
     }
 
 	

@@ -225,7 +225,7 @@ func (a *DB) GetCharactersInfoByCharacterid(characterid int32, playersInfo *[]DB
 }
 
 //获取邮件信息信息通过多个邮件id
-func (a *DB) GetMailsInfoByids(id []int32, mailsInfo *[]DB_MailInfo) error {
+func (a *DB) GetMailsInfoByids(id []int, mailsInfo *[]DB_MailInfo) error {
 	if len(id) <= 0 {
 		return nil
 	}
