@@ -10,7 +10,7 @@ import (
 	"net"
 	"time"
 
-	//"dq/db"
+	"dq/db"
 	"dq/utils"
 	//"dq/cyward"
 	"dq/gamecore"
@@ -48,6 +48,7 @@ func (a *GameScene1Agent) Init() {
 
 	//初始化 组队信息
 	gamecore.TeamManagerObj.Init(a)
+	gamecore.ExchangeManagerObj.Init(a)
 
 	a.ServerName = datamsg.GameScene1
 
@@ -74,7 +75,7 @@ func (a *GameScene1Agent) Init() {
 	a.handles["CS_UseAI"] = a.DoUseAI
 
 	a.handles["CS_LookVedioSucc"] = a.DoLookVedioSucc
-
+	//队伍
 	a.handles["CS_OrganizeTeam"] = a.DoOrganizeTeam
 	a.handles["CS_ResponseOrgTeam"] = a.DoResponseOrgTeam
 	a.handles["CS_OutTeam"] = a.DoOutTeam
@@ -98,6 +99,14 @@ func (a *GameScene1Agent) Init() {
 	a.handles["CS_GetMailsList"] = a.DoGetMailsList
 	a.handles["CS_GetMailInfo"] = a.DoGetMailInfo
 	a.handles["CS_GetMailRewards"] = a.DoGetMailRewards
+
+	//交易所相关
+	a.handles["CS_GetExchangeShortCommoditys"] = a.DoGetExchangeShortCommoditys
+	a.handles["CS_GetExchangeDetailedCommoditys"] = a.DoGetExchangeDetailedCommoditys
+	a.handles["CS_BuyExchangeCommodity"] = a.DoBuyExchangeCommodity
+	a.handles["CS_ShelfExchangeCommodity"] = a.DoShelfExchangeCommodity
+	a.handles["CS_GetSellUIInfo"] = a.DoGetSellUIInfo
+	a.handles["CS_UnShelfExchangeCommodity"] = a.DoUnShelfExchangeCommodity
 
 	//创建场景
 	allscene := conf.GetAllScene()
@@ -644,6 +653,134 @@ func (a *GameScene1Agent) DoGetFriendsList(data *protomsg.MsgBase) {
 
 	}
 	player.(*gamecore.Player).SendMsgToClient("SC_GetFriendsList", d1)
+}
+
+//交易所相关
+//a.handles["CS_GetExchangeShortCommoditys"] = a.DoGetExchangeShortCommoditys
+//	a.handles["CS_GetExchangeDetailedCommoditys"] = a.DoGetExchangeDetailedCommoditys
+//	a.handles["CS_BuyExchangeCommodity"] = a.DoBuyExchangeCommodity
+//	a.handles["CS_ShelfExchangeCommodity"] = a.DoShelfExchangeCommodity
+//a.handles["CS_GetSellUIInfo"] = a.DoGetSellUIInfo
+//a.handles["CS_UnShelfExchangeCommodity"] = a.DoUnShelfExchangeCommodity
+func (a *GameScene1Agent) DoUnShelfExchangeCommodity(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_UnShelfExchangeCommodity{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	gamecore.ExchangeManagerObj.UnShelfExchangeCommodity_Lock(h2.ID)
+	msg := player.(*gamecore.Player).GetSellUIInfo()
+	player.(*gamecore.Player).SendMsgToClient("SC_GetSellUIInfo", msg)
+}
+func (a *GameScene1Agent) DoGetSellUIInfo(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_GetSellUIInfo{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	msg := player.(*gamecore.Player).GetSellUIInfo()
+
+	player.(*gamecore.Player).SendMsgToClient("SC_GetSellUIInfo", msg)
+}
+func (a *GameScene1Agent) DoShelfExchangeCommodity(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_ShelfExchangeCommodity{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	ok, item := player.(*gamecore.Player).ShelfBagItem2Exchange(h2.BagPos)
+	if !ok || item == nil {
+		return
+	}
+	//	ItemID            int32   `json:"itemid"`
+	//	Level             int32   `json:"level"`
+	//	PriceType         int32   `json:"pricetype"`         //价格类型 1金币 2砖石
+	//	Price             int32   `json:"price"`             //价格
+	//	SellerUid         int32   `json:"sellerUid"`         //卖家UID(账号ID)
+	//	SellerCharacterid int32   `json:"sellerCharacterid"` //卖家角色ID
+	dataitem := &db.DB_PlayerItemTransactionInfo{}
+	dataitem.ItemID = item.TypeID
+	dataitem.Level = item.Level
+	dataitem.PriceType = h2.PriceType
+	dataitem.Price = h2.Price
+	dataitem.SellerUid = data.Uid
+	dataitem.SellerCharacterid = player.(*gamecore.Player).Characterid
+	//data *db.DB_PlayerItemTransactionInfo
+	gamecore.ExchangeManagerObj.ShelfExchangeCommodity(dataitem)
+
+	//发送玩家售卖UI信息
+	msg := player.(*gamecore.Player).GetSellUIInfo()
+	player.(*gamecore.Player).SendMsgToClient("SC_GetSellUIInfo", msg)
+
+}
+func (a *GameScene1Agent) DoBuyExchangeCommodity(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_BuyExchangeCommodity{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	commodityv := gamecore.ExchangeManagerObj.Commoditys.Get(h2.ID)
+	if commodityv == nil {
+		return
+	}
+	commodity := commodityv.(*db.DB_PlayerItemTransactionInfo)
+	ok := gamecore.ExchangeManagerObj.BuyExchangeCommodity(h2, player.(*gamecore.Player))
+	if ok {
+		//购买成功后重新发送界面信息
+		mail := gamecore.ExchangeManagerObj.GetExchangeDetailedCommoditys(commodity.ItemID)
+		player.(*gamecore.Player).SendMsgToClient("SC_GetExchangeDetailedCommoditys", mail)
+	}
+
+}
+func (a *GameScene1Agent) DoGetExchangeDetailedCommoditys(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_GetExchangeDetailedCommoditys{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	mail := gamecore.ExchangeManagerObj.GetExchangeDetailedCommoditys(h2.ItemID)
+
+	player.(*gamecore.Player).SendMsgToClient("SC_GetExchangeDetailedCommoditys", mail)
+}
+func (a *GameScene1Agent) DoGetExchangeShortCommoditys(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_GetExchangeShortCommoditys{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	mail := gamecore.ExchangeManagerObj.GetExchangeShortCommoditys()
+
+	player.(*gamecore.Player).SendMsgToClient("SC_GetExchangeShortCommoditys", mail)
 }
 
 //邮件信息

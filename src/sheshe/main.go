@@ -14,7 +14,14 @@ import (
 	//	"os"
 )
 
+//func test(t interface{}) int32 {
+//	a := t.(int32)
+//	return a
+
+//}
+
 func main() {
+	//log.Info("test:%d", test(30))
 	//
 	//	ApplicationDir, _ := os.Getwd()
 

@@ -183,9 +183,14 @@ func LoadConfig(Path string) {
 }
 
 type normalInfo struct {
-	LookVedioAddDiamond      int //观看视频获取砖石
-	WatchVedioMaxCountOneDay int //一天观看视频的最大次数
-	MailUpperLimit           int //邮件上限
+	LookVedioAddDiamond       int     //观看视频获取砖石
+	WatchVedioMaxCountOneDay  int     //一天观看视频的最大次数
+	MailUpperLimit            int     //邮件上限
+	ShelfExchangeLimit        int     //上架道具到交易所上限
+	SellExchangeTax           float32 //成功卖出商品税收
+	ShelfExchangeFeePriceType int     //上架道具手续费价格类型
+	ShelfExchangeFeePrice     int     //上架道具手续费价格
+	AutoUnShelfTime           int     //自动下架时间(秒为单位)
 }
 
 type Config struct {

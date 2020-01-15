@@ -495,6 +495,7 @@ message CS_GetMailsList{
 //获取邮件列表
 message SC_GetMailsList{
     repeated MailShortInfoMsg Mails = 1;//邮件
+    int32 MailUpperLimit = 2;//邮件数量上限
     
 }
 //获取具体邮件信息
@@ -519,4 +520,71 @@ message CS_GetMailRewards{
 message SC_GetMailRewards{
     int32 Id = 1;//邮件ID
     int32 Result = 2;//1表示成功 0表示失败
+}
+
+//交易所相关
+//获取正在售卖的道具
+message CS_GetExchangeShortCommoditys{
+    int32 Id = 1;//
+}
+//正在售卖的道具数据
+message ExchangeShortCommodityData{
+    int32 ItemID = 1; //道具ID
+    int32 SellCount = 2;//售卖数量
+}
+//返回正在售卖的相同种类道具数据
+message SC_GetExchangeShortCommoditys{
+    repeated ExchangeShortCommodityData Commoditys = 1;//所有商品
+}
+//返回正在售卖的道具
+message CS_GetExchangeDetailedCommoditys{
+    int32 ItemID = 1;////道具ID
+}
+
+//商品数据
+//message CommodityDataProto{
+//    int32 TypeID = 1;    //商品ID
+//    int32 ItemID = 2;    //道具ID
+//    int32 PriceType = 3; //价格类型 1金币 2砖石
+//    int32 Price = 4;    //价格
+//    int32 Level = 5; //道具等级
+//}
+//正在售卖的道具数据
+message ExchangeDetailedCommodityData{
+    CommodityDataProto CommodityData = 1;//道具信息
+    int32 RemaindTime = 2;//剩余时间
+}
+//返回正在售卖的道具数据
+message SC_GetExchangeDetailedCommoditys{
+    repeated ExchangeDetailedCommodityData Commoditys = 1;//所有商品
+}
+
+//购买商品
+message CS_BuyExchangeCommodity{
+    int32 ID = 1;    //商品ID 
+}
+//上架商品(只能上架背包里面的道具)
+message CS_ShelfExchangeCommodity{
+    int32 BagPos = 1;    //背包里的位置
+    int32 PriceType = 2; //价格类型 10000金币 10001砖石
+    int32 Price = 3;    //价格
+}
+//下架商品()
+message CS_UnShelfExchangeCommodity{
+    int32 ID = 1;    //商品ID
+}
+
+//获取我要出售界面信息
+message CS_GetSellUIInfo{
+    int32 ID = 1;////
+}
+//获取我要出售界面信息
+message SC_GetSellUIInfo{
+    int32 ShelfExchangeLimit = 1;
+    float SellExchangeTax = 2;
+    int32 ShelfExchangeFeePriceType = 3;
+    int32 ShelfExchangeFeePrice = 4;
+    int32 AutoUnShelfTime = 5;
+    repeated ExchangeDetailedCommodityData Commoditys = 6;//我正在卖的商品
+    repeated UnitEquip Equips = 7;//装备 背包里可以卖的装备
 }

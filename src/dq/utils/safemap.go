@@ -127,6 +127,26 @@ func (m *BeeMap) Change(k interface{}, v interface{}) bool {
 	}
 	return true
 }
+func (m *BeeMap) AddInt2(k interface{}, addcount int) bool {
+	m.lock.Lock()
+	if _, ok := m.bm[k]; !ok {
+		m.bm[k] = addcount
+		m.size++
+		m.lock.Unlock()
+		return true
+	} else {
+		value, ok := m.bm[k].(int)
+		if ok {
+			m.bm[k] = value + addcount
+			m.lock.Unlock()
+			return true
+		}
+
+		m.lock.Unlock()
+		return false
+	}
+	return false
+}
 
 func (m *BeeMap) AddInt(k interface{}, addcount int) bool {
 	m.lock.Lock()

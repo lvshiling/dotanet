@@ -53,6 +53,7 @@ func (this *Mails) GetMailsList() *protomsg.SC_GetMailsList {
 		msim.Date = v.(*MailInfo).Date
 		msg.Mails = append(msg.Mails, msim)
 	}
+	msg.MailUpperLimit = int32(conf.Conf.NormalInfo.MailUpperLimit)
 	return msg
 }
 
@@ -113,34 +114,95 @@ func (this *Mails) GetMailRewards(id int32) *protomsg.SC_GetMailRewards {
 	return msg
 }
 
-//测试邮件
-func (this *Mails) TestMail() {
+//购买商品邮件
+func Create_UnShelfCommodityMail_Mail(itemid int32, level int32) *MailInfo {
+	mi := &MailInfo{}
+	mi.Sendname = "系统"
+	mi.Title = "返还道具"
+	mi.Content = "你在交易所上架的该道具现已下架返还给你:"
+
+	mi.Reward = make([]RewardsConfig, 0)
+	tt := RewardsConfig{ItemType: itemid, Count: 1, Level: level}
+	mi.Reward = append(mi.Reward, tt)
+	rewards, _ := json.Marshal(mi.Reward)
+	mi.Rewardstr = string(rewards)
+	mi.Getstate = 0
+	return mi
+}
+func (this *Mails) UnShelfCommodityMail(itemid int32, level int32) {
 
 	if this.MyPlayer == nil {
 		return
 	}
-
-	mi := &MailInfo{}
-	mi.Sendname = "系统"
-	mi.Title = "测试"
-	mi.Content = "恭喜你获得以下道具:"
+	mi := Create_UnShelfCommodityMail_Mail(itemid, level)
 	mi.RecUid = this.MyPlayer.Uid
 	mi.RecCharacterid = this.MyPlayer.Characterid
+
+	db.DbOne.CreateAndSaveMail(&mi.DB_MailInfo)
+	this.MyMailsInfo.Set(mi.Id, mi)
+}
+
+//购买商品邮件
+func Create_BuyCommodityMail_Mail(itemid int32, level int32) *MailInfo {
+	mi := &MailInfo{}
+	mi.Sendname = "系统"
+	mi.Title = "购买道具"
+	mi.Content = "恭喜你购得以下道具:"
+
 	mi.Reward = make([]RewardsConfig, 0)
-	tt := RewardsConfig{ItemType: 10, Count: 1, Level: 1}
+	tt := RewardsConfig{ItemType: itemid, Count: 1, Level: level}
 	mi.Reward = append(mi.Reward, tt)
-	tt1 := RewardsConfig{ItemType: 10000, Count: 1000, Level: 1}
-	mi.Reward = append(mi.Reward, tt1)
-	tt2 := RewardsConfig{ItemType: 10001, Count: 100, Level: 1}
-	mi.Reward = append(mi.Reward, tt2)
 	rewards, _ := json.Marshal(mi.Reward)
 	mi.Rewardstr = string(rewards)
 	mi.Getstate = 0
+	return mi
+}
+func (this *Mails) BuyCommodityMail(itemid int32, level int32) {
 
+	if this.MyPlayer == nil {
+		return
+	}
+	mi := Create_BuyCommodityMail_Mail(itemid, level)
+	mi.RecUid = this.MyPlayer.Uid
+	mi.RecCharacterid = this.MyPlayer.Characterid
+
+	db.DbOne.CreateAndSaveMail(&mi.DB_MailInfo)
+	this.MyMailsInfo.Set(mi.Id, mi)
+}
+
+//购买商品邮件
+func Create_SellCommodityMail_Mail(pricetype int32, price int32) *MailInfo {
+	mi := &MailInfo{}
+	mi.Sendname = "系统"
+	mi.Title = "售出道具"
+	mi.Content = "恭喜你通过售卖道具获得以下收入:"
+	mi.Reward = make([]RewardsConfig, 0)
+	tt := RewardsConfig{ItemType: pricetype, Count: price, Level: 1}
+	mi.Reward = append(mi.Reward, tt)
+	rewards, _ := json.Marshal(mi.Reward)
+	mi.Rewardstr = string(rewards)
+	mi.Getstate = 0
+	return mi
+}
+
+//售卖商品邮件
+func (this *Mails) SellCommodityMail(pricetype int32, price int32) {
+
+	if this.MyPlayer == nil {
+		return
+	}
+	mi := Create_SellCommodityMail_Mail(pricetype, price)
+	mi.RecUid = this.MyPlayer.Uid
+	mi.RecCharacterid = this.MyPlayer.Characterid
 	db.DbOne.CreateAndSaveMail(&mi.DB_MailInfo)
 
 	this.MyMailsInfo.Set(mi.Id, mi)
 }
+
+////售卖道具获利邮件
+//func SellItemMail(mailinfo MailInfo) {
+//	db.DbOne.CreateAndSaveMail(&mailinfo)
+//}
 
 //创建邮件系统
 func NewMails(mialstr string, myplayer *Player) *Mails {

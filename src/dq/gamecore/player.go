@@ -413,8 +413,73 @@ func (this *Player) AddItem(typeid int32, level int32) bool {
 	return false
 }
 
+//获取我要出售界面信息
+func (this *Player) GetSellUIInfo() *protomsg.SC_GetSellUIInfo {
+	this.lock.RLock()
+	defer this.lock.RUnlock()
+	data := &protomsg.SC_GetSellUIInfo{}
+	data.ShelfExchangeLimit = int32(conf.Conf.NormalInfo.ShelfExchangeLimit)
+	data.SellExchangeTax = float32(conf.Conf.NormalInfo.SellExchangeTax)
+	data.ShelfExchangeFeePriceType = int32(conf.Conf.NormalInfo.ShelfExchangeFeePriceType)
+	data.ShelfExchangeFeePrice = int32(conf.Conf.NormalInfo.ShelfExchangeFeePrice)
+	data.AutoUnShelfTime = int32(conf.Conf.NormalInfo.AutoUnShelfTime)
+	data.Commoditys = ExchangeManagerObj.GetPlayerSelling(this.Characterid)
+	data.Equips = make([]*protomsg.UnitEquip, 0)
+	for _, v := range this.BagInfo {
+		if v != nil {
+			equip := &protomsg.UnitEquip{}
+			equip.Pos = v.Index
+			equip.TypdID = v.TypeID
+			equip.Level = v.Level
+			data.Equips = append(data.Equips, equip)
+		}
+	}
+
+	return data
+}
+
+//上架道具到交易所
+func (this *Player) ShelfBagItem2Exchange(pos int32) (bool, *BagItem) {
+	this.lock.Lock()
+	defer this.lock.Unlock()
+
+	shouxufeiprice := int32(conf.Conf.NormalInfo.ShelfExchangeFeePrice)
+	shouxufeipricetype := int32(conf.Conf.NormalInfo.ShelfExchangeFeePriceType)
+
+	maxcount := int32(conf.Conf.NormalInfo.ShelfExchangeLimit)
+
+	if pos < 0 || pos >= MaxBagCount {
+		return false, nil
+	}
+	if this.MainUnit == nil {
+		return false, nil
+	}
+	item := this.BagInfo[pos]
+	if item == nil {
+		return false, nil
+	}
+	//是否超过售卖上限
+	if ExchangeManagerObj.GetPlayerSellingCount(this.Characterid) >= maxcount {
+		//操作上限
+		this.SendNoticeWordToClient(23)
+		return false, nil
+	}
+
+	//扣手续费
+	//手续费不足
+	if this.BuyItemSubMoney(shouxufeipricetype, shouxufeiprice) == false {
+		//货币不足
+		this.SendNoticeWordToClient(shouxufeipricetype)
+		return false, nil
+	}
+
+	//删除道具
+	this.BagInfo[pos] = nil
+	return true, item
+}
+
 //获取多个道具到背包[]RewardsConfig
-func (this Player) AddItemS2Bag(items []RewardsConfig) bool {
+func (this *Player) AddItemS2Bag(items []RewardsConfig) bool {
 	this.lock.Lock()
 	defer this.lock.Unlock()
 	itemcount := int32(0)
@@ -454,7 +519,7 @@ func (this Player) AddItemS2Bag(items []RewardsConfig) bool {
 }
 
 //获取道具到背包
-func (this Player) AddItem2Bag(typeid int32, count int32) bool {
+func (this *Player) AddItem2Bag(typeid int32, count int32) bool {
 	this.lock.Lock()
 	defer this.lock.Unlock()
 	////:10000表示金币 10001表示砖石  其他表示道具ID
@@ -505,6 +570,31 @@ func (this *Player) CheckOtherUnit() {
 	}
 
 }
+func (this *Player) BuyItemSubMoney(pricetype int32, price int32) bool {
+
+	//扣钱
+	if pricetype == 10000 {
+		if this.MainUnit.Gold >= price {
+			this.MainUnit.Gold -= price
+			return true
+		}
+
+	}
+	if pricetype == 10001 {
+		if this.MainUnit.Diamond >= price {
+			this.MainUnit.Diamond -= price
+			return true
+		}
+	}
+	return false
+}
+
+//买东西扣钱
+func (this *Player) BuyItemSubMoneyLock(pricetype int32, price int32) bool {
+	this.Buy.Lock()
+	defer this.Buy.Unlock()
+	return this.BuyItemSubMoney(pricetype, price)
+}
 
 //购买道具
 func (this *Player) BuyItem(cominfo *conf.CommodityData) bool {
@@ -515,7 +605,7 @@ func (this *Player) BuyItem(cominfo *conf.CommodityData) bool {
 	}
 	if this.CheckPrice(cominfo.PriceType, cominfo.Price) == false {
 		//货币不足
-		this.SendNoticeWordToClient(4 + cominfo.PriceType)
+		this.SendNoticeWordToClient(cominfo.PriceType)
 		return false
 	}
 
@@ -525,11 +615,10 @@ func (this *Player) BuyItem(cominfo *conf.CommodityData) bool {
 		return false
 	}
 	//扣钱
-	if cominfo.PriceType == 1 {
-		this.MainUnit.Gold -= cominfo.Price
-	}
-	if cominfo.PriceType == 2 {
-		this.MainUnit.Diamond -= cominfo.Price
+	if this.BuyItemSubMoney(cominfo.PriceType, cominfo.Price) == false {
+		//货币不足
+		this.SendNoticeWordToClient(cominfo.PriceType)
+		return false
 	}
 
 	//购买成功
@@ -545,7 +634,7 @@ func (this *Player) CheckPrice(pricetype int32, price int32) bool {
 		return false
 	}
 
-	if pricetype == 1 {
+	if pricetype == 10000 {
 		if this.MainUnit.Gold >= price {
 			return true
 		} else {
@@ -553,7 +642,7 @@ func (this *Player) CheckPrice(pricetype int32, price int32) bool {
 		}
 	}
 
-	if pricetype == 2 {
+	if pricetype == 10001 {
 		if this.MainUnit.Diamond >= price {
 			return true
 		} else {

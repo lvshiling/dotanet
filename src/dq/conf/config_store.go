@@ -66,7 +66,7 @@ type CommodityData struct {
 	TypeID    int32 //商品ID
 	ItemID    int32 //道具ID
 	Level     int32 //道具等级
-	PriceType int32 //价格类型 1金币 2砖石
+	PriceType int32 //价格类型 10000金币 10001砖石
 	Price     int32 //价格
 	IsSell    int32 //是否售卖 1:卖  2:不卖
 }

@@ -260,6 +260,14 @@ func (a *DB) GetCharactersInfoByCharacterids(characterid []int32, playersInfo *[
 	return a.QueryAnything(sqlstr, playersInfo)
 }
 
+//获取交易所信息
+func (a *DB) GetExchanges(commoditys *[]DB_PlayerItemTransactionInfo) error {
+
+	sqlstr := "SELECT * FROM exchange"
+
+	return a.QueryAnything(sqlstr, commoditys)
+}
+
 //创建角色
 func (a *DB) CreateCharacter(uid int32, name string, typeid int32) (error, int32) {
 
@@ -287,6 +295,36 @@ func (a *DB) CreateCharacter(uid int32, name string, typeid int32) (error, int32
 	err1 = tx.Commit()
 
 	return err1, int32(characterid)
+}
+
+//添加邮件ID
+func (a *DB) AddMail(mycharacterid int32, mailid int32) error {
+	tx, e1 := a.Mydb.Begin()
+
+	for tx == nil || e1 != nil {
+		log.Info("AddMail :%s", e1.Error())
+		time.Sleep(time.Millisecond * 2)
+		tx, e1 = a.Mydb.Begin()
+	}
+	sqlstr := "UPDATE characterinfo SET mails= CONCAT(mails,';" + strconv.Itoa(int(mailid)) + "')"
+	sqlstr += " where characterid=?"
+
+	res, err1 := tx.Exec(sqlstr, mycharacterid)
+	if err1 != nil {
+		log.Info("err1 %s", err1.Error())
+		return tx.Rollback()
+	}
+	n, e := res.RowsAffected()
+	if n == 0 || e != nil {
+		if e != nil {
+			log.Info("AddMail err %s", e.Error())
+		}
+
+		return tx.Rollback()
+	}
+
+	err1 = tx.Commit()
+	return err1
 }
 
 //添加好友请求
@@ -440,6 +478,127 @@ func (a *DB) SaveCharacter(playerInfo DB_CharacterInfo) error {
 	if n == 0 || e != nil {
 		if e != nil {
 			log.Info("SaveCharacter err %s", e.Error())
+		}
+
+		return tx.Rollback()
+	}
+
+	err1 = tx.Commit()
+	return err1
+}
+
+//创建并保存上架到交易所的道具
+func (a *DB) CreateAndSaveCommodity(mailInfo *DB_PlayerItemTransactionInfo) {
+	_, id := a.CreateCommodity()
+	if id < 0 {
+		return
+	}
+
+	mailInfo.Id = id
+
+	a.SaveCommodity(*mailInfo)
+}
+
+//创建商品
+func (a *DB) CreateCommodity() (error, int32) {
+	tx, _ := a.Mydb.Begin()
+	res, err1 := tx.Exec("INSERT exchange (level) values (?)", 1)
+	n, e := res.RowsAffected()
+	characterid, err2 := res.LastInsertId()
+	if err1 != nil || n == 0 || e != nil || err2 != nil {
+		log.Info("INSERT mail err")
+		return tx.Rollback(), -1
+	}
+
+	err1 = tx.Commit()
+
+	return err1, int32(characterid)
+}
+
+//删除商品
+func (a *DB) DeleteCommodity(id int32) error {
+	tx, _ := a.Mydb.Begin()
+	res, err1 := tx.Exec("DELETE FROM exchange WHERE id=" + strconv.Itoa(int(id)))
+	n, e := res.RowsAffected()
+	_, err2 := res.LastInsertId()
+	if err1 != nil || n == 0 || e != nil || err2 != nil {
+		log.Info("DeleteCommodity err")
+		return tx.Rollback()
+	}
+
+	err1 = tx.Commit()
+
+	return err1
+}
+
+//保存商品信息
+func (a *DB) SaveCommodity(mailInfo DB_PlayerItemTransactionInfo) error {
+	tx, e1 := a.Mydb.Begin()
+
+	for tx == nil || e1 != nil {
+		log.Info("SaveCommodity :%s", e1.Error())
+		time.Sleep(time.Millisecond * 2)
+		tx, e1 = a.Mydb.Begin()
+
+	}
+
+	//要存的数据
+	datastring := make(map[string]interface{})
+	datastring["id"] = mailInfo.Id
+	datastring["itemid"] = mailInfo.ItemID
+	datastring["level"] = mailInfo.Level
+	datastring["pricetype"] = mailInfo.PriceType
+	datastring["price"] = mailInfo.Price
+	datastring["sellerUid"] = mailInfo.SellerUid
+	datastring["sellerCharacterid"] = mailInfo.SellerCharacterid
+	datastring["shelftime"] = mailInfo.ShelfTime
+
+	sqlstr := "UPDATE exchange SET "
+	count := 0
+	for k, v := range datastring {
+
+		switch v.(type) {
+
+		case string:
+			sqlstr += k + "=" + "'" + v.(string) + "'"
+			break
+		case int:
+			sqlstr += k + "=" + strconv.Itoa(v.(int))
+			break
+		case int32:
+			sqlstr += k + "=" + strconv.Itoa(int(v.(int32)))
+			break
+		case int64:
+			sqlstr += k + "=" + strconv.Itoa(int(v.(int64)))
+			break
+		case float64:
+			sqlstr += k + "=" + strconv.FormatFloat(float64(v.(float64)), 'f', 4, 32)
+			break
+		case float32:
+			sqlstr += k + "=" + strconv.FormatFloat(float64(v.(float32)), 'f', 4, 32)
+			break
+		}
+		if count == len(datastring)-1 {
+
+		} else {
+			sqlstr += ","
+		}
+		count++
+
+	}
+	sqlstr += " where id=?"
+
+	//log.Info("SaveCharacter:%s ---%d", sqlstr, playerInfo.Characterid)
+
+	res, err1 := tx.Exec(sqlstr, mailInfo.Id)
+	if err1 != nil {
+		log.Info("err1 %s", err1.Error())
+		return tx.Rollback()
+	}
+	n, e := res.RowsAffected()
+	if n == 0 || e != nil {
+		if e != nil {
+			log.Info("mail err %s", e.Error())
 		}
 
 		return tx.Rollback()

@@ -50,3 +50,15 @@ type DB_MailInfo struct {
 	Rewardstr      string `json:"rewardstr"`
 	Getstate       int32  `json:"getstate"`
 }
+
+//玩家之间的物品交易
+type DB_PlayerItemTransactionInfo struct {
+	Id                int32 `json:"id"`
+	ItemID            int32 `json:"itemid"`
+	Level             int32 `json:"level"`
+	PriceType         int32 `json:"pricetype"`         //价格类型 1金币 2砖石
+	Price             int32 `json:"price"`             //价格
+	SellerUid         int32 `json:"sellerUid"`         //卖家UID(账号ID)
+	SellerCharacterid int32 `json:"sellerCharacterid"` //卖家角色ID
+	ShelfTime         int32 `json:"shelftime"`         //上架时间(秒)
+}

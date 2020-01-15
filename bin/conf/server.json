@@ -40,8 +40,18 @@
         //观看一次视频增加的砖石
         "LookVedioAddDiamond":12,
         //一天可以观看视频加砖石的最大次数
-        "WatchVedioMaxCountOneDay":50,
-        "MailUpperLimit":40
+        "WatchVedioMaxCountOneDay":10,
+        "MailUpperLimit":30,
+        //上架道具到交易所上限
+        "ShelfExchangeLimit":5,
+        //成功卖出商品税收
+        "SellExchangeTax":0.2,
+        //上架道具手续费价格类型
+        "ShelfExchangeFeePriceType":10000,
+        //上架道具手续费价格
+        "ShelfExchangeFeePrice":200,
+        //自动下架时间(秒为单位) 86400=1天
+        "AutoUnShelfTime":86400
     }
 
 	
