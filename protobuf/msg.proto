@@ -521,6 +521,11 @@ message SC_GetMailRewards{
     int32 Id = 1;//邮件ID
     int32 Result = 2;//1表示成功 0表示失败
 }
+//删除已经领取附件的邮件(没有附件)
+message CS_DeleteNoRewardMails{
+    int32 Id = 1;//ID
+}
+
 
 //交易所相关
 //获取正在售卖的道具

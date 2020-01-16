@@ -99,6 +99,7 @@ func (a *GameScene1Agent) Init() {
 	a.handles["CS_GetMailsList"] = a.DoGetMailsList
 	a.handles["CS_GetMailInfo"] = a.DoGetMailInfo
 	a.handles["CS_GetMailRewards"] = a.DoGetMailRewards
+	a.handles["CS_DeleteNoRewardMails"] = a.DoDeleteNoRewardMails
 
 	//交易所相关
 	a.handles["CS_GetExchangeShortCommoditys"] = a.DoGetExchangeShortCommoditys
@@ -788,6 +789,23 @@ func (a *GameScene1Agent) DoGetExchangeShortCommoditys(data *protomsg.MsgBase) {
 //	a.handles["CS_GetMailsList"] = a.DoGetMailsList
 //	a.handles["CS_GetMailInfo"] = a.DoGetMailInfo
 //	a.handles["CS_GetMailRewards"] = a.DoGetMailRewards
+//a.handles["CS_DeleteNoRewardMails"] = a.DoDeleteNoRewardMails
+func (a *GameScene1Agent) DoDeleteNoRewardMails(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_DeleteNoRewardMails{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil || player.(*gamecore.Player).MyMails == nil {
+		return
+	}
+	player.(*gamecore.Player).MyMails.DeleteNoRewardMails()
+	mails := player.(*gamecore.Player).MyMails.GetMailsList()
+
+	player.(*gamecore.Player).SendMsgToClient("SC_GetMailsList", mails)
+}
 func (a *GameScene1Agent) DoGetMailRewards(data *protomsg.MsgBase) {
 	h2 := &protomsg.CS_GetMailRewards{}
 	err := proto.Unmarshal(data.Datas, h2)

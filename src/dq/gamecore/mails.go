@@ -39,6 +39,18 @@ func (this *Mails) GetDBStr() string {
 	return mailsid
 }
 
+////删除已经领取附件的邮件(没有附件)
+func (this *Mails) DeleteNoRewardMails() bool {
+	all1 := this.MyMailsInfo.Items()
+	for k, v := range all1 {
+		//已经领取
+		if v.(*MailInfo).Getstate == 1 {
+			this.MyMailsInfo.Delete(k)
+		}
+	}
+	return true
+}
+
 //获取邮件列表
 func (this *Mails) GetMailsList() *protomsg.SC_GetMailsList {
 	msg := &protomsg.SC_GetMailsList{}
