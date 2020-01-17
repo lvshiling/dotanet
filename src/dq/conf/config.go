@@ -182,15 +182,31 @@ func LoadConfig(Path string) {
 	}
 }
 
+//获取当前观看视频可以得到的砖石数
+func GetCurLookVedioAddDiamond(lookcount int32) int32 {
+
+	if int32(Conf.NormalInfo.WatchVedioMaxCountOneDay) <= lookcount {
+		return 0
+	}
+
+	addDiamond := int32(Conf.NormalInfo.LookVedioAddDiamond) - int32(Conf.NormalInfo.LookVedioAddDiamondDecay)*lookcount
+	if addDiamond <= int32(Conf.NormalInfo.LookVedioAddDiamondMinValue) {
+		return int32(Conf.NormalInfo.LookVedioAddDiamondMinValue)
+	}
+	return addDiamond
+}
+
 type normalInfo struct {
-	LookVedioAddDiamond       int     //观看视频获取砖石
-	WatchVedioMaxCountOneDay  int     //一天观看视频的最大次数
-	MailUpperLimit            int     //邮件上限
-	ShelfExchangeLimit        int     //上架道具到交易所上限
-	SellExchangeTax           float32 //成功卖出商品税收
-	ShelfExchangeFeePriceType int     //上架道具手续费价格类型
-	ShelfExchangeFeePrice     int     //上架道具手续费价格
-	AutoUnShelfTime           int     //自动下架时间(秒为单位)
+	LookVedioAddDiamond         int     //观看视频获取砖石
+	LookVedioAddDiamondDecay    int     //观看一次视频增加的砖石衰减
+	LookVedioAddDiamondMinValue int     //观看一次视频增加的砖石最小值
+	WatchVedioMaxCountOneDay    int     //一天观看视频的最大次数
+	MailUpperLimit              int     //邮件上限
+	ShelfExchangeLimit          int     //上架道具到交易所上限
+	SellExchangeTax             float32 //成功卖出商品税收
+	ShelfExchangeFeePriceType   int     //上架道具手续费价格类型
+	ShelfExchangeFeePrice       int     //上架道具手续费价格
+	AutoUnShelfTime             int     //自动下架时间(秒为单位)
 }
 
 type Config struct {

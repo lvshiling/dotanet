@@ -1372,8 +1372,9 @@ func (this *Unit) DoOtherCmd() {
 	lookvedio := this.LookViewGetDiamond
 	if lookvedio != nil {
 		this.LookViewGetDiamond = nil
-		this.Diamond += int32(conf.Conf.NormalInfo.LookVedioAddDiamond)
+		this.Diamond += conf.GetCurLookVedioAddDiamond(this.WatchVedioCountOneDay)
 		this.WatchVedioCountOneDay += 1
+
 	}
 }
 
@@ -3950,7 +3951,7 @@ func (this *Unit) FreshClientData() {
 	this.ClientData.ReviveGold = this.ReviveGold
 	this.ClientData.ReviveDiamond = this.ReviveDiamond
 	this.ClientData.RemainWatchVedioCountToday = int32(conf.Conf.NormalInfo.WatchVedioMaxCountOneDay) - this.WatchVedioCountOneDay
-	this.ClientData.WatchVedioAddDiamond = int32(conf.Conf.NormalInfo.LookVedioAddDiamond)
+	this.ClientData.WatchVedioAddDiamond = conf.GetCurLookVedioAddDiamond(this.WatchVedioCountOneDay)
 	if this.MyPlayer != nil {
 		this.ClientData.TeamID = this.MyPlayer.TeamID
 		this.ClientData.Characterid = this.MyPlayer.Characterid
@@ -4119,7 +4120,7 @@ func (this *Unit) FreshClientDataSub() {
 	this.ClientDataSub.ReviveDiamond = this.ReviveDiamond - this.ClientData.ReviveDiamond
 
 	this.ClientDataSub.RemainWatchVedioCountToday = int32(conf.Conf.NormalInfo.WatchVedioMaxCountOneDay) - this.WatchVedioCountOneDay - this.ClientData.RemainWatchVedioCountToday
-	this.ClientDataSub.WatchVedioAddDiamond = int32(conf.Conf.NormalInfo.LookVedioAddDiamond) - this.ClientData.WatchVedioAddDiamond
+	this.ClientDataSub.WatchVedioAddDiamond = conf.GetCurLookVedioAddDiamond(this.WatchVedioCountOneDay) - this.ClientData.WatchVedioAddDiamond
 
 	if this.MyPlayer != nil {
 		this.ClientDataSub.TeamID = this.MyPlayer.TeamID - this.ClientData.TeamID

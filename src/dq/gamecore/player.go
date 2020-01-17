@@ -394,6 +394,7 @@ func (this *Player) AddItem(typeid int32, level int32) bool {
 
 			item := NewItem(typeid, level)
 			this.MainUnit.AddItem(-1, item)
+			this.SendGetItemNotice(typeid, level)
 			//this.lock.Unlock()
 			return true
 		}
@@ -405,6 +406,7 @@ func (this *Player) AddItem(typeid int32, level int32) bool {
 			item.TypeID = typeid
 			item.Level = level
 			this.BagInfo[k] = item
+			this.SendGetItemNotice(typeid, level)
 			//this.lock.Unlock()
 			return true
 		}
@@ -490,6 +492,7 @@ func (this *Player) AddItemS2Bag(items []RewardsConfig) bool {
 	}
 	//检查背包空位是否足够
 	if this.GetBagNilCount() < itemcount {
+		this.SendNoticeWordToClient(7)
 		return false
 	}
 
@@ -510,6 +513,7 @@ func (this *Player) AddItemS2Bag(items []RewardsConfig) bool {
 				item.TypeID = v.ItemType
 				item.Level = v.Level
 				this.BagInfo[k] = item
+				this.SendGetItemNotice(v.ItemType, v.Level)
 				break
 			}
 		}
@@ -518,30 +522,41 @@ func (this *Player) AddItemS2Bag(items []RewardsConfig) bool {
 	return true
 }
 
-//获取道具到背包
-func (this *Player) AddItem2Bag(typeid int32, count int32) bool {
-	this.lock.Lock()
-	defer this.lock.Unlock()
-	////:10000表示金币 10001表示砖石  其他表示道具ID
-	if typeid == 10000 {
-		//扣钱
-		this.MainUnit.Gold += count
-		return true
-	} else if typeid == 10001 {
-		this.MainUnit.Diamond += count
-		return true
+//发送获取道具提示
+func (this *Player) SendGetItemNotice(typeid int32, level int32) {
+	itemdata := conf.GetItemData(typeid)
+	if itemdata == nil {
+		return
 	}
-	for k, v := range this.BagInfo {
-		if v == nil {
-			item := &BagItem{}
-			item.Index = int32(k)
-			item.TypeID = typeid
-			this.BagInfo[k] = item
-			return true
-		}
-	}
-	return false
+	this.SendNoticeWordToClient(25, itemdata.ItemName, "lv."+strconv.Itoa(int(level)))
 }
+
+//获取道具到背包
+//func (this *Player) AddItem2Bag(typeid int32, count int32) bool {
+//	this.lock.Lock()
+//	defer this.lock.Unlock()
+//	////:10000表示金币 10001表示砖石  其他表示道具ID
+//	if typeid == 10000 {
+//		//扣钱
+//		this.MainUnit.Gold += count
+//		return true
+//	} else if typeid == 10001 {
+//		this.MainUnit.Diamond += count
+//		return true
+//	}
+//	for k, v := range this.BagInfo {
+//		if v == nil {
+//			item := &BagItem{}
+//			item.Index = int32(k)
+//			item.TypeID = typeid
+//			this.BagInfo[k] = item
+//			//
+//			this.SendGetItemNotice(typeid,1)
+//			return true
+//		}
+//	}
+//	return false
+//}
 
 //获取背包空位
 func (this *Player) GetBagNilCount() int32 {
