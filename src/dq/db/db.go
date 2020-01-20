@@ -268,6 +268,14 @@ func (a *DB) GetExchanges(commoditys *[]DB_PlayerItemTransactionInfo) error {
 	return a.QueryAnything(sqlstr, commoditys)
 }
 
+//获取公会信息
+func (a *DB) GetGuilds(commoditys *[]DB_GuildInfo) error {
+
+	sqlstr := "SELECT * FROM guild"
+
+	return a.QueryAnything(sqlstr, commoditys)
+}
+
 //创建角色
 func (a *DB) CreateCharacter(uid int32, name string, typeid int32) (error, int32) {
 
@@ -431,6 +439,10 @@ func (a *DB) SaveCharacter(playerInfo DB_CharacterInfo) error {
 	datastring["friendsrequest"] = playerInfo.FriendsRequest
 	datastring["watchvediocountoneday"] = playerInfo.WatchVedioCountOneDay
 	datastring["mails"] = playerInfo.Mails
+	datastring["guildid"] = playerInfo.GuildId
+	datastring["guildpinlevel"] = playerInfo.GuildPinLevel
+	datastring["guildpinexperience"] = playerInfo.GuildPinExperience
+	datastring["guildpost"] = playerInfo.GuildPost
 
 	sqlstr := "UPDATE characterinfo SET "
 	count := 0

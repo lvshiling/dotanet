@@ -48,7 +48,10 @@ func (a *GameScene1Agent) Init() {
 
 	//初始化 组队信息
 	gamecore.TeamManagerObj.Init(a)
+	//初始化 交易所信息
 	gamecore.ExchangeManagerObj.Init(a)
+	//初始化 公会信息
+	gamecore.GuildManagerObj.Init(a)
 
 	a.ServerName = datamsg.GameScene1
 

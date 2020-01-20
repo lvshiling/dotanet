@@ -47,8 +47,9 @@ type Player struct {
 
 	TeamID int32 //组队信息
 
-	MyFriends *Friends //好友
-	MyMails   *Mails   //邮件系统
+	MyFriends *Friends            //好友
+	MyMails   *Mails              //邮件系统
+	MyGuild   *GuildCharacterInfo //公会系统
 
 	BagInfo []*BagItem
 
@@ -733,6 +734,18 @@ func (this *Player) GetDBData() *db.DB_CharacterInfo {
 		mials := this.MyMails.GetDBStr()
 		dbdata.Mails = mials
 	}
+	//公会数据
+	if this.MyGuild != nil {
+		dbdata.GuildId = this.MyGuild.GuildId
+		dbdata.GuildPinLevel = this.MyGuild.PinLevel
+		dbdata.GuildPinExperience = this.MyGuild.PinExperience
+		dbdata.GuildPost = this.MyGuild.Post
+	} else {
+		dbdata.GuildId = 0
+		dbdata.GuildPinLevel = 1
+		dbdata.GuildPinExperience = 0
+		dbdata.GuildPost = 0
+	}
 
 	//技能
 	for _, v := range this.MainUnit.Skills {
@@ -1049,6 +1062,12 @@ func (this *Player) GoInScene(scene *Scene, datas []byte) {
 	this.MyFriends = NewFriends(characterinfo.Friends, characterinfo.FriendsRequest, this)
 	//邮件信息
 	this.MyMails = NewMails(characterinfo.Mails, this)
+	//公会信息
+	if characterinfo.GuildId > 0 {
+		this.MyGuild = NewGuildCharacterInfo(&characterinfo)
+	} else {
+		this.MyGuild = nil
+	}
 
 	this.CurScene.PlayerGoin(this, &characterinfo)
 	//this.ReInit()

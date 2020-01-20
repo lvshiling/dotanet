@@ -34,7 +34,7 @@ func (this *Friends) AddFriendData(id1 int32, data *FriendInfo) {
 	this.MyFriendsInfo.Set(id1, data)
 }
 
-//被请求加为好友
+//被加为好友
 func (this *Friends) AddFriendRequest(h2 *protomsg.CS_AddFriendRequest, friend *Player) {
 	if this.MyPlayer == nil {
 		return

@@ -593,3 +593,52 @@ message SC_GetSellUIInfo{
     repeated ExchangeDetailedCommodityData Commoditys = 6;//我正在卖的商品
     repeated UnitEquip Equips = 7;//装备 背包里可以卖的装备
 }
+
+//-------------公会相关------------
+//查看所有公会简短信息
+message CS_GetAllGuildsInfo{
+    int32 ID = 1;////
+}
+//公会简短信息
+message GuildShortInfo{
+    int32 ID = 1;//id
+    string Name = 2;//名字
+    int32 Level = 3;//等级
+    int32 Experience = 4;//经验值
+    int32 MaxExperience = 5;//最大经验值
+    int32 CharacterCount = 6;//当前成员数量
+    int32 MaxCount = 7;//最大成员数量
+    string PresidentName = 8;//会长名字
+    int32 Joinaudit = 9; //加入是否需要审批
+    int32 Joinlevellimit = 10;//加入等级限制
+}
+//返回所有公会信息
+message SC_GetAllGuildsInfo{
+    repeated GuildShortInfo Guilds = 1;//所有公会信息
+    int32 CreatePriceType = 2; //创建公会 价格类型 10000金币 10001砖石
+    int32 CreatePrice = 3;    //创建公会 价格 
+}
+//创建公会
+message CS_CreateGuild{
+    string Name = 1;//名字
+}
+//加入公会
+message CS_JoinGuild{
+    string UD = 1;//公会名字
+}
+//查看公会详情
+message CS_GetGuildInfo{
+    GuildShortInfo GuildBaseInfo = 1;//公会基本信息
+    repeated GuildChaInfo Characters = 2;//公会所有成员信息
+}
+//公会成员信息
+message GuildChaInfo{
+    int32 Uid = 1;
+    int32 Characterid = 2;
+    string Name = 3;
+    int32 Level = 4;
+    int32 Typeid = 5;
+    int32 PinLevel = 6;
+    int32 PinExperience = 7;
+    int32 Post = 8;
+}

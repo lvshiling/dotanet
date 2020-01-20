@@ -1,5 +1,7 @@
 package db
 
+//"encoding/json"
+
 //玩家角色信息
 type DB_CharacterInfo struct {
 	Characterid           int32   `json:"characterid"`
@@ -36,6 +38,10 @@ type DB_CharacterInfo struct {
 	FriendsRequest        string  `json:"friendsrequest"`
 	WatchVedioCountOneDay int32   `json:"watchvediocountoneday"`
 	Mails                 string  `json:"mails"`
+	GuildId               int32   `json:"guildid"`
+	GuildPinLevel         int32   `json:"guildpinlevel"`
+	GuildPinExperience    int32   `json:"guildpinexperience"`
+	GuildPost             int32   `json:"guildpost"`
 }
 
 //角色邮件信息
@@ -61,4 +67,18 @@ type DB_PlayerItemTransactionInfo struct {
 	SellerUid         int32 `json:"sellerUid"`         //卖家UID(账号ID)
 	SellerCharacterid int32 `json:"sellerCharacterid"` //卖家角色ID
 	ShelfTime         int32 `json:"shelftime"`         //上架时间(秒)
+}
+
+//公会数据
+type DB_GuildInfo struct {
+	Id                   int32  `json:"id"`
+	PresidentCharacterid int32  `json:"presidentCharacterid"`
+	Level                int32  `json:"level"`
+	Experience           int32  `json:"experience"`
+	Createday            string `json:"createday"`
+	Name                 string `json:"name"`
+	Notice               string `json:"notice"`
+	Joinaudit            int32  `json:"joinaudit"`
+	Joinlevellimit       int32  `json:"joinlevellimit"`
+	Characters           string `json:"characters"`
 }
