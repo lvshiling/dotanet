@@ -112,6 +112,12 @@ func (a *GameScene1Agent) Init() {
 	a.handles["CS_GetSellUIInfo"] = a.DoGetSellUIInfo
 	a.handles["CS_UnShelfExchangeCommodity"] = a.DoUnShelfExchangeCommodity
 
+	//公会相关
+	a.handles["CS_GetAllGuildsInfo"] = a.DoGetAllGuildsInfo
+	a.handles["CS_CreateGuild"] = a.DoCreateGuild
+	a.handles["CS_JoinGuild"] = a.DoJoinGuild
+	a.handles["CS_GetGuildInfo"] = a.DoGetGuildInfo
+
 	//创建场景
 	allscene := conf.GetAllScene()
 	for _, v := range allscene {
@@ -657,6 +663,71 @@ func (a *GameScene1Agent) DoGetFriendsList(data *protomsg.MsgBase) {
 
 	}
 	player.(*gamecore.Player).SendMsgToClient("SC_GetFriendsList", d1)
+}
+
+//公会相关
+//	a.handles["CS_GetAllGuildsInfo"] = a.DoGetAllGuildsInfo
+//	a.handles["CS_CreateGuild"] = a.DoCreateGuild
+//	a.handles["CS_JoinGuild"] = a.DoJoinGuild
+//	a.handles["CS_GetGuildInfo"] = a.DoGetGuildInfo
+func (a *GameScene1Agent) DoGetAllGuildsInfo(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_GetAllGuildsInfo{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+
+	msg := gamecore.GuildManagerObj.GetAllGuildsInfo()
+	player.(*gamecore.Player).SendMsgToClient("SC_GetAllGuildsInfo", msg)
+
+}
+func (a *GameScene1Agent) DoCreateGuild(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_CreateGuild{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	player.(*gamecore.Player).CreateGuild(h2)
+
+}
+
+//申请加入公会
+func (a *GameScene1Agent) DoJoinGuild(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_JoinGuild{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+
+}
+func (a *GameScene1Agent) DoGetGuildInfo(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_GetGuildInfo{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+	msg := gamecore.GuildManagerObj.GetGuildInfo(h2.ID)
+	player.(*gamecore.Player).SendMsgToClient("SC_GetGuildInfo", msg)
 }
 
 //交易所相关

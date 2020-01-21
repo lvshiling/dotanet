@@ -622,12 +622,15 @@ message SC_GetAllGuildsInfo{
 message CS_CreateGuild{
     string Name = 1;//名字
 }
-//加入公会
+//申请加入公会
 message CS_JoinGuild{
-    string UD = 1;//公会名字
+    string ID = 1;//公会ID
 }
 //查看公会详情
 message CS_GetGuildInfo{
+    int32 ID = 1;//公会ID
+}
+message SC_GetGuildInfo{
     GuildShortInfo GuildBaseInfo = 1;//公会基本信息
     repeated GuildChaInfo Characters = 2;//公会所有成员信息
 }

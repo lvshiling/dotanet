@@ -276,6 +276,12 @@ func (a *DB) GetGuilds(commoditys *[]DB_GuildInfo) error {
 	return a.QueryAnything(sqlstr, commoditys)
 }
 
+//获取公会信息通过公会名字
+func (a *DB) GetGuildsInfoByName(name string, guildsInfo *[]DB_GuildInfo) error {
+	sqlstr := "SELECT * FROM guild where name=" + "'" + name + "'"
+	return a.QueryAnything(sqlstr, guildsInfo)
+}
+
 //创建角色
 func (a *DB) CreateCharacter(uid int32, name string, typeid int32) (error, int32) {
 
@@ -497,6 +503,22 @@ func (a *DB) SaveCharacter(playerInfo DB_CharacterInfo) error {
 
 	err1 = tx.Commit()
 	return err1
+}
+
+//创建公会
+func (a *DB) CreateGuild(name string) (error, int32) {
+	tx, _ := a.Mydb.Begin()
+	res, err1 := tx.Exec("INSERT guild (name) values (?)", name)
+	n, e := res.RowsAffected()
+	id, err2 := res.LastInsertId()
+	if err1 != nil || n == 0 || e != nil || err2 != nil {
+		log.Info("CreateGuild  err")
+		return tx.Rollback(), -1
+	}
+
+	err1 = tx.Commit()
+
+	return err1, int32(id)
 }
 
 //创建并保存上架到交易所的道具

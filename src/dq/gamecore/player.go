@@ -7,6 +7,7 @@ import (
 	"dq/log"
 	"dq/protobuf"
 	"dq/utils"
+	"dq/wordsfilter"
 	"strconv"
 	"strings"
 	"sync"
@@ -558,6 +559,53 @@ func (this *Player) SendGetItemNotice(typeid int32, level int32) {
 //	}
 //	return false
 //}
+
+//创建公会
+func (this *Player) CreateGuild(data *protomsg.CS_CreateGuild) {
+	//this.MyGuild = NewGuildCharacterInfo(&characterinfo)
+	if this.MyGuild != nil {
+		//已经有公会了
+		return
+	}
+	//含有非法字符
+	if wordsfilter.WF.DoContains(data.Name) == true {
+		this.SendNoticeWordToClient(26)
+		return
+	}
+	//
+	pricetype := int32(conf.Conf.NormalInfo.CreateGuildPriceType)
+	price := int32(conf.Conf.NormalInfo.CreateGuildPrice)
+	if this.BuyItemSubMoneyLock(pricetype, price) == false {
+		//钱不够
+		this.SendNoticeWordToClient(pricetype)
+		return
+	}
+	guildinfo := GuildManagerObj.CreateGuild(data.Name)
+	if guildinfo == nil {
+		//重名
+		this.SendNoticeWordToClient(27)
+		//还回已经扣除的钱
+		this.BuyItemSubMoneyLock(pricetype, 0-price)
+		return
+	}
+
+	//创建公会成功 (补上创始人ID)
+	guildinfo.PresidentCharacterid = this.Characterid
+	//角色创建的公会信息
+	characterinfo := db.DB_CharacterInfo{}
+	characterinfo.GuildId = guildinfo.Id
+	characterinfo.Uid = this.Uid
+	characterinfo.Characterid = this.Characterid
+	if this.MainUnit != nil {
+		characterinfo.Name = this.MainUnit.Name
+		characterinfo.Level = this.MainUnit.Level
+		characterinfo.Typeid = this.MainUnit.TypeID
+	}
+	characterinfo.GuildPinLevel = int32(1)
+	characterinfo.GuildPinExperience = int32(0)
+	characterinfo.GuildPost = int32(10)
+	this.MyGuild = NewGuildCharacterInfo(&characterinfo)
+}
 
 //获取背包空位
 func (this *Player) GetBagNilCount() int32 {

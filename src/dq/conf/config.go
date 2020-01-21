@@ -207,6 +207,8 @@ type normalInfo struct {
 	ShelfExchangeFeePriceType   int     //上架道具手续费价格类型
 	ShelfExchangeFeePrice       int     //上架道具手续费价格
 	AutoUnShelfTime             int     //自动下架时间(秒为单位)
+	CreateGuildPriceType        int     //创建公会手续费价格类型
+	CreateGuildPrice            int     //创建公会手续费价格
 }
 
 type Config struct {

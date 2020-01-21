@@ -71,14 +71,15 @@ type DB_PlayerItemTransactionInfo struct {
 
 //公会数据
 type DB_GuildInfo struct {
-	Id                   int32  `json:"id"`
-	PresidentCharacterid int32  `json:"presidentCharacterid"`
-	Level                int32  `json:"level"`
-	Experience           int32  `json:"experience"`
-	Createday            string `json:"createday"`
-	Name                 string `json:"name"`
-	Notice               string `json:"notice"`
-	Joinaudit            int32  `json:"joinaudit"`
-	Joinlevellimit       int32  `json:"joinlevellimit"`
-	Characters           string `json:"characters"`
+	Id                    int32  `json:"id"`
+	PresidentCharacterid  int32  `json:"presidentCharacterid"`
+	Level                 int32  `json:"level"`
+	Experience            int32  `json:"experience"`
+	Createday             string `json:"createday"`
+	Name                  string `json:"name"`
+	Notice                string `json:"notice"`
+	Joinaudit             int32  `json:"joinaudit"`
+	Joinlevellimit        int32  `json:"joinlevellimit"`
+	Characters            string `json:"characters"`
+	RequestJoinCharacters string `json:"requestjoincharacters"`
 }

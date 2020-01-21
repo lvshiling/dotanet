@@ -55,7 +55,11 @@
         //上架道具手续费价格
         "ShelfExchangeFeePrice":200,
         //自动下架时间(秒为单位) 86400=1天
-        "AutoUnShelfTime":86400
+        "AutoUnShelfTime":86400,
+        //创建公会手续费价格类型
+        "CreateGuildPriceType":10001,
+        //创建公会手续费价格
+        "CreateGuildPrice":500
     }
 
 	
