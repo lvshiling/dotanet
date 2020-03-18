@@ -624,7 +624,7 @@ message CS_CreateGuild{
 }
 //申请加入公会
 message CS_JoinGuild{
-    string ID = 1;//公会ID
+    int32 ID = 1;//公会ID
 }
 //查看公会详情
 message CS_GetGuildInfo{

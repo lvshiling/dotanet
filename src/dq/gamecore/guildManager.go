@@ -171,6 +171,29 @@ func (this *GuildManager) CreateGuild(name string) *GuildInfo {
 
 }
 
+//申请加入公会
+func (this *GuildManager) RequestJoinGuild(player *Player, guildid int32) {
+	if player == nil || guildid <= 0 {
+		return
+	}
+	if player.MyGuild != nil {
+		//已经有公会了 不能加入
+		player.SendNoticeWordToClient(28)
+		return
+	}
+	guild1 := this.Guilds.Get(guildid)
+	if guild1 == nil {
+		//不存在该公会
+		player.SendNoticeWordToClient(29)
+		return
+	}
+	guild := guild1.(*GuildInfo)
+
+	guild.RequestJoinCharacters.Set(player.Characterid, guild)
+
+	player.SendNoticeWordToClient(30)
+}
+
 //从数据库载入数据
 func (this *GuildManager) LoadDataFromDB() {
 	this.OperateLock.Lock()

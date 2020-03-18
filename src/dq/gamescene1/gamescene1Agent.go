@@ -714,7 +714,11 @@ func (a *GameScene1Agent) DoJoinGuild(data *protomsg.MsgBase) {
 		return
 	}
 
+	gamecore.GuildManagerObj.RequestJoinGuild(player.(*gamecore.Player), h2.ID)
+
 }
+
+//获取公会信息
 func (a *GameScene1Agent) DoGetGuildInfo(data *protomsg.MsgBase) {
 	h2 := &protomsg.CS_GetGuildInfo{}
 	err := proto.Unmarshal(data.Datas, h2)
