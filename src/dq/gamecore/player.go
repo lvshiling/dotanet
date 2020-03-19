@@ -605,6 +605,9 @@ func (this *Player) CreateGuild(data *protomsg.CS_CreateGuild) {
 	characterinfo.GuildPinExperience = int32(0)
 	characterinfo.GuildPost = int32(10)
 	this.MyGuild = NewGuildCharacterInfo(&characterinfo)
+
+	//保存到数据库
+	GuildManagerObj.SaveDBGuildInfo(guildinfo)
 }
 
 //获取背包空位

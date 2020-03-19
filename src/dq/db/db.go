@@ -506,9 +506,10 @@ func (a *DB) SaveCharacter(playerInfo DB_CharacterInfo) error {
 }
 
 //创建公会
-func (a *DB) CreateGuild(name string) (error, int32) {
+func (a *DB) CreateGuild(name string, day string) (error, int32) {
 	tx, _ := a.Mydb.Begin()
-	res, err1 := tx.Exec("INSERT guild (name) values (?)", name)
+
+	res, err1 := tx.Exec("INSERT guild (name,createday) values (?,?)", name, day)
 	n, e := res.RowsAffected()
 	id, err2 := res.LastInsertId()
 	if err1 != nil || n == 0 || e != nil || err2 != nil {
@@ -519,6 +520,84 @@ func (a *DB) CreateGuild(name string) (error, int32) {
 	err1 = tx.Commit()
 
 	return err1, int32(id)
+}
+
+//保存公会信息
+func (a *DB) SaveGuild(guild DB_GuildInfo) error {
+	tx, e1 := a.Mydb.Begin()
+
+	for tx == nil || e1 != nil {
+		log.Info("SaveGuild :%s", e1.Error())
+		time.Sleep(time.Millisecond * 2)
+		tx, e1 = a.Mydb.Begin()
+
+	}
+
+	//要存的数据
+	datastring := make(map[string]interface{})
+	datastring["id"] = guild.Id
+	datastring["presidentCharacterid"] = guild.PresidentCharacterid
+	datastring["level"] = guild.Level
+	datastring["experience"] = guild.Experience
+	datastring["notice"] = guild.Notice
+	datastring["joinaudit"] = guild.Joinaudit
+	datastring["joinlevellimit"] = guild.Joinlevellimit
+	datastring["characters"] = guild.Characters
+	datastring["requestjoincharacters"] = guild.RequestJoinCharacters
+
+	sqlstr := "UPDATE guild SET "
+	count := 0
+	for k, v := range datastring {
+
+		switch v.(type) {
+
+		case string:
+			sqlstr += k + "=" + "'" + v.(string) + "'"
+			break
+		case int:
+			sqlstr += k + "=" + strconv.Itoa(v.(int))
+			break
+		case int32:
+			sqlstr += k + "=" + strconv.Itoa(int(v.(int32)))
+			break
+		case int64:
+			sqlstr += k + "=" + strconv.Itoa(int(v.(int64)))
+			break
+		case float64:
+			sqlstr += k + "=" + strconv.FormatFloat(float64(v.(float64)), 'f', 4, 32)
+			break
+		case float32:
+			sqlstr += k + "=" + strconv.FormatFloat(float64(v.(float32)), 'f', 4, 32)
+			break
+		}
+		if count == len(datastring)-1 {
+
+		} else {
+			sqlstr += ","
+		}
+		count++
+
+	}
+	sqlstr += " where id=?"
+
+	//log.Info("SaveCharacter:%s ---%d", sqlstr, playerInfo.Characterid)
+
+	res, err1 := tx.Exec(sqlstr, guild.Id)
+	if err1 != nil {
+		log.Info("err1 %s", err1.Error())
+		return tx.Rollback()
+	}
+	n, e := res.RowsAffected()
+	if n == 0 || e != nil {
+		if e != nil {
+			log.Info("guild err %s", e.Error())
+		}
+
+		return tx.Rollback()
+	}
+
+	err1 = tx.Commit()
+	return err1
 }
 
 //创建并保存上架到交易所的道具

@@ -277,9 +277,10 @@ message UnitDatas{
     int32   Characterid = 40;//
     int32   RemainWatchVedioCountToday = 41;//今日剩余观看视频次数
     int32   WatchVedioAddDiamond = 42;//当前观看视频奖励砖石
-    repeated SkillDatas SD = 43;//技能数据
-    repeated BuffDatas BD = 44;//buff数据
-    repeated SkillDatas ISD = 45;//道具技能数据
+    int32   GuildID = 43;//公会ID
+    repeated SkillDatas SD = 44;//技能数据
+    repeated BuffDatas BD = 45;//buff数据
+    repeated SkillDatas ISD = 46;//道具技能数据
 
     //单位状态(idle walk attack skill die)
     //各种buff状态(单位身上的buff 包括剩余时间)
@@ -611,6 +612,7 @@ message GuildShortInfo{
     string PresidentName = 8;//会长名字
     int32 Joinaudit = 9; //加入是否需要审批
     int32 Joinlevellimit = 10;//加入等级限制
+    string Notice = 11;//公告
 }
 //返回所有公会信息
 message SC_GetAllGuildsInfo{
@@ -644,4 +646,21 @@ message GuildChaInfo{
     int32 PinLevel = 6;
     int32 PinExperience = 7;
     int32 Post = 8;
+}
+
+//获取公会申请列表
+message CS_GetJoinGuildPlayer{
+    int32 ID = 1;//公会ID
+}
+message SC_GetJoinGuildPlayer{
+    repeated GuildChaInfo RequestCharacters = 1;//公会申请成员信息
+}
+//回复玩家加入公会
+message CS_ResponseJoinGuildPlayer{
+    int32 Characterid = 1;
+    int32 Result = 2; //1表示同意 其他表示不同意
+}
+//把玩家踢出公会
+message CS_DeleteGuildPlayer{
+    int32 Characterid = 1;
 }

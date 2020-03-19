@@ -3955,6 +3955,11 @@ func (this *Unit) FreshClientData() {
 	if this.MyPlayer != nil {
 		this.ClientData.TeamID = this.MyPlayer.TeamID
 		this.ClientData.Characterid = this.MyPlayer.Characterid
+		if this.MyPlayer.MyGuild != nil {
+			this.ClientData.GuildID = this.MyPlayer.MyGuild.GuildId
+		} else {
+			this.ClientData.GuildID = 0
+		}
 
 	}
 
@@ -4125,6 +4130,12 @@ func (this *Unit) FreshClientDataSub() {
 	if this.MyPlayer != nil {
 		this.ClientDataSub.TeamID = this.MyPlayer.TeamID - this.ClientData.TeamID
 		this.ClientDataSub.Characterid = this.MyPlayer.Characterid - this.ClientData.Characterid
+
+		if this.MyPlayer.MyGuild != nil {
+			this.ClientDataSub.GuildID = this.MyPlayer.MyGuild.GuildId - this.ClientData.GuildID
+		} else {
+			this.ClientDataSub.GuildID = 0 - this.ClientData.GuildID
+		}
 	}
 	//道具技能
 	isds := make(map[int32]int32)

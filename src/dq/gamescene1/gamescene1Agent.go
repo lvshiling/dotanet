@@ -117,6 +117,9 @@ func (a *GameScene1Agent) Init() {
 	a.handles["CS_CreateGuild"] = a.DoCreateGuild
 	a.handles["CS_JoinGuild"] = a.DoJoinGuild
 	a.handles["CS_GetGuildInfo"] = a.DoGetGuildInfo
+	a.handles["CS_GetJoinGuildPlayer"] = a.DoGetJoinGuildPlayer
+	a.handles["CS_ResponseJoinGuildPlayer"] = a.DoResponseJoinGuildPlayer
+	a.handles["CS_DeleteGuildPlayer"] = a.DoDeleteGuildPlayer
 
 	//创建场景
 	allscene := conf.GetAllScene()
@@ -670,6 +673,54 @@ func (a *GameScene1Agent) DoGetFriendsList(data *protomsg.MsgBase) {
 //	a.handles["CS_CreateGuild"] = a.DoCreateGuild
 //	a.handles["CS_JoinGuild"] = a.DoJoinGuild
 //	a.handles["CS_GetGuildInfo"] = a.DoGetGuildInfo
+//a.handles["CS_GetJoinGuildPlayer"] = a.DoGetJoinGuildPlayer
+//a.handles["CS_ResponseJoinGuildPlayer"] = a.DoResponseJoinGuildPlayer
+//	a.handles["CS_DeleteGuildPlayer"] = a.DoDeleteGuildPlayer
+func (a *GameScene1Agent) DoDeleteGuildPlayer(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_DeleteGuildPlayer{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+
+}
+func (a *GameScene1Agent) DoResponseJoinGuildPlayer(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_ResponseJoinGuildPlayer{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+
+}
+func (a *GameScene1Agent) DoGetJoinGuildPlayer(data *protomsg.MsgBase) {
+	h2 := &protomsg.CS_GetJoinGuildPlayer{}
+	err := proto.Unmarshal(data.Datas, h2)
+	if err != nil {
+		log.Info(err.Error())
+		return
+	}
+	player := a.Players.Get(data.Uid)
+	if player == nil {
+		return
+	}
+
+	//如果id小于等于0 则为获取所有公会信息
+	if player.(*gamecore.Player).MyGuild != nil {
+		msg := gamecore.GuildManagerObj.GetJoinGuildPlayer(player.(*gamecore.Player).MyGuild.GuildId)
+		player.(*gamecore.Player).SendMsgToClient("SC_GetJoinGuildPlayer", msg)
+	}
+
+}
 func (a *GameScene1Agent) DoGetAllGuildsInfo(data *protomsg.MsgBase) {
 	h2 := &protomsg.CS_GetAllGuildsInfo{}
 	err := proto.Unmarshal(data.Datas, h2)
@@ -698,6 +749,12 @@ func (a *GameScene1Agent) DoCreateGuild(data *protomsg.MsgBase) {
 		return
 	}
 	player.(*gamecore.Player).CreateGuild(h2)
+
+	//创建成功 发送公会信息给玩家
+	if player.(*gamecore.Player).MyGuild != nil {
+		msg := gamecore.GuildManagerObj.GetGuildInfo(player.(*gamecore.Player).MyGuild.GuildId)
+		player.(*gamecore.Player).SendMsgToClient("SC_GetGuildInfo", msg)
+	}
 
 }
 
@@ -730,8 +787,15 @@ func (a *GameScene1Agent) DoGetGuildInfo(data *protomsg.MsgBase) {
 	if player == nil {
 		return
 	}
-	msg := gamecore.GuildManagerObj.GetGuildInfo(h2.ID)
-	player.(*gamecore.Player).SendMsgToClient("SC_GetGuildInfo", msg)
+	//如果id小于等于0 则为获取所有公会信息
+	if h2.ID <= 0 {
+		msg := gamecore.GuildManagerObj.GetAllGuildsInfo()
+		player.(*gamecore.Player).SendMsgToClient("SC_GetAllGuildsInfo", msg)
+	} else {
+		msg := gamecore.GuildManagerObj.GetGuildInfo(h2.ID)
+		player.(*gamecore.Player).SendMsgToClient("SC_GetGuildInfo", msg)
+	}
+
 }
 
 //交易所相关
@@ -1162,6 +1226,8 @@ func (a *GameScene1Agent) OnClose() {
 		v.(*gamecore.Scene).Close()
 	}
 	gamecore.TeamManagerObj.Close()
+
+	gamecore.GuildManagerObj.Close()
 
 	a.wgScene.Wait()
 

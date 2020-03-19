@@ -7,6 +7,7 @@ import (
 	"dq/conf"
 	"dq/db"
 	"dq/utils"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -35,7 +36,7 @@ func NewGuildCharacterInfo(characterinfo *db.DB_CharacterInfo) *GuildCharacterIn
 
 	guildchainfo := &GuildCharacterInfo{}
 	//重新设置公会成员信息
-	guild.(*GuildInfo).Characters.Set(characterinfo.Characterid, guildchainfo)
+	guild.(*GuildInfo).CharactersMap.Set(characterinfo.Characterid, guildchainfo)
 	guildchainfo.Uid = characterinfo.Uid
 	guildchainfo.Characterid = characterinfo.Characterid
 	guildchainfo.GuildId = characterinfo.GuildId
@@ -52,8 +53,8 @@ func NewGuildCharacterInfo(characterinfo *db.DB_CharacterInfo) *GuildCharacterIn
 //公会信息
 type GuildInfo struct {
 	db.DB_GuildInfo
-	Characters            *utils.BeeMap //公会成员
-	RequestJoinCharacters *utils.BeeMap //请求加入公会角色
+	CharactersMap            *utils.BeeMap //公会成员
+	RequestJoinCharactersMap *utils.BeeMap //请求加入公会角色
 }
 
 //公会管理器
@@ -108,16 +109,37 @@ func (this *GuildManager) GuildInfo2ProtoGuildShortInfo(guild *GuildInfo) *proto
 	guildBaseInfo.Level = guild.Level
 	guildBaseInfo.Experience = guild.Experience
 	guildBaseInfo.MaxExperience = int32(10000)
-	guildBaseInfo.CharacterCount = int32(guild.Characters.Size())
+	guildBaseInfo.CharacterCount = int32(guild.CharactersMap.Size())
 	guildBaseInfo.MaxCount = int32(100)
 	guildBaseInfo.PresidentName = ""
-	president := guild.Characters.Get(guild.PresidentCharacterid)
+	guildBaseInfo.Notice = guild.Notice
+	president := guild.CharactersMap.Get(guild.PresidentCharacterid)
 	if president != nil {
-		guildBaseInfo.PresidentName = president.(*protomsg.GuildChaInfo).Name
+		guildBaseInfo.PresidentName = president.(*GuildCharacterInfo).Name
 	}
 	guildBaseInfo.Joinaudit = guild.Joinaudit
 	guildBaseInfo.Joinlevellimit = guild.Joinlevellimit
 	return guildBaseInfo
+}
+
+//获取申请列表信息
+func (this *GuildManager) GetJoinGuildPlayer(id int32) *protomsg.SC_GetJoinGuildPlayer {
+	guildinfo := &protomsg.SC_GetJoinGuildPlayer{}
+	guild1 := this.Guilds.Get(id)
+	if guild1 == nil {
+		return nil
+	}
+	guild := guild1.(*GuildInfo)
+
+	//公会申请成员信息
+	guildinfo.RequestCharacters = make([]*protomsg.GuildChaInfo, 0)
+	rechaitems := guild.RequestJoinCharactersMap.Items()
+	for _, v := range rechaitems {
+		one := &v.(*GuildCharacterInfo).GuildChaInfo
+		guildinfo.RequestCharacters = append(guildinfo.RequestCharacters, one)
+	}
+
+	return guildinfo
 }
 
 //获取公会信息
@@ -133,11 +155,18 @@ func (this *GuildManager) GetGuildInfo(id int32) *protomsg.SC_GetGuildInfo {
 	guildinfo.GuildBaseInfo = this.GuildInfo2ProtoGuildShortInfo(guild)
 	//公会成员信息
 	guildinfo.Characters = make([]*protomsg.GuildChaInfo, 0)
-	chaitems := guild.Characters.Items()
+	chaitems := guild.CharactersMap.Items()
 	for _, v := range chaitems {
 		one := &v.(*GuildCharacterInfo).GuildChaInfo
 		guildinfo.Characters = append(guildinfo.Characters, one)
 	}
+	//	//公会申请成员信息
+	//	guildinfo.RequestCharacters = make([]*protomsg.GuildChaInfo, 0)
+	//	rechaitems := guild.RequestJoinCharactersMap.Items()
+	//	for _, v := range rechaitems {
+	//		one := &v.(*GuildCharacterInfo).GuildChaInfo
+	//		guildinfo.RequestCharacters = append(guildinfo.RequestCharacters, one)
+	//	}
 
 	return guildinfo
 }
@@ -153,13 +182,14 @@ func (this *GuildManager) CreateGuild(name string) *GuildInfo {
 	guild := &GuildInfo{}
 	guild.Createday = time.Now().Format("2006-01-02")
 	guild.Name = name
+	guild.Level = 1
 	guild.Notice = "欢迎来到(" + name + ")大家庭!"
 	guild.Joinaudit = 0
 	guild.Joinlevellimit = 1
-	guild.Characters = utils.NewBeeMap()
-	guild.RequestJoinCharacters = utils.NewBeeMap()
+	guild.CharactersMap = utils.NewBeeMap()
+	guild.RequestJoinCharactersMap = utils.NewBeeMap()
 	//数据库创建信息获得ID
-	_, id := db.DbOne.CreateGuild(name)
+	_, id := db.DbOne.CreateGuild(name, guild.Createday)
 	if id < 0 {
 		return nil
 	}
@@ -189,7 +219,7 @@ func (this *GuildManager) RequestJoinGuild(player *Player, guildid int32) {
 	}
 	guild := guild1.(*GuildInfo)
 
-	guild.RequestJoinCharacters.Set(player.Characterid, guild)
+	guild.RequestJoinCharactersMap.Set(player.Characterid, guild)
 
 	player.SendNoticeWordToClient(30)
 }
@@ -205,8 +235,8 @@ func (this *GuildManager) LoadDataFromDB() {
 		//log.Info("----------ExchangeManager load %d %v", v.Id, &commoditys[k])
 		guild := &GuildInfo{}
 		guild.DB_GuildInfo = v
-		guild.Characters = utils.NewBeeMap()
-		guild.RequestJoinCharacters = utils.NewBeeMap()
+		guild.CharactersMap = utils.NewBeeMap()
+		guild.RequestJoinCharactersMap = utils.NewBeeMap()
 
 		//解析公会成员数据
 		allguildids := utils.GetInt32FromString3(v.Characters, ";")
@@ -223,7 +253,7 @@ func (this *GuildManager) LoadDataFromDB() {
 			guildchainfo.PinLevel = v1.GuildPinLevel
 			guildchainfo.PinExperience = v1.GuildPinExperience
 			guildchainfo.Post = v1.GuildPost
-			guild.Characters.Set(guildchainfo.Characterid, guildchainfo)
+			guild.CharactersMap.Set(guildchainfo.Characterid, guildchainfo)
 		}
 		//解析请求加入公会的角色
 
@@ -238,7 +268,7 @@ func (this *GuildManager) LoadDataFromDB() {
 			guildchainfo.Level = v1.Level
 			guildchainfo.Typeid = v1.Typeid
 
-			guild.RequestJoinCharacters.Set(guildchainfo.Characterid, guildchainfo)
+			guild.RequestJoinCharactersMap.Set(guildchainfo.Characterid, guildchainfo)
 		}
 
 		this.Guilds.Set(v.Id, guild)
@@ -246,7 +276,35 @@ func (this *GuildManager) LoadDataFromDB() {
 
 }
 
+//type GuildInfo struct {
+//	db.DB_GuildInfo
+//	CharactersMap            *utils.BeeMap //公会成员
+//	RequestJoinCharactersMap *utils.BeeMap //请求加入公会角色
+//}
+func (this *GuildManager) SaveDBGuildInfo(guild *GuildInfo) {
+	if guild == nil {
+		return
+	}
+	chaitems := guild.CharactersMap.Items()
+	guild.Characters = ""
+	for _, item := range chaitems {
+		guild.Characters += strconv.Itoa(int(item.(*GuildCharacterInfo).Characterid)) + ";"
+	}
+
+	joinitems := guild.RequestJoinCharactersMap.Items()
+	guild.RequestJoinCharacters = ""
+	for _, item := range joinitems {
+		guild.RequestJoinCharacters += strconv.Itoa(int(item.(*GuildCharacterInfo).Characterid)) + ";"
+	}
+
+	db.DbOne.SaveGuild(guild.DB_GuildInfo)
+}
+
 func (this *GuildManager) Close() {
 	//存入数据库
 	log.Info("GuildManager save")
+	guilditems := this.Guilds.Items()
+	for _, guild := range guilditems {
+		this.SaveDBGuildInfo(guild.(*GuildInfo))
+	}
 }
