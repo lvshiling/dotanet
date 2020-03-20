@@ -560,6 +560,27 @@ func (this *Player) SendGetItemNotice(typeid int32, level int32) {
 //	return false
 //}
 
+//新加入公会信息
+func (this *Player) NewAddGuildInfo(guildid int32, post int32) {
+	if this.MyGuild != nil {
+		return
+	}
+	//角色创建的公会信息
+	characterinfo := db.DB_CharacterInfo{}
+	characterinfo.GuildId = guildid
+	characterinfo.Uid = this.Uid
+	characterinfo.Characterid = this.Characterid
+	if this.MainUnit != nil {
+		characterinfo.Name = this.MainUnit.Name
+		characterinfo.Level = this.MainUnit.Level
+		characterinfo.Typeid = this.MainUnit.TypeID
+	}
+	characterinfo.GuildPinLevel = int32(1)
+	characterinfo.GuildPinExperience = int32(0)
+	characterinfo.GuildPost = post
+	this.MyGuild = NewGuildCharacterInfo(&characterinfo)
+}
+
 //创建公会
 func (this *Player) CreateGuild(data *protomsg.CS_CreateGuild) {
 	//this.MyGuild = NewGuildCharacterInfo(&characterinfo)
@@ -592,19 +613,7 @@ func (this *Player) CreateGuild(data *protomsg.CS_CreateGuild) {
 	//创建公会成功 (补上创始人ID)
 	guildinfo.PresidentCharacterid = this.Characterid
 	//角色创建的公会信息
-	characterinfo := db.DB_CharacterInfo{}
-	characterinfo.GuildId = guildinfo.Id
-	characterinfo.Uid = this.Uid
-	characterinfo.Characterid = this.Characterid
-	if this.MainUnit != nil {
-		characterinfo.Name = this.MainUnit.Name
-		characterinfo.Level = this.MainUnit.Level
-		characterinfo.Typeid = this.MainUnit.TypeID
-	}
-	characterinfo.GuildPinLevel = int32(1)
-	characterinfo.GuildPinExperience = int32(0)
-	characterinfo.GuildPost = int32(10)
-	this.MyGuild = NewGuildCharacterInfo(&characterinfo)
+	this.NewAddGuildInfo(guildinfo.Id, 10)
 
 	//保存到数据库
 	GuildManagerObj.SaveDBGuildInfo(guildinfo)

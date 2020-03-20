@@ -80,7 +80,7 @@ func (this *GuildManager) CheckName(name string) bool {
 	items := this.Guilds.Items()
 	for _, v := range items {
 		//重名了
-		if v.(*db.DB_GuildInfo).Name == name {
+		if v.(*GuildInfo).Name == name {
 			return true
 		}
 	}
@@ -105,6 +105,7 @@ func (this GuildManager) GetAllGuildsInfo() *protomsg.SC_GetAllGuildsInfo {
 //本公会信息转成proto的公会简短信息
 func (this *GuildManager) GuildInfo2ProtoGuildShortInfo(guild *GuildInfo) *protomsg.GuildShortInfo {
 	guildBaseInfo := &protomsg.GuildShortInfo{}
+	guildBaseInfo.ID = guild.Id
 	guildBaseInfo.Name = guild.Name
 	guildBaseInfo.Level = guild.Level
 	guildBaseInfo.Experience = guild.Experience
@@ -201,6 +202,139 @@ func (this *GuildManager) CreateGuild(name string) *GuildInfo {
 
 }
 
+//踢人
+func (this *GuildManager) DeleteGuildPlayer(player *Player, data *protomsg.CS_DeleteGuildPlayer, targetplayer *Player) {
+	if player == nil || data == nil || player.MyGuild == nil || player == targetplayer {
+		return
+	}
+	//回复玩家加入公会
+	postdata := conf.GetGuildPostFileData(player.MyGuild.Post)
+	if postdata == nil || postdata.DeletePlayerWriteAble != 1 {
+		//没有权限 31
+		player.SendNoticeWordToClient(31)
+		return
+	}
+	//找到当前公会
+	guild1 := this.Guilds.Get(player.MyGuild.GuildId)
+	if guild1 == nil {
+		//不存在该公会
+		player.SendNoticeWordToClient(29)
+		return
+	}
+	guild := guild1.(*GuildInfo)
+
+	//申请的玩家角色
+	character := targetplayer
+	if character == nil { //离线
+		players := make([]db.DB_CharacterInfo, 0)
+		db.DbOne.GetCharactersInfoByCharacterid(data.Characterid, &players)
+		if len(players) <= 0 {
+			//找不到该用户
+			return
+		}
+		//存档数据库
+		players[0].GuildId = 0
+		players[0].GuildPinLevel = int32(1)
+		players[0].GuildPinExperience = int32(0)
+		players[0].GuildPost = int32(1)
+		db.DbOne.SaveCharacter(players[0])
+
+	} else { //在线
+		if character.MyGuild != nil {
+			//对方已经有公会了 32
+			character.MyGuild = nil
+		}
+	}
+
+	//把数据存入公会中
+	guild.CharactersMap.Delete(data.Characterid)
+}
+
+//回复加入公会的申请
+func (this *GuildManager) ResponseJoinGuild(player *Player, data *protomsg.CS_ResponseJoinGuildPlayer, targetplayer *Player) {
+	if player == nil || data == nil || player.MyGuild == nil {
+		return
+	}
+	//回复玩家加入公会
+	postdata := conf.GetGuildPostFileData(player.MyGuild.Post)
+	if postdata == nil || postdata.ResponseJoinPlayerWriteAble != 1 {
+		//没有权限 31
+		player.SendNoticeWordToClient(31)
+		return
+	}
+	//找到当前公会
+	guild1 := this.Guilds.Get(player.MyGuild.GuildId)
+	if guild1 == nil {
+		//不存在该公会
+		player.SendNoticeWordToClient(29)
+		return
+	}
+	guild := guild1.(*GuildInfo)
+
+	//删除申请请求
+	chainfo := guild.RequestJoinCharactersMap.Get(data.Characterid)
+	if chainfo == nil {
+		//找不到该玩家
+		return
+	}
+
+	guild.RequestJoinCharactersMap.Delete(data.Characterid)
+
+	//如果是拒绝就到此为止
+	if data.Result != 1 {
+		return
+	}
+
+	//申请的玩家角色
+	character := targetplayer
+	if character == nil { //离线
+		players := make([]db.DB_CharacterInfo, 0)
+		db.DbOne.GetCharactersInfoByCharacterid(data.Characterid, &players)
+		if len(players) <= 0 {
+			//找不到该用户
+			return
+		}
+		if players[0].GuildId > 0 {
+			//对方已经有公会了 32
+			player.SendNoticeWordToClient(32)
+			return
+		}
+
+		//存档数据库
+		players[0].GuildId = player.MyGuild.GuildId
+		players[0].GuildPinLevel = int32(1)
+		players[0].GuildPinExperience = int32(0)
+		players[0].GuildPost = int32(1)
+		db.DbOne.SaveCharacter(players[0])
+		//把数据存入公会中
+		guildchainfo := &GuildCharacterInfo{}
+		guildchainfo.Uid = players[0].Uid
+		guildchainfo.Characterid = players[0].Characterid
+		guildchainfo.Name = players[0].Name
+		guildchainfo.Level = players[0].Level
+		guildchainfo.Typeid = players[0].Typeid
+		guildchainfo.GuildId = players[0].GuildId
+		guildchainfo.PinLevel = players[0].GuildPinLevel
+		guildchainfo.PinExperience = players[0].GuildPinExperience
+		guildchainfo.Post = players[0].GuildPost
+		guild.CharactersMap.Set(guildchainfo.Characterid, guildchainfo)
+
+	} else { //在线
+		if character.MyGuild != nil {
+			//对方已经有公会了 32
+			player.SendNoticeWordToClient(32)
+		} else {
+			//角色创建的公会信息
+			character.NewAddGuildInfo(player.MyGuild.GuildId, 1)
+		}
+	}
+
+	//message CS_ResponseJoinGuildPlayer{
+	//    int32 Characterid = 1;
+	//    int32 Result = 2; //1表示同意 其他表示不同意
+	//}
+}
+
 //申请加入公会
 func (this *GuildManager) RequestJoinGuild(player *Player, guildid int32) {
 	if player == nil || guildid <= 0 {
@@ -219,9 +353,21 @@ func (this *GuildManager) RequestJoinGuild(player *Player, guildid int32) {
 	}
 	guild := guild1.(*GuildInfo)
 
-	guild.RequestJoinCharactersMap.Set(player.Characterid, guild)
+	//角色信息
+	guildchainfo := &GuildCharacterInfo{}
+	guildchainfo.Uid = player.Uid
+	guildchainfo.Characterid = player.Characterid
+	if player.MainUnit != nil {
+		guildchainfo.Name = player.MainUnit.Name
+		guildchainfo.Level = player.MainUnit.Level
+		guildchainfo.Typeid = player.MainUnit.TypeID
+	}
+
+	guild.RequestJoinCharactersMap.Set(player.Characterid, guildchainfo)
 
 	player.SendNoticeWordToClient(30)
+
+	log.Info("----------RequestJoinGuild--")
 }
 
 //从数据库载入数据

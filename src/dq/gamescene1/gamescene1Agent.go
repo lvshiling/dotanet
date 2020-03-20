@@ -32,6 +32,7 @@ type GameScene1Agent struct {
 	ServerName string
 	Scenes     *utils.BeeMap
 	Players    *utils.BeeMap
+	Characters *utils.BeeMap
 
 	wgScene sync.WaitGroup
 }
@@ -57,6 +58,7 @@ func (a *GameScene1Agent) Init() {
 
 	a.Scenes = utils.NewBeeMap()
 	a.Players = utils.NewBeeMap()
+	a.Characters = utils.NewBeeMap()
 
 	a.handles = make(map[string]func(data *protomsg.MsgBase))
 	a.handles["MsgUserEnterScene"] = a.DoMsgUserEnterScene
@@ -159,6 +161,7 @@ func (a *GameScene1Agent) DoDisconnect(data *protomsg.MsgBase) {
 
 			player.(*gamecore.Player).OutScene()
 			a.Players.Delete(data.Uid)
+			a.Characters.Delete(player.(*gamecore.Player).Characterid)
 			//存档 数据库
 
 		} else {
@@ -231,6 +234,7 @@ func (a *GameScene1Agent) DoUserEnterScene(h2 *protomsg.MsgUserEnterScene) {
 			player = gamecore.CreatePlayer(h2.Uid, h2.ConnectId, -1)
 			player.(*gamecore.Player).ServerAgent = a
 			a.Players.Set(player.(*gamecore.Player).Uid, player)
+
 		} else {
 			//			//重新连接
 			//			if player.(*gamecore.Player).ConnectId != h2.ConnectId {
@@ -245,6 +249,7 @@ func (a *GameScene1Agent) DoUserEnterScene(h2 *protomsg.MsgUserEnterScene) {
 
 		//进入新场景
 		player.(*gamecore.Player).GoInScene(scene.(*gamecore.Scene), h2.Datas)
+		a.Characters.Set(player.(*gamecore.Player).Characterid, player)
 
 		//发送场景信息给玩家
 		msg := &protomsg.SC_NewScene{}
@@ -687,6 +692,18 @@ func (a *GameScene1Agent) DoDeleteGuildPlayer(data *protomsg.MsgBase) {
 	if player == nil {
 		return
 	}
+	targetplayer := a.Characters.Get(h2.Characterid)
+
+	if targetplayer == nil {
+		gamecore.GuildManagerObj.DeleteGuildPlayer(player.(*gamecore.Player), h2, nil)
+	} else {
+		gamecore.GuildManagerObj.DeleteGuildPlayer(player.(*gamecore.Player), h2, targetplayer.(*gamecore.Player))
+	}
+
+	if player.(*gamecore.Player).MyGuild != nil {
+		msg := gamecore.GuildManagerObj.GetGuildInfo(player.(*gamecore.Player).MyGuild.GuildId)
+		player.(*gamecore.Player).SendMsgToClient("SC_GetGuildInfo", msg)
+	}
 
 }
 func (a *GameScene1Agent) DoResponseJoinGuildPlayer(data *protomsg.MsgBase) {
@@ -700,7 +717,18 @@ func (a *GameScene1Agent) DoResponseJoinGuildPlayer(data *protomsg.MsgBase) {
 	if player == nil {
 		return
 	}
+	targetplayer := a.Characters.Get(h2.Characterid)
 
+	if targetplayer == nil {
+		gamecore.GuildManagerObj.ResponseJoinGuild(player.(*gamecore.Player), h2, nil)
+	} else {
+		gamecore.GuildManagerObj.ResponseJoinGuild(player.(*gamecore.Player), h2, targetplayer.(*gamecore.Player))
+	}
+
+	if player.(*gamecore.Player).MyGuild != nil {
+		msg := gamecore.GuildManagerObj.GetJoinGuildPlayer(player.(*gamecore.Player).MyGuild.GuildId)
+		player.(*gamecore.Player).SendMsgToClient("SC_GetJoinGuildPlayer", msg)
+	}
 }
 func (a *GameScene1Agent) DoGetJoinGuildPlayer(data *protomsg.MsgBase) {
 	h2 := &protomsg.CS_GetJoinGuildPlayer{}
@@ -770,6 +798,7 @@ func (a *GameScene1Agent) DoJoinGuild(data *protomsg.MsgBase) {
 	if player == nil {
 		return
 	}
+	log.Info("----------DoJoinGuild--%d", h2.ID)
 
 	gamecore.GuildManagerObj.RequestJoinGuild(player.(*gamecore.Player), h2.ID)
 

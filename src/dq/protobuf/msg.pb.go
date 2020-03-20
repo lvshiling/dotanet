@@ -5303,7 +5303,7 @@ func (m *SC_GetJoinGuildPlayer) GetRequestCharacters() []*GuildChaInfo {
 	return nil
 }
 
-// 同意玩家加入公会
+// 回复玩家加入公会
 type CS_ResponseJoinGuildPlayer struct {
 	Characterid          int32    `protobuf:"varint,1,opt,name=Characterid,proto3" json:"Characterid,omitempty"`
 	Result               int32    `protobuf:"varint,2,opt,name=Result,proto3" json:"Result,omitempty"`

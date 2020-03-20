@@ -158,6 +158,7 @@ func (app *DefaultApp) Run() error {
 	conf.LoadBuffFileData()  //加载buff数据配置
 	conf.LoadHaloFileData()  //加载halo数据配置
 	conf.LoadItemFileData()  //加载道具数据配置
+	conf.LoadGuildFileData() //加载公会数据配置
 
 	log.InitBeego(true, "dq", Logdir, make(map[string]interface{}))
 

@@ -250,6 +250,10 @@ func OpenXlsl(path string) *excelize.File {
 }
 
 func ReadXlsxData(path string, data interface{}) (error, map[interface{}]interface{}) {
+	return ReadXlsxOneSheetData(path, "Sheet1", data)
+}
+
+func ReadXlsxOneSheetData(path string, sheet string, data interface{}) (error, map[interface{}]interface{}) {
 	re := make(map[interface{}]interface{})
 	xlsx := OpenXlsl(path)
 	if xlsx == nil {
@@ -266,13 +270,13 @@ func ReadXlsxData(path string, data interface{}) (error, map[interface{}]interfa
 	datatype := reflect.TypeOf(data).Elem()
 
 	nameandindex := make(map[int]string)
-	firstrow := xlsx.GetRows("Sheet1")[0]
+	firstrow := xlsx.GetRows(sheet)[0]
 	for k, v := range firstrow {
 		nameandindex[k] = v
 	}
 
-	for i := 1; i < len(xlsx.GetRows("Sheet1")); i++ {
-		onedata := xlsx.GetRows("Sheet1")[i]
+	for i := 1; i < len(xlsx.GetRows(sheet)); i++ {
+		onedata := xlsx.GetRows(sheet)[i]
 
 		person := reflect.New(datatype).Interface()
 		//person := datatype
